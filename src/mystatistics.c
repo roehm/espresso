@@ -6,10 +6,16 @@ DoubleList boundaries = { NULL, 0 };
 int n_part_in_bin = 0;
 // the boxes with the particle identities
 IntList *part_in_bin = NULL;
-
+int allo=0;
+int counter=1;
+int dummy[3] = {0,0,0};
+  
 static void wall_sort_particles()
 {
-  // 1. reallocate the boxes for the particle identities
+
+  //ATTENTION IF STATEMENT only for my personal purpose!!!!!!!!
+  //if(allo==0){
+   // 1. reallocate the boxes for the particle identities
   // free old boxes
   for (int i = 0; i < n_part_in_bin; ++i) {
     realloc_intlist(&part_in_bin[i], part_in_bin[i].n = 0);
@@ -23,8 +29,12 @@ static void wall_sort_particles()
 
   // 2. for each particle, find the box and put its
   // identity there
+
   for(int i=0; i<n_total_particles; i++) {
-    double x = partCfg[i].r.p[0];
+    //double x = partCfg[i].r.p[0];
+    double* rp = partCfg[i].r.p;
+    fold_position(rp, dummy);
+    double x = rp[0];
     // ignore particles outside the boundaries
     if (x < boundaries.e[0] || x > boundaries.e[boundaries.n-1])
       continue;
@@ -39,6 +49,69 @@ static void wall_sort_particles()
     realloc_grained_intlist(&part_in_bin[s], part_in_bin[s].n + 1, 8);
     part_in_bin[s].e[part_in_bin[s].n++] = i;
   }
+  allo=1;
+  //counter++;
+  //}
+}
+
+static int printpeaks(char* filename){
+
+  if(allo==1){
+ #if 0
+    for(int i=0; i<n_total_particles; i++) {
+      //double x = partCfg[i].r.p[0];
+          double* rp = partCfg[i].r.p;
+    fold_position(rp, dummy);
+    double x = rp[0];
+      // ignore particles outside the boundaries
+      if (x < boundaries.e[0] || x > boundaries.e[boundaries.n-1])
+        continue;
+      // simple bisection on the particle's x-coordinate
+      int s = 0;
+      int e = boundaries.n - 1;
+      while (e - s > 1) {
+        int c = (e + s)/2;
+        if (x >= boundaries.e[c]) s = c; else e = c;
+      }
+      // and add the particle to the resulting list
+      //realloc_grained_intlist(&part_in_bin[s], part_in_bin[s].n + 1, 8);
+      //part_in_bin[s].e[part_in_bin[s].n++] = i;
+      part_in_bin[s].n++;
+      
+  }
+  counter++;
+#endif
+  FILE* fp = fopen(filename, "w");
+	
+	   if(fp == NULL)
+	  	  return 1;
+	  	for(int s=0; s<boundaries.n-1; s++) {
+#if 1
+      if(s==0) {
+        if(part_in_bin[s].n > part_in_bin[s+1].n) {
+          fprintf(fp, "%lf \t %lf\n", ((s+0.5)*box_l[0])/(boundaries.n-1), (boundaries.n-1)*part_in_bin[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]));
+        }
+      }
+      if(s==boundaries.n-1) {
+        if(part_in_bin[s].n > part_in_bin[s-1].n) {
+          fprintf(fp, "%lf \t %lf\n", ((s+0.5)*box_l[0])/(boundaries.n-1), (boundaries.n-1)*part_in_bin[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]));
+        }
+      }else
+        if(part_in_bin[s].n > part_in_bin[s-1].n && part_in_bin[s].n > part_in_bin[s+1].n) {
+          fprintf(fp, "%lf \t %lf\n", ((s+0.5)*box_l[0])/(boundaries.n-1), (boundaries.n-1)*part_in_bin[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]));
+        }
+     #else
+     fprintf(fp, "%lf \t %lf\n", ((s+0.5)*box_l[0])/(boundaries.n-1), (boundaries.n-1)*part_in_bin[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]));
+    #endif
+    }
+        
+    fclose(fp);
+    return 0;
+  }
+  else{
+    printf("\npls call -bins to initialize bins before calling printpeaks!\n");
+    return 1;
+    }
 }
 
 static void calc_wallmsdyz(double *g, int bin)
@@ -443,7 +516,7 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv)
   int job, bin;
   double rmin, rmax,rclocal;
   int rbins, boxes;
-  enum { BINS, MX, MYZ, RDFYZ,BONDYZ,SCALE,SCALE2, PRINT };
+  enum { BINS, MX, MYZ, RDFYZ,BONDYZ,SCALE,SCALE2, PRINT, PRINTPEAKS };
 
   if (argc < 2) {
     Tcl_AppendResult(interp, "expected: analyze wallstuff -bins <binboundaries> | -myz <bin> |-mx <bin> | -rdfyz <bin> <rmin> <rmax> <rdfbins> |-bondyz| -scale| -scale2 ",
@@ -454,6 +527,13 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv)
   // 1. what do we do?
   if (ARG0_IS_S("-bins")) {
     job = BINS;
+  }
+  else if (ARG0_IS_S("-printpeaks") && argc == 2) {
+    job = PRINTPEAKS;
+    if(printpeaks(argv[1]) != 0) {
+					      Tcl_AppendResult(interp, "Unknown Error at printpeaks", (char *)NULL);
+				        return TCL_ERROR;
+				      } 
   }
   else if (ARG0_IS_S("-mx") && argc == 2) {
     job = MX;
@@ -508,7 +588,7 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv)
     }
     break;
   }
-
+    
   // 2. other parameters, only for rdf
   switch (job) {
   case RDFYZ:
@@ -618,6 +698,7 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv)
       Tcl_AppendResult(interp, buffer, (char *)NULL); 
     }
     break;
+  
   }
 
   // print out double results, if any
