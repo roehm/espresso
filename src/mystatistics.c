@@ -1,5 +1,7 @@
 /* this is included in statistics.c */
+#include "mystatistics.h"
 
+#ifdef MY_STAT
 // list of the currently specified box boundaries
 DoubleList boundaries = { NULL, 0 };
 // number of boxes
@@ -9,9 +11,9 @@ IntList *part_in_bin = NULL;
 int allo=0;
 int counter=1;
 int dummy[3] = {0,0,0};
-  
-static void wall_sort_particles()
-{
+int num_of_sets = 0;  
+char *savefilename;
+static void wall_sort_particles() {
 
   //ATTENTION IF STATEMENT only for my personal purpose!!!!!!!!
   //if(allo==0){
@@ -46,41 +48,29 @@ static void wall_sort_particles()
       if (x >= boundaries.e[c]) s = c; else e = c;
     }
     // and add the particle to the resulting list
-    realloc_grained_intlist(&part_in_bin[s], part_in_bin[s].n + 1, 8);
-    part_in_bin[s].e[part_in_bin[s].n++] = i;
+    //realloc_grained_intlist(&part_in_bin[s], part_in_bin[s].n + 1, 8);
+    //part_in_bin[s].e[part_in_bin[s].n++] = i;
+    part_in_bin[s].n++;
   }
-  allo=1;
-  //counter++;
+  //allo=1;
+  //if(num_of_sets!=0) counter++;
+  //else allo=0;
   //}
+  counter=1;
 }
+static int meanpeaks(int sets){
 
+ num_of_sets = sets;
+ if (num_of_sets!=0) return 0;
+   else{
+    printf("\nnumber of sets: %i\n",sets);
+    return 1;
+    }
+  return 0;
+}
 static int printpeaks(char* filename){
-
-  if(allo==1){
- #if 0
-    for(int i=0; i<n_total_particles; i++) {
-      //double x = partCfg[i].r.p[0];
-          double* rp = partCfg[i].r.p;
-    fold_position(rp, dummy);
-    double x = rp[0];
-      // ignore particles outside the boundaries
-      if (x < boundaries.e[0] || x > boundaries.e[boundaries.n-1])
-        continue;
-      // simple bisection on the particle's x-coordinate
-      int s = 0;
-      int e = boundaries.n - 1;
-      while (e - s > 1) {
-        int c = (e + s)/2;
-        if (x >= boundaries.e[c]) s = c; else e = c;
-      }
-      // and add the particle to the resulting list
-      //realloc_grained_intlist(&part_in_bin[s], part_in_bin[s].n + 1, 8);
-      //part_in_bin[s].e[part_in_bin[s].n++] = i;
-      part_in_bin[s].n++;
-      
-  }
-  counter++;
-#endif
+ if (num_of_sets==0){
+  savefilename=filename;
   FILE* fp = fopen(filename, "w");
 	
 	   if(fp == NULL)
@@ -106,13 +96,44 @@ static int printpeaks(char* filename){
     }
         
     fclose(fp);
-    return 0;
+      
+  //else{
+  //  printf("\npls call -bins to initialize bins before calling printpeaks!\n");
+  //  return 1;
+  //  }
   }
-  else{
-    printf("\npls call -bins to initialize bins before calling printpeaks!\n");
-    return 1;
-    }
+  return 0;
 }
+
+static int updatemean(){
+    
+  updatePartCfg(WITHOUT_BONDS);
+  
+    for(int i=0; i<n_total_particles; i++) {
+      double* rp = partCfg[i].r.p;
+      fold_position(rp, dummy);
+      double x = rp[0];
+      // ignore particles outside the boundaries
+      if (x < boundaries.e[0] || x > boundaries.e[boundaries.n-1])
+        continue;
+      // simple bisection on the particle's x-coordinate
+      int s = 0;
+      int e = boundaries.n - 1;
+      while (e - s > 1) {
+        int c = (e + s)/2;
+        if (x >= boundaries.e[c]) s = c; else e = c;
+      }
+      // and add the particle to the resulting list
+      //realloc_grained_intlist(&part_in_bin[s], part_in_bin[s].n + 1, 8);
+      //part_in_bin[s].e[part_in_bin[s].n++] = i;
+      part_in_bin[s].n++;
+    }
+  counter++;
+  return 0;
+    //printpeaks(savefilename);
+    //}
+}
+
 
 static void calc_wallmsdyz(double *g, int bin)
 {
@@ -506,35 +527,36 @@ static void calc_wallrdfyz(double *g, int bin, double rmin, double rmax, int rbi
     g[i] = (g[i]/bin_volume) / av_density;
   }
 }
-
-int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv)
-{
+//**************************************************//
+/*PARSER*/
+//**************************************************//
+int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
   /* 'analyze wallmsd -xy|-z <min> <max>' */
   /******************************************************************************/
   char buffer[TCL_INTEGER_SPACE + TCL_DOUBLE_SPACE + 2];
   DoubleList g;
   int job, bin;
   double rmin, rmax,rclocal;
-  int rbins, boxes;
-  enum { BINS, MX, MYZ, RDFYZ,BONDYZ,SCALE,SCALE2, PRINT, PRINTPEAKS };
-
-  if (argc < 2) {
+  int rbins, boxes, setts;
+  enum { BINS, MX, MYZ, RDFYZ,BONDYZ,SCALE,SCALE2, PRINT, PEAKS, UPDATEMEAN };
+  double floatarg;
+  
+  if (argc < 1) {
     Tcl_AppendResult(interp, "expected: analyze wallstuff -bins <binboundaries> | -myz <bin> |-mx <bin> | -rdfyz <bin> <rmin> <rmax> <rdfbins> |-bondyz| -scale| -scale2 ",
 		     (char *)NULL);
-    return TCL_ERROR;
+    return (TCL_ERROR);
   }
 
   // 1. what do we do?
   if (ARG0_IS_S("-bins")) {
     job = BINS;
   }
-  else if (ARG0_IS_S("-printpeaks") && argc == 2) {
-    job = PRINTPEAKS;
-    if(printpeaks(argv[1]) != 0) {
-					      Tcl_AppendResult(interp, "Unknown Error at printpeaks", (char *)NULL);
-				        return TCL_ERROR;
-				      } 
-  }
+  else if (ARG0_IS_S("-printpeaks") && argc >= 2) {
+    job = PEAKS;
+	 }     
+		else if (ARG0_IS_S("-updatemean")) {
+		   job = UPDATEMEAN;
+		}
   else if (ARG0_IS_S("-mx") && argc == 2) {
     job = MX;
   }
@@ -587,6 +609,10 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv)
       return (TCL_ERROR);
     }
     break;
+  case PEAKS:
+  break;
+  case UPDATEMEAN:
+  break;
   }
     
   // 2. other parameters, only for rdf
@@ -698,7 +724,18 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv)
       Tcl_AppendResult(interp, buffer, (char *)NULL); 
     }
     break;
-  
+  case PEAKS:
+    if(printpeaks(argv[1]) != 0) {
+				   Tcl_AppendResult(interp, "Error at printpeaks", (char *)NULL);
+				   return (TCL_ERROR);
+				}
+				break;
+		case UPDATEMEAN:
+		  if(updatemean() != 0) {
+				  Tcl_AppendResult(interp, "Error at updatemean", (char *)NULL);
+				   return (TCL_ERROR);
+				}
+				break;
   }
 
   // print out double results, if any
@@ -1232,3 +1269,4 @@ int parse_current(Tcl_Interp *interp, int argc, char **argv)
 #endif  
   return TCL_OK;
 }
+#endif

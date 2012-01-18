@@ -57,7 +57,7 @@
 #include "virtual_sites.h"
 #include "adresso.h"
 #include "lbgpu.h"
-
+#include "mystatistics.h"
 /************************************************
  * DEFINES
  ************************************************/
@@ -586,6 +586,16 @@ ghost_communicator(&cell_structure.collect_ghost_force_comm);
   /* verlet list statistics */
   if(n_verlet_updates>0) verlet_reuse = n_steps/(double) n_verlet_updates;
   else verlet_reuse = 0;
+
+#if 0
+#ifdef MY_STAT
+  if(this_node == 0){
+    if(num_of_sets!=0){
+      save_sets();
+    }
+  }
+#endif
+#endif
 
 #ifdef NPT
   if(integ_switch == INTEG_METHOD_NPT_ISO) {
