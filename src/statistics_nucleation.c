@@ -253,14 +253,8 @@ int count_neighbors(double p_tmp[3], double radius) {
     return neb;
 }
 
-double analyze_bubble_volume(Tcl_Interp *interp, int bubble_cut) {
+double analyze_bubble_volume(Tcl_Interp *interp, double bubble_cut, double sigma) {
 
-        // TODO: Get sigma from parameters
-        //IA_parameters *data;
-        //data = get_ia_param();
-        //fprintf(stderr,"Sigma: %f", data->Tsflj_sig);
-        
-        double sigma = 1.0;
         double sigmah = sigma / 2.0;    
 
         int c=0, np1=0, i=0 ,j=0;
@@ -803,7 +797,6 @@ int prepareQ6(double rc){
 
             //fprintf(stderr,"Particle %d has %d neighbors. Q6: %f\n",partCfg[i].p.identity,partCfg[i].l.neb,partCfg[i].l.q6);
     }
-    //fprintf(stderr,"Total number of neighbors: %d\n",totneb);
     
     return statusOK;
 }
@@ -870,7 +863,7 @@ inline double pair_q6q6( Particle *p, Particle *q ) {
     return( q6q6 );
 }
 
-int reduceQ6Q6(double q6q6_min, int min_solid_bonds){
+double reduceQ6Q6(double q6q6_min, int min_solid_bonds){
 
   double    q6q6, eQ6Q6;
   int       bondCount;
@@ -897,8 +890,7 @@ int reduceQ6Q6(double q6q6_min, int min_solid_bonds){
               q6q6 = pair_q6q6(p1, &partCfg[p1->l.neighbors[j]]);
               //fprintf(stderr,"q6q6: %f\n", q6q6);
               
-              //Test against arbitrary threshold - not yet known for ellipsoids
-              
+              //Test against arbitrary threshold
               if ( q6q6 > q6q6_min ) {
 	            p1->l.solidBonds++;
               }
@@ -923,7 +915,7 @@ int reduceQ6Q6(double q6q6_min, int min_solid_bonds){
         eQ6Q6 /= (double) bondCount;
     }
     
-//  fprintf(stderr,"solidParticles %d, average stat: %f\n",solidParticles, eQ6Q6);
+  fprintf(stderr,"solidParticles %d, average stat: %f\n",solidParticles, eQ6Q6);
   return eQ6Q6;
 
 }

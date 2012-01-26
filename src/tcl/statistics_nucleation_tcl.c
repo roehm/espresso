@@ -31,24 +31,26 @@
 /* Main, by-TCL-called function */
 int tclcommand_analyze_bubble_volume(Tcl_Interp *interp, int argc, char **argv)
 {
-        char buffer[TCL_DOUBLE_SPACE];
-        double bubble_cut = 1.0; 
+    char buffer[TCL_DOUBLE_SPACE];
+    double bubble_cut; // e.g. 1.0
+    double sigma; // e.g. 1.0
 
-        if (n_nodes > 1) {
-                Tcl_AppendResult(interp, "Error: Largest bubble volume can only be calculated on a single processor", (char *)NULL);
-                return TCL_ERROR;
-        }
-        if ((argc == 1) && (Tcl_GetDouble(interp, argv[0], &bubble_cut) != TCL_ERROR)) {
-                // fprintf(stderr,"bubble_cut: %f", bubble_cut);
-        } else {
-                Tcl_AppendResult(interp, "Error: Usage: analyze bubble_volume bubble_cut.", (char *)NULL);
-                return TCL_ERROR;
-        }
+    if (n_nodes > 1) {
+        Tcl_AppendResult(interp, "Error: Largest bubble volume can only be calculated on a single processor", (char *)NULL);
+        return TCL_ERROR;
+    }
 
-        Tcl_PrintDouble(interp, analyze_bubble_volume(interp,bubble_cut), buffer);
-        Tcl_AppendResult(interp, buffer, (char *)NULL);
+    /* check parameter types */
+    if( (! ARG_IS_D(0, bubble_cut)) ||
+        (! ARG_IS_D(1, sigma)) ) {
+        Tcl_AppendResult(interp, "Error: Usage: analyze bubble_volume bubble_cut.\n", (char *)NULL);
+        return TCL_ERROR;
+    }
 
-        return TCL_OK;
+    Tcl_PrintDouble(interp, analyze_bubble_volume(interp,bubble_cut,sigma), buffer);
+    Tcl_AppendResult(interp, buffer, (char *)NULL);
+
+    return TCL_OK;
 }
 
 

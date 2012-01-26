@@ -28,7 +28,7 @@
  *
  */
 
-double analyze_bubble_volume(Tcl_Interp *interp, int bubble_cut);
+double analyze_bubble_volume(Tcl_Interp *interp, double bubble_cut, double sigma);
 
 double analyze_q6(double rc, double q6q6_min, int min_solid_bonds);
 
