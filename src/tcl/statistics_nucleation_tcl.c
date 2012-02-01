@@ -61,7 +61,7 @@ int tclcommand_analyze_q6(Tcl_Interp *interp, int argc, char **argv) {
     int min_solid_bonds;
 
     if (n_nodes > 1) {
-        Tcl_AppendResult(interp, "Error: Cluster can only be calculated on a single processor", (char *)NULL);
+        Tcl_AppendResult(interp, "Error: Q6 can only be calculated on a single processor", (char *)NULL);
         return TCL_ERROR;
     }
         
@@ -86,7 +86,7 @@ int tclcommand_analyze_q6_solid(Tcl_Interp *interp, int argc, char **argv) {
     int min_solid_bonds;
 
     if (n_nodes > 1) {
-        Tcl_AppendResult(interp, "Error: Cluster can only be calculated on a single processor", (char *)NULL);
+        Tcl_AppendResult(interp, "Error: Q6 can only be calculated on a single processor", (char *)NULL);
         return TCL_ERROR;
     }
         
@@ -111,7 +111,7 @@ int tclcommand_analyze_q6_solid_cluster(Tcl_Interp *interp, int argc, char **arg
     int min_solid_bonds;
 
     if (n_nodes > 1) {
-        Tcl_AppendResult(interp, "Error: Cluster can only be calculated on a single processor", (char *)NULL);
+        Tcl_AppendResult(interp, "Error: Q6 can only be calculated on a single processor", (char *)NULL);
         return TCL_ERROR;
     }
         

@@ -765,7 +765,7 @@ int prepareQ6(double rc){
     
     
     totneb = 0;
-
+    
     for (i=0;i<n_total_particles;i++) {
 
 	        // PR thesis eq 3.27
@@ -777,8 +777,8 @@ int prepareQ6(double rc){
             } else {
 	            //Q6 undefined... system needs to collapse a little
 	            //Q6 = 0.0;
-	            //partCfg[i].l.q6r[m] = 0.0;
-	            //partCfg[i].l.q6i[m] = 0.0;
+	            partCfg[i].l.q6r[m] = 0.0;
+	            partCfg[i].l.q6i[m] = 0.0;
 	            statusOK = 0;
 	        }
 
@@ -943,6 +943,7 @@ double analyze_q6(double rc, double q6q6_min, int min_solid_bonds) {
     reduceQ6();
     avgQ6 = reduceQ6Q6(q6q6_min, min_solid_bonds);
 
+   
     freePartCfg();
 
     return avgQ6;
