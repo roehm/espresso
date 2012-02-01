@@ -46,6 +46,7 @@
 #include "initialize.h"
 #include "statistics_chain_tcl.h"
 #include "topology_tcl.h"
+#include "mystatistics.h"
 
 /** Variables for measuring the compressibility from volume fluctuations.
     Will be used by \ref parse_Vkappa exclusively. */
@@ -2391,6 +2392,14 @@ int tclcommand_analyze(ClientData data, Tcl_Interp *interp, int argc, char **arg
 
   /* for the elses below */
   if (0);
+  
+#ifdef MY_STAT  
+  REGISTER_ANALYSIS("wallstuff", parse_wallstuff);
+  //REGISTER_ANALYSIS("dipol", parse_dipol);
+  //REGISTER_ANALYSIS("current", parse_current);
+  //REGISTER_ANALYSIS("sqr", parse_sqr);
+#endif
+
   REGISTER_ANALYZE_OPTION("set", tclcommand_analyze_parse_set);
 #if defined(LB) || defined(LB_GPU)
   REGISTER_ANALYZE_OPTION("fluid", tclcommand_analyze_parse_fluid);

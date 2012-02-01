@@ -1,4 +1,28 @@
 /* this is included in statistics.c */
+#include <tcl.h>
+#include <stdlib.h>
+#include <string.h>
+#include "utils.h"
+#include "statistics.h"
+#include "tcl/statistics_chain_tcl.h"
+#include "statistics_molecule.h"
+#include "tcl/statistics_cluster_tcl.h"
+#include "tcl/statistics_fluid_tcl.h"
+#include "energy.h"
+#include "modes.h"
+#include "tcl/pressure_tcl.h"
+#include "communication.h"
+#include "grid.h"
+#include "parser.h"
+#include "particle_data.h"
+#include "interaction_data.h"
+#include "domain_decomposition.h"
+#include "verlet.h"
+#include "lb.h"
+#include "tcl/virtual_sites_com_tcl.h"
+#include "initialize.h"
+#include "tcl/statistics_chain_tcl.h"
+#include "tcl/topology_tcl.h"
 #include "mystatistics.h"
 
 #ifdef MY_STAT
