@@ -82,6 +82,7 @@ static void wall_sort_particles() {
   //}
   counter=1;
 }
+#if 0
 static int meanpeaks(int sets){
 
  num_of_sets = sets;
@@ -92,6 +93,7 @@ static int meanpeaks(int sets){
     }
   return 0;
 }
+#endif
 static int printpeaks(char* filename){
  if (num_of_sets==0){
   savefilename=filename;
@@ -561,9 +563,9 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
   DoubleList g;
   int job, bin;
   double rmin, rmax,rclocal;
-  int rbins, boxes, setts;
+  int rbins, boxes;
   enum { BINS, MX, MYZ, RDFYZ,BONDYZ,SCALE,SCALE2, PRINT, PEAKS, UPDATEMEAN };
-  double floatarg;
+  //double floatarg;
   
   if (argc < 1) {
     Tcl_AppendResult(interp, "expected: analyze wallstuff -bins <binboundaries> | -myz <bin> |-mx <bin> | -rdfyz <bin> <rmin> <rmax> <rdfbins> |-bondyz| -scale| -scale2 ",
