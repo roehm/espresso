@@ -170,6 +170,7 @@ libEspresso_a_SOURCES += \
 	tcl/statistics_chain_tcl.c tcl/statistics_chain_tcl.h \
 	tcl/statistics_cluster_tcl.c tcl/statistics_cluster_tcl.h \
 	tcl/statistics_fluid_tcl.c tcl/statistics_fluid_tcl.h \
+	tcl/statistics_nucleation_tcl.c tcl/statistics_nucleation_tcl.h \
 	tcl/statistics_tcl.c tcl/statistics_tcl.h \
 	tcl/thermostat_tcl.c tcl/thermostat_tcl.h \
 	tcl/topology_tcl.c \

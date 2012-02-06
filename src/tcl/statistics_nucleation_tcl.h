@@ -29,7 +29,9 @@
 
 #ifndef STATISTICS_NUCLEATION_TCL_H
 #define STATISTICS_NUCLEATION_TCL_H
- 
+
+#include "parser.h"
+
 /** Largest bubble volume of vapor-like particles
 */
 int tclcommand_analyze_bubble_volume(Tcl_Interp *interp, int argc, char **argv);
