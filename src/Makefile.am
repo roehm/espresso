@@ -87,6 +87,7 @@ libEspresso_a_SOURCES = \
 	molforces.c molforces.h \
 	mol_cut.h \
 	morse.h \
+	mystatistics.c mystatistics.h \ 
 	nemd.c nemd.h \
 	npt.h \
 	nsquare.c nsquare.h \
