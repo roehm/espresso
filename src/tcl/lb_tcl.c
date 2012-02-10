@@ -204,7 +204,7 @@ int tclcommand_lbfluid(ClientData data, Tcl_Interp *interp, int argc, char **arg
       else if (ARG0_IS_S("ext_force")) {
 #ifdef EXTERNAL_FORCES
         if ( argc < 4 || !ARG_IS_D(1, vectarg[0]) || !ARG_IS_D(2, vectarg[1]) ||  !ARG_IS_D(3, vectarg[2]) ) {
-	        Tcl_AppendResult(interp, "friction requires 1 argument", (char *)NULL);
+	        Tcl_AppendResult(interp, "external force requires 3 arguments", (char *)NULL);
           return TCL_ERROR;
         } else if (lb_lbfluid_set_ext_force(vectarg[0], vectarg[1], vectarg[2]) == 0) {
           argc-=4; argv+=4;
