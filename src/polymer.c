@@ -162,9 +162,9 @@ int constraint_collision(double *p1, double *p2){
     case CONSTRAINT_PORE:
       calculate_pore_dist(&part1,folded_pos1,&part1,&c->c.pore,&d1,v);
       calculate_pore_dist(&part2,folded_pos2,&part2,&c->c.pore,&d2,v);
-      if(d1<0.0 || d2<0.0)	return 1;
+      //fprintf(stderr,"d1: %f, d2: %f; ",d1,d2);
+      if(d1<1.0 || d2<1.0)	return 1;
 	  break;
-    case CONSTRAINT_PLATE:
     case CONSTRAINT_RHOMBOID:
       break;
     }

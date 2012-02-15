@@ -679,7 +679,7 @@ proc prepare_vmd_connection { {filename "vmd"} {wait "0"} {start "1" } {draw_con
 
         # Use triangulation, edge length of the triangles = tlength
         
-        set tlength 0.3
+        set tlength 0.7
 
         for {set dy [expr -$r]} {$dy < $r} {set dy [expr $dy + $tlength]} {
           for {set dz [expr -$r]} {$dz < $r} {set dz [expr $dz + $tlength]} {
