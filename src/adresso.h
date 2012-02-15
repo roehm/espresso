@@ -1,6 +1,7 @@
 /*
-  Copyright (C) 2010 The ESPResSo project
-  Copyright (C) 2008,2009,2010 Max-Planck-Institute for Polymer Research, Theory Group, PO Box 3148, 55021 Mainz, Germany
+  Copyright (C) 2010,2012 The ESPResSo project
+  Copyright (C) 2008,2009,2010 
+   Max-Planck-Institute for Polymer Research, Theory Group
   
   This file is part of ESPResSo.
   
@@ -50,11 +51,6 @@ extern double adress_vars[7];
 */
 
 #ifdef ADRESS
-// This code requires the "center of mass" implementation of virtual sites
-#ifndef VIRTUAL_SITES_COM
- #error Adress requires the "center of mass"-implementation  of virtual sites. Please activate it in myconfig.h
-#endif
-/* #endif */
 
 /** Calc adress weight function of a vector
     @param x input vector
