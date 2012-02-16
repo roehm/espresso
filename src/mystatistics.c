@@ -13,7 +13,7 @@
 #include "tcl/pressure_tcl.h"
 #include "communication.h"
 #include "grid.h"
-#include "parser.h"
+#include "tcl/parser.h"
 #include "particle_data.h"
 #include "interaction_data.h"
 #include "domain_decomposition.h"
@@ -22,7 +22,7 @@
 #include "tcl/virtual_sites_com_tcl.h"
 #include "initialize.h"
 #include "tcl/statistics_chain_tcl.h"
-#include "tcl/topology_tcl.h"
+//#include "tcl/topology_tcl.h"
 #include "mystatistics.h"
 
 #ifdef MY_STAT

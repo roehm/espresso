@@ -1,3 +1,4 @@
+# Copyright (C) 2012 The ESPResSo project
 # Copyright (C) 2006,2007,2008,2009,2010,2011 Olaf Lenz, Axel Arnold
 # Copyright (C) 2008,2009,2010 
 #   Max-Planck-Institute for Polymer Research, Theory Group
@@ -23,7 +24,7 @@ AC_INIT([ESPResSo],[3.0.2],[espressomd-users@nongnu.org])
 
 AC_PREREQ([2.59])
 
-AC_CONFIG_SRCDIR([src/main.c])
+AC_CONFIG_SRCDIR([src/initialize.c])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(config)
 AC_PREFIX_DEFAULT($HOME/Espresso)
@@ -180,7 +181,8 @@ AM_CONDITIONAL(HAVE_LATEX,
 	[test .$PDFLATEX != .no && 
 	test .$MAKEINDEX != .no && 
 	test .$BIBTEX != .no])
-
+AC_PATH_PROG(PYTHON,python,no)
+AM_CONDITIONAL(HAVE_PYTHON, [test .$PYTHON != .no])
 
 cat <<EOF
 ****************************************************************
@@ -231,7 +233,15 @@ dnl with_tcl=no   bail out
 dnl otherwise     use the specified version
 
 if test .$with_tcl = .no; then
-   AC_MSG_ERROR([Tcl is required by ESPResSo!])
+   AC_MSG_WARN([
+*********************************************************
+*                                                       *
+* Without Tcl, ESPResSo doesn't do anything useful yet! *
+*                                                       *
+*********************************************************
+])
+   use_tcl=none
+   AC_DEFINE(TCL,[],[Whether Tcl is available])
 elif test .$with_tcl = .yes; then
 	for version in $TCL_VERSION tcl8.6 tcl8.5 tcl8.4 tcl8.3 tcl8.2 tcl; do
 		ES_ADDPATH_CHECK_LIB($version, Tcl_Init, [use_tcl=$version])
@@ -242,7 +252,7 @@ else
 fi
 
 # check the results
-if test .$use_tcl = .; then
+if test .$use_tcl = . ; then
    # Tcl was not found
    case $target_os in
 	*darwin*) AC_MSG_NOTICE(
@@ -264,18 +274,22 @@ case $target_os in
 	  extrapaths=/usr/include/$version ;;
 esac
 
-ES_ADDPATH_CHECK_HEADER(tcl.h, [], 
-		[AC_MSG_FAILURE([
+if test .$use_tcl != .none; then
+   ES_ADDPATH_CHECK_HEADER(tcl.h, [], 
+			[AC_MSG_FAILURE([
 ********************************************************************************
 * Could not find the Tcl header files (tcl.h).                                 *
 * Please add the include path to CPPFLAGS                                      *
 * (e.g. configure CPPFLAGS=-I/usr/include)!                                    *
 ********************************************************************************
 ])], $extrapaths)
+fi
 
 if test .$use_tcl = .; then
    use_tcl=none
 fi
+
+AM_CONDITIONAL(TCL, [test .$use_tcl != .none])
 
 ##################################
 # check for tk
@@ -482,6 +496,8 @@ EOF
 AC_CONFIG_HEADERS([src/acconfig.h])
 AC_CONFIG_FILES([
 	Makefile
+	config/Makefile
+	config/myconfig-sample-header.h
 	src/Makefile
 	tools/Makefile
 	scripts/Makefile 
@@ -496,12 +512,12 @@ AC_CONFIG_FILES([
 	doc/tutorials/01-lennard_jones/Makefile 
 	doc/tutorials/02-charged_system/Makefile 
 	doc/latexit.sh
-	myconfig-sample.h
 	])
 AC_CONFIG_FILES([testsuite/runtest.sh],
 	[chmod 755 testsuite/runtest.sh])
 AC_CONFIG_FILES([tools/es_mpiexec],
 	[chmod 755 tools/es_mpiexec])
+
 
 AC_OUTPUT
 
@@ -511,8 +527,8 @@ cat <<EOF
 ****************************************************************
 platform detected	= $target
 
-Compiler settings:
-------------------
+Compiler
+--------
 compiler		= $CC
 linker			= $LD
 c compiler flags	= $CFLAGS
@@ -523,15 +539,15 @@ using debug flags	= $enable_debug
 using profiling flags	= $enable_profiling
 inline			= $MDINLINE
 
-Libraries:
-----------
+Libraries
+---------
 Tcl version		= $use_tcl
 Tk version		= $use_tk
 FFTW 			= $fftw_found
 efence			= $with_efence
 
-Other settings:
----------------
+Other settings
+--------------
 local config header	= $myconfig
 installation prefix	= $prefix
 number of test tasks    = $CPU_COUNT
@@ -542,17 +558,21 @@ makeindex		= $MAKEINDEX
 bibtex			= $BIBTEX
 doxygen			= $DOXYGEN
 dot			= $DOT
+EOF
+
+if test x$with_cuda != xno; then
+cat <<EOF
+CUDA compiler		= $NVCC
+CUDA flags		= $NVCCFLAGS
 
 EOF
+else
+   echo
+   echo "CUDA disabled or not supported."
+fi
 
 if test x"$use_mpi_fake" = x"yes"; then
    echo "WARNING: MPI disabled or not supported! Parallelization turned off."
-fi
-
-if test x$with_cuda != xno; then
-   echo "Using NVIDA CUDA compiler nvcc = $NVCC, flags = $NVCCFLAGS."
-else
-   echo "CUDA disabled or not supported."
 fi
 
 if test .$pdflatex = .no; then

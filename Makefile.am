@@ -1,3 +1,4 @@
+# Copyright (C) 2012 The ESPResSo project
 # Copyright (C) 2007,2008,2009,2010,2011 Olaf Lenz, Axel Arnold
 #
 # This file is part of ESPResSo.
@@ -15,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-SUBDIRS = src . scripts tools testsuite doc
+SUBDIRS = config src . scripts tools testsuite doc
 
 ACLOCAL_AMFLAGS = -I config
 
@@ -23,36 +24,24 @@ ACLOCAL_AMFLAGS = -I config
 # by any other means
 EXTRA_DIST = bootstrap.sh samples packages $(extra)
 
-#################################################################
-# Installation of the main program
-#################################################################
-# Two binaries are generated: Espresso for the build dir,
-# Espresso.install for the installation dir. 
-# The ".install" suffix is removed upon installation.
-noinst_PROGRAMS = Espresso
-Espresso_CPPFLAGS = -D 'ESPRESSO_SCRIPTS_DEFAULT="$(buildscriptsdir)"'
-Espresso_SOURCES = src/scriptsdir.c src/main.c
-Espresso_LDADD = src/libEspresso.a
+all-local: Espresso myconfig-sample.h
+CLEANFILES = Espresso myconfig-sample.h
 
-bin_PROGRAMS = Espresso.install
-Espresso_install_CPPFLAGS = -D 'ESPRESSO_SCRIPTS_DEFAULT="$(scriptsdir)"'
-Espresso_install_SOURCES = src/scriptsdir.c src/main.c
-Espresso_install_LDADD = src/libEspresso.a
+Espresso: 
+	$(LN_S) src/Espresso .
 
-# rename Espresso after installation
-install-exec-hook:
-	$(am__mv) \
-		$(DESTDIR)$(bindir)/Espresso.install \
-		$(DESTDIR)$(bindir)/Espresso
-
-uninstall-local:
-	-rm -f $(DESTDIR)$(bindir)/Espresso
+myconfig-sample.h: config/myconfig-sample-header.h config/myconfig-sample-body.h
+	cat config/myconfig-sample-header.h > myconfig-sample.h
+	cat config/myconfig-sample-body.h >> myconfig-sample.h
 
 
 #################################################################
 # Documentation
 #################################################################
-.PHONY: FORCE doc ug dg tutorials
-doc ug dg tutorials: FORCE
+.PHONY: FORCE doc ug dg tutorials doxygen 
+ug dg tutorials: FORCE
+	cd doc; $(MAKE) --print-directory $@
+doc doxygen: FORCE
+	cd src; $(MAKE) --print-directory $@
 	cd doc; $(MAKE) --print-directory $@
 FORCE:
