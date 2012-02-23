@@ -548,6 +548,15 @@ proc galileiTransformParticles { } {
 #
 #############################################################
 
+proc check_tria_points {r c1 c2 c3 t1 t2 t3} {
+    set dist2 [expr ($t1-$c1)*($t1-$c1)+($t2-$c2)*($t2-$c2)+($t3-$c3)*($t3-$c3)]
+    if {$dist2 < [expr $r*$r]} {
+      return 0
+    } else {
+      return 1
+    }
+}
+
 proc prepare_vmd_connection { {filename "vmd"} {wait "0"} {start "1" } {draw_constraints "0"} } {
   global vmd_show_constraints_flag
   
@@ -580,8 +589,9 @@ proc prepare_vmd_connection { {filename "vmd"} {wait "0"} {start "1" } {draw_con
       set id [ lindex $c 0 ]
       set type [ lindex $c 1 ]
       
-      puts $vmdout_file "draw color gray"
-      
+      puts $vmdout_file "draw color orange"
+
+# SPHERE 
       if {$type == "sphere"} {
         set centerx [ lindex $c 3 ]
         set centery [ lindex $c 4 ]
@@ -589,6 +599,8 @@ proc prepare_vmd_connection { {filename "vmd"} {wait "0"} {start "1" } {draw_con
         set radius [ lindex $c 7 ]
         
         puts $vmdout_file "draw sphere \{ $centerx $centery $centerz \} radius $radius"
+        
+# RHOMBOID 
       } elseif {$type == "rhomboid"} {
         set p_x [lindex $c 3]
         set p_y [lindex $c 4]
@@ -630,8 +642,90 @@ proc prepare_vmd_connection { {filename "vmd"} {wait "0"} {start "1" } {draw_con
         set r [lindex $c 11]
         
         set l [lindex $c 13]
+        puts $vmdout_file "draw cylinder \{[expr $l*($c_x-$a_x)] [expr $l*($c_y-$a_y)] [expr $l*($c_z-$a_z)]\} \{[expr $l*($c_x+$a_x)] [expr $l*($c_y+$a_y)] [expr $l*($c_z+$a_z)]\} radius $r resolution 38"
+
+# PORE        
+      } elseif {$type == "pore"} {
+        set c_x [lindex $c 3]
+        set c_y [lindex $c 4]
+        set c_z [lindex $c 5]
         
-        puts $vmdout_file "draw cylinder \{[expr $l*($c_x-$a_x)] [expr $l*($c_y-$a_y)] [expr $l*($c_z-$a_z)]\} \{[expr $l*($c_x+$a_x)] [expr $l*($c_y+$a_y)] [expr $l*($c_z+$a_z)]\} radius $r resolution 36"
+        set a_x [lindex $c 7]
+        set a_y [lindex $c 8]
+        set a_z [lindex $c 9]
+
+        set normfac [expr sqrt($a_x*$a_x + $a_y*$a_y + $a_z*$a_z)]
+        
+        set r [lindex $c 11]
+        
+        set l [lindex $c 13]
+ 
+        # rescale axis vector
+        set anx [expr $l*$a_x/$normfac]
+        set any [expr $l*$a_y/$normfac]
+        set anz [expr $l*$a_z/$normfac]
+        
+        set p1x [expr ($c_x-$anx)]
+        set p1y [expr ($c_y-$any)]
+        set p1z [expr ($c_z-$anz)]
+        
+        set p2x [expr ($c_x+$anx)]
+        set p2y [expr ($c_y+$any)]
+        set p2z [expr ($c_z+$anz)]
+
+        puts $vmdout_file "draw material Transparent"
+        puts $vmdout_file "draw cylinder \{$p1x $p1y $p1z\} \{$p2x $p2y $p2z\} radius $r resolution 38"
+        #puts $vmdout_file "draw material Opaque"        # unfortunately, does not work, then cylinder is also opaque
+
+        # Use triangulation, edge length of the triangles = tlength
+        
+        set tlength 0.7
+
+        for {set dy [expr -$r]} {$dy < $r} {set dy [expr $dy + $tlength]} {
+          for {set dz [expr -$r]} {$dz < $r} {set dz [expr $dz + $tlength]} {
+            set tria1y1 [expr $p1y+$dy]
+            set tria1z1 [expr $p1z+$dz]
+            set tria1y2 [expr $p1y+$dy+$tlength]
+            set tria1z2 [expr $p1z+$dz]
+            set tria1y3 [expr $p1y+$dy]
+            set tria1z3 [expr $p1z+$dz+$tlength]
+            if {[check_tria_points $r $p1x $p1y $p1z $p1x $tria1y1 $tria1z1] && [check_tria_points $r $p1x $p1y $p1z $p1x $tria1y2 $tria1z2] && [check_tria_points $r $p1x $p1y $p1z  $p1x $tria1y3 $tria1z3]} {
+              puts $vmdout_file "draw triangle \{$p1x $tria1y1 $tria1z1 \} \{$p1x $tria1y2 $tria1z2 \} \{$p1x $tria1y3 $tria1z3 \}"
+              puts $vmdout_file "draw triangle \{[expr $p1x+2*$anx] $tria1y1 $tria1z1 \} \{[expr $p1x+2*$anx] $tria1y2 $tria1z2 \} \{[expr $p1x+2*$anx] $tria1y3 $tria1z3 \}"
+            }
+            set tria1y1 [expr $p1y+$dy+$tlength]
+            set tria1z1 [expr $p1z+$dz+$tlength]
+            set tria1y2 [expr $p1y+$dy+$tlength]
+            set tria1z2 [expr $p1z+$dz]
+            set tria1y3 [expr $p1y+$dy]
+            set tria1z3 [expr $p1z+$dz+$tlength]
+            if {[check_tria_points $r $p1x $p1y $p1z $p1x $tria1y1 $tria1z1] && [check_tria_points $r $p1x $p1y $p1z $p1x $tria1y2 $tria1z2] && [check_tria_points $r $p1x $p1y $p1z  $p1x $tria1y3 $tria1z3]} {
+              puts $vmdout_file "draw triangle \{$p1x $tria1y1 $tria1z1 \} \{$p1x $tria1y2 $tria1z2 \} \{$p1x $tria1y3 $tria1z3 \}"
+              puts $vmdout_file "draw triangle \{[expr $p1x+2*$anx] $tria1y1 $tria1z1 \} \{[expr $p1x+2*$anx] $tria1y2 $tria1z2 \} \{[expr $p1x+2*$anx] $tria1y3 $tria1z3 \}"
+            }
+          }
+        }
+        
+        # squares around cylinder ends are now filled, now fill surface of the rest
+        
+        puts $vmdout_file "draw triangle \{$p1x [expr $p1y-$r] 0\} \{$p1x [expr $p1y-$r] [expr [lindex [setmd box_l] 2]-$p1z-$r]\} \{$p1x [lindex [setmd box_l] 1] [expr [lindex [setmd box_l] 2]-$p1z-$r] \}"
+        puts $vmdout_file "draw triangle \{$p1x [lindex [setmd box_l] 1] 0\} \{$p1x [expr $p1y-$r] 0\} \{$p1x [lindex [setmd box_l] 1] [expr [lindex [setmd box_l] 2]-$p1z-$r] \}"
+        puts $vmdout_file "draw triangle \{$p1x [expr $p1y-$r] 0\} \{$p1x 0 0\} \{$p1x 0 [expr $p1z+$r] \}"
+        puts $vmdout_file "draw triangle \{$p1x [expr $p1y-$r] 0\} \{$p1x [expr $p1y-$r] [expr $p1z+$r]\} \{$p1x 0 [expr $p1z+$r] \}"
+        
+        puts $vmdout_file "draw triangle \{$p1x [expr $p1y+$r] [expr [lindex [setmd box_l] 2]]\} \{$p1x [expr $p1y+$r] [expr [lindex [setmd box_l] 2]-$p1z+$r]\} \{$p1x 0 [expr [lindex [setmd box_l] 2]-$p1z+$r] \}"
+        puts $vmdout_file "draw triangle \{$p1x [expr $p1y+$r] [expr [lindex [setmd box_l] 2]]\} \{$p1x 0 [lindex [setmd box_l] 2]\} \{$p1x 0 [expr [lindex [setmd box_l] 2]-$p1z+$r] \}"
+        puts $vmdout_file "draw triangle \{$p1x [lindex [setmd box_l] 1] [lindex [setmd box_l] 2]\} \{$p1x [expr $p1y+$r] [expr $p1z-$r]\} \{$p1x [expr $p1y+$r] [lindex [setmd box_l] 2] \}"
+        puts $vmdout_file "draw triangle \{$p1x [lindex [setmd box_l] 1] [lindex [setmd box_l] 2]\} \{$p1x [expr $p1y+$r] [expr $p1z-$r]\} \{$p1x [lindex [setmd box_l] 1] [expr $p1z-$r] \}"
+#        
+        puts $vmdout_file "draw triangle \{[expr $p1x+2*$anx] [expr $p1y-$r] 0\} \{[expr $p1x+2*$anx] [expr $p1y-$r] [expr [lindex [setmd box_l] 2]-$p1z-$r]\} \{[expr $p1x+2*$anx] [lindex [setmd box_l] 1] [expr [lindex [setmd box_l] 2]-$p1z-$r] \}"
+        puts $vmdout_file "draw triangle \{[expr $p1x+2*$anx] [lindex [setmd box_l] 1] 0\} \{[expr $p1x+2*$anx] [expr $p1y-$r] 0\} \{[expr $p1x+2*$anx] [lindex [setmd box_l] 1] [expr [lindex [setmd box_l] 2]-$p1z-$r] \}"
+        puts $vmdout_file "draw triangle \{[expr $p1x+2*$anx] [expr $p1y-$r] 0\} \{[expr $p1x+2*$anx] 0 0\} \{[expr $p1x+2*$anx] 0 [expr $p1z+$r] \}"
+        puts $vmdout_file "draw triangle \{[expr $p1x+2*$anx] [expr $p1y-$r] 0\} \{[expr $p1x+2*$anx] [expr $p1y-$r] [expr $p1z+$r]\} \{[expr $p1x+2*$anx] 0 [expr $p1z+$r] \}"
+        puts $vmdout_file "draw triangle \{[expr $p1x+2*$anx] [expr $p1y+$r] [expr [lindex [setmd box_l] 2]]\} \{[expr $p1x+2*$anx] [expr $p1y+$r] [expr [lindex [setmd box_l] 2]-$p1z+$r]\} \{[expr $p1x+2*$anx] 0 [expr [lindex [setmd box_l] 2]-$p1z+$r] \}"
+        puts $vmdout_file "draw triangle \{[expr $p1x+2*$anx] [expr $p1y+$r] [expr [lindex [setmd box_l] 2]]\} \{[expr $p1x+2*$anx] 0 [lindex [setmd box_l] 2]\} \{[expr $p1x+2*$anx] 0 [expr [lindex [setmd box_l] 2]-$p1z+$r] \}"
+        puts $vmdout_file "draw triangle \{[expr $p1x+2*$anx] [lindex [setmd box_l] 1] [lindex [setmd box_l] 2]\} \{[expr $p1x+2*$anx] [expr $p1y+$r] [expr $p1z-$r]\} \{[expr $p1x+2*$anx] [expr $p1y+$r] [lindex [setmd box_l] 2] \}"
+        puts $vmdout_file "draw triangle \{[expr $p1x+2*$anx] [lindex [setmd box_l] 1] [lindex [setmd box_l] 2]\} \{[expr $p1x+2*$anx] [expr $p1y+$r] [expr $p1z-$r]\} \{[expr $p1x+2*$anx] [lindex [setmd box_l] 1] [expr $p1z-$r] \}"
       }
     }
   }

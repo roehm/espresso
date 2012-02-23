@@ -182,6 +182,7 @@ void on_integration_start()
     case COULOMB_P3M:   break;
 #endif /*P3M*/
     case COULOMB_EWALD: break;
+    case COULOMB_DH: break;
     default: {
       char *errtext = runtime_error(128);
       ERROR_SPRINTF(errtext,"{014 npt only works with Ewald sum or P3M} ");

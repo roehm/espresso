@@ -198,6 +198,17 @@ typedef struct {
   /** check whether a particle is a ghost or not */
   int ghost;
 #endif
+
+  /* Q6 */
+  int neb;
+  int solid;
+  int solidBonds;
+  double q6;
+  double q6r[14];
+  double q6i[14];
+  int neighbors[127];
+  int clabel;
+
 } ParticleLocal;
 
 #ifdef LB

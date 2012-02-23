@@ -95,6 +95,9 @@ void auto_exclusion(int distance);
 
 void init_particle(Particle *part)
 {
+
+  int m;
+    
   /* ParticleProperties */
   part->p.identity = -1;
   part->p.type     = 0;
@@ -210,6 +213,17 @@ void init_particle(Particle *part)
   part->T = -1.0;
   part->gamma = -1.0;
 #endif
+
+  /* Q6 */
+  part->l.neb = 0;
+  part->l.solid = 0;
+  part->l.solidBonds = 0;
+  part->l.q6 = 0.0;
+  for(m=0; m<=6; m++) {
+    part->l.q6r[m]=0.0;
+    part->l.q6i[m]=0.0;
+  }
+  part->l.clabel = -1;
 }
 
 void free_particle(Particle *part) {
