@@ -69,6 +69,7 @@ static size_t size_of_forces;
 static size_t size_of_positions;
 static size_t size_of_seed;
 static size_t size_of_extern_nodeforces;
+size_t size_of_nodes_gpu;
 
 /**parameters residing in constant memory */
 static __device__ __constant__ LB_parameters_gpu para;
@@ -294,6 +295,10 @@ __device__ void thermalize_modes(float *mode, unsigned int index, LB_randomnr_gp
 
   float Rho = mode[0] + para.rho*para.agrid*para.agrid*para.agrid;
 
+  /*
+    if (Rho <0)
+    printf("Rho too small! %f %f %f", Rho, mode[0], para.rho*para.agrid*para.agrid*para.agrid);
+  */
 #ifdef GAUSSRANDOM
   /** stress modes */
   gaussian_random(rn);
@@ -658,12 +663,11 @@ __device__ void calc_viscous_force(LB_nodes_gpu n_a, float *delta, LB_particle_g
   float temp_delta[6];
   float temp_delta_half[6];
 
-  /** see ahlrichs + duennweg page 8227 equ (10) and (11) */
+  /** see ahlrichs + duenweg page 8227 equ (10) and (11) */
   #pragma unroll
   for(int i=0; i<3; ++i){
     float scaledpos = particle_data[part_index].p[i]/para.agrid;
-    my_left[i] = (int)(floorf(scaledpos));
-    //printf("scaledpos %f \t myleft: %u \n", scaledpos, my_left[i]);
+    my_left[i] = (int)(floorf(scaledpos - 0.5f));
     temp_delta[3+i] = scaledpos - my_left[i];
     temp_delta[i] = 1.f - temp_delta[3+i];
     /**further value used for interpolation of fluid velocity at part pos near boundaries */
@@ -680,9 +684,10 @@ __device__ void calc_viscous_force(LB_nodes_gpu n_a, float *delta, LB_particle_g
   delta[6] = temp_delta[0] * temp_delta[4] * temp_delta[5];
   delta[7] = temp_delta[3] * temp_delta[4] * temp_delta[5];
 
-  int x = my_left[0];
-  int y = my_left[1];
-  int z = my_left[2];
+  // modulo for negative numbers is strange at best, shift to make sure we are positive
+  int x = my_left[0] + para.dim_x;
+  int y = my_left[1] + para.dim_y;
+  int z = my_left[2] + para.dim_z;
 
   node_index[0] = x%para.dim_x     + para.dim_x*(y%para.dim_y)     + para.dim_x*para.dim_y*(z%para.dim_z);
   node_index[1] = (x+1)%para.dim_x + para.dim_x*(y%para.dim_y)     + para.dim_x*para.dim_y*(z%para.dim_z);
@@ -700,7 +705,6 @@ __device__ void calc_viscous_force(LB_nodes_gpu n_a, float *delta, LB_particle_g
     interpolated_u2 += delta[i]*mode[2]/(Rho);
     interpolated_u3 += delta[i]*mode[3]/(Rho);
   }
-
 
   /** calculate viscous force
    * take care to rescale velocities with time_step and transform to MD units
@@ -1310,12 +1314,12 @@ void lb_init_GPU(LB_parameters_gpu *lbpar_gpu){
   size_of_forces = lbpar_gpu->number_of_particles * sizeof(LB_particle_force_gpu);
   size_of_positions = lbpar_gpu->number_of_particles * sizeof(LB_particle_gpu);
   size_of_seed = lbpar_gpu->number_of_particles * sizeof(LB_particle_seed_gpu);
-
+  size_of_nodes_gpu = lbpar_gpu->number_of_nodes * 19 * sizeof(float);
+  
   cuda_safe_mem(cudaMalloc((void**)&device_values, size_of_values));
 
-
-  cuda_safe_mem(cudaMalloc((void**)&nodes_a.vd, lbpar_gpu->number_of_nodes * 19 * sizeof(float)));
-  cuda_safe_mem(cudaMalloc((void**)&nodes_b.vd, lbpar_gpu->number_of_nodes * 19 * sizeof(float)));                                           
+  cuda_safe_mem(cudaMalloc((void**)&nodes_a.vd, size_of_nodes_gpu));
+  cuda_safe_mem(cudaMalloc((void**)&nodes_b.vd, size_of_nodes_gpu));                                           
 
   cuda_safe_mem(cudaMalloc((void**)&nodes_a.seed, lbpar_gpu->number_of_nodes * sizeof(unsigned int)));
   cuda_safe_mem(cudaMalloc((void**)&nodes_a.boundary, lbpar_gpu->number_of_nodes * sizeof(unsigned int)));
@@ -1360,7 +1364,6 @@ void lb_init_GPU(LB_parameters_gpu *lbpar_gpu){
   current_nodes = &nodes_a;
   h_gpu_check[0] = 0;
   cuda_safe_mem(cudaMemcpy(h_gpu_check, gpu_check, sizeof(int), cudaMemcpyDeviceToHost));
-//fprintf(stderr, "initialization of lb gpu code %i\n", lbpar_gpu->number_of_nodes);
   cudaThreadSynchronize();
   if(!h_gpu_check[0]){
     fprintf(stderr, "initialization of lb gpu code failed! \n");
@@ -1551,6 +1554,18 @@ void lb_get_values_GPU(LB_values_gpu *host_values){
 
 }
 
+
+/** setup and call kernel for getting macroscopic fluid values of all nodes
+ * @param *host_values struct to save the gpu values
+*/
+void lb_print_checkpoint_GPU(float *host_checkpoint_vd, unsigned int *host_checkpoint_seed, unsigned int *host_checkpoint_boundary, float *host_checkpoint_force){
+
+  cudaMemcpy(host_checkpoint_vd, current_nodes->vd, size_of_nodes_gpu, cudaMemcpyDeviceToHost);
+  cudaMemcpy(host_checkpoint_seed, current_nodes->seed, lbpar_gpu.number_of_nodes * sizeof(unsigned int), cudaMemcpyDeviceToHost);
+  cudaMemcpy(host_checkpoint_boundary, current_nodes->boundary, lbpar_gpu.number_of_nodes * sizeof(unsigned int), cudaMemcpyDeviceToHost);
+  cudaMemcpy(host_checkpoint_force, node_f.force, lbpar_gpu.number_of_nodes * 3 * sizeof(float), cudaMemcpyDeviceToHost);
+
+}
 /** get all the boundary flags for all nodes
  *  @param host_bound_array here go the values of the boundary flag
  */
