@@ -199,6 +199,9 @@ static void register_tcl_commands(Tcl_Interp* interp) {
 #ifdef COLLISION_DETECTION
   REGISTER_COMMAND("on_collision", tclcommand_on_collision);
 #endif
+#ifdef Q6
+  REGISTER_COMMAND("q6", tclcommand_q6);
+#endif
 }
 
 static void register_global_variables(Tcl_Interp *interp)

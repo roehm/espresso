@@ -214,6 +214,7 @@ void init_particle(Particle *part)
   part->gamma = -1.0;
 #endif
 
+#ifdef Q6
   /* Q6 */
   part->l.neb = 0;
   part->l.solid = 0;
@@ -225,6 +226,7 @@ void init_particle(Particle *part)
   }
   part->l.clabel = -1;
 }
+#endif
 
 void free_particle(Particle *part) {
   realloc_intlist(&(part->bl), 0);

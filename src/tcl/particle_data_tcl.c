@@ -180,6 +180,15 @@ void tclcommand_part_print_mu_E(Particle *part, char *buffer, Tcl_Interp *interp
 }
 #endif
 
+#ifdef Q6
+void tclcommand_part_print_Q6(Particle *part, char *buffer, Tcl_Interp *interp)
+{
+  /* unscale velocities ! */
+  Tcl_PrintDouble(interp, part->p.q6, buffer);
+  Tcl_AppendResult(interp, buffer, " ", (char *)NULL);
+}
+#endif
+
 void tclcommand_part_print_f(Particle *part, char *buffer, Tcl_Interp *interp)
 {
   /* unscale forces ! */

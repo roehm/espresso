@@ -199,6 +199,7 @@ typedef struct {
   int ghost;
 #endif
 
+#ifdef Q6
   /* Q6 */
   int neb;
   int solid;
@@ -208,6 +209,7 @@ typedef struct {
   double q6i[14];
   int neighbors[127];
   int clabel;
+#endif
 
 } ParticleLocal;
 

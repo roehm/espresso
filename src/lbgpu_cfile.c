@@ -1,18 +1,18 @@
-/* 
+/*
    Copyright (C) 2010,2011,2012 The ESPResSo project
 
    This file is part of ESPResSo.
-  
+
    ESPResSo is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
-   
+
    ESPResSo is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
@@ -188,7 +188,7 @@ void lb_reinit_parameters_gpu() {
 
   if (lbpar_gpu.viscosity > 0.0) {
     /* Eq. (80) Duenweg, Schiller, Ladd, PRE 76(3):036704 (2007). */
-    lbpar_gpu.gamma_shear = 1. - 2./(6.*lbpar_gpu.viscosity*lbpar_gpu.tau/(lbpar_gpu.agrid*lbpar_gpu.agrid) + 1.);   
+    lbpar_gpu.gamma_shear = 1. - 2./(6.*lbpar_gpu.viscosity*lbpar_gpu.tau/(lbpar_gpu.agrid*lbpar_gpu.agrid) + 1.);
   }
 
   if (lbpar_gpu.bulk_viscosity > 0.0) {
@@ -199,7 +199,7 @@ void lb_reinit_parameters_gpu() {
   if (temperature > 0.0) {  /* fluctuating hydrodynamics ? */
 
     lbpar_gpu.fluct = 1;
-	LB_TRACE (fprintf(stderr, "fluct on \n"));
+	 LB_TRACE (fprintf(stderr, "fluct on \n"));
     /* Eq. (51) Duenweg, Schiller, Ladd, PRE 76(3):036704 (2007).*/
     /* Note that the modes are not normalized as in the paper here! */
 
@@ -237,7 +237,7 @@ void lb_init_gpu() {
   lb_reinit_parameters_gpu();
 
   lb_realloc_particles_gpu();
-	
+
   lb_init_GPU(&lbpar_gpu);
 
   LB_TRACE(printf("Initialzing fluid on GPU successful\n"));
@@ -258,7 +258,7 @@ static void mpi_get_particles_lb(LB_particle_gpu *host_data)
   int c;
   MPI_Status status;
 
-  int i;	
+  int i;
   int *sizes;
   sizes = malloc(sizeof(int)*n_nodes);
 
@@ -280,7 +280,7 @@ static void mpi_get_particles_lb(LB_particle_gpu *host_data)
         if (pnode == 0) {
           for (c = 0; c < local_cells.n; c++) {
             Particle *part;
-            int npart;	
+            int npart;
             int dummy[3] = {0,0,0};
             double pos[3];
             cell = local_cells.cell[c];
@@ -292,7 +292,7 @@ static void mpi_get_particles_lb(LB_particle_gpu *host_data)
               host_data[i+g].p[0] = (float)pos[0];
               host_data[i+g].p[1] = (float)pos[1];
               host_data[i+g].p[2] = (float)pos[2];
-								
+
               host_data[i+g].v[0] = (float)part[i].m.v[0];
               host_data[i+g].v[1] = (float)part[i].m.v[1];
               host_data[i+g].v[2] = (float)part[i].m.v[2];
@@ -301,9 +301,9 @@ static void mpi_get_particles_lb(LB_particle_gpu *host_data)
               host_data[i+g].mu_E[1] = (float)part[i].p.mu_E[1];
               host_data[i+g].mu_E[2] = (float)part[i].p.mu_E[2];
 #endif
-            }  
+            }
             g += npart;
-          }  
+          }
         }
         else {
           MPI_Recv(&host_data[g], sizes[pnode]*sizeof(LB_particle_gpu), MPI_BYTE, pnode, REQ_GETPARTS,
@@ -318,7 +318,7 @@ static void mpi_get_particles_lb(LB_particle_gpu *host_data)
 }
 
 static void mpi_get_particles_slave_lb(){
- 
+
   int n_part;
   int g;
   LB_particle_gpu *host_data_sl;
@@ -333,7 +333,7 @@ static void mpi_get_particles_slave_lb(){
     /* get (unsorted) particle informations as an array of type 'particle' */
     /* then get the particle information */
     host_data_sl = malloc(n_part*sizeof(LB_particle_gpu));
-    
+
     g = 0;
     for (c = 0; c < local_cells.n; c++) {
       Particle *part;
@@ -346,8 +346,8 @@ static void mpi_get_particles_slave_lb(){
 
       for (i=0;i<npart;i++) {
         memcpy(pos, part[i].r.p, 3*sizeof(double));
-        fold_position(pos, dummy);	
-			
+        fold_position(pos, dummy);
+
         host_data_sl[i+g].p[0] = (float)pos[0];
         host_data_sl[i+g].p[1] = (float)pos[1];
         host_data_sl[i+g].p[2] = (float)pos[2];
@@ -366,16 +366,16 @@ static void mpi_get_particles_slave_lb(){
     /* and send it back to the master node */
     MPI_Send(host_data_sl, n_part*sizeof(LB_particle_gpu), MPI_BYTE, 0, REQ_GETPARTS, comm_cart);
     free(host_data_sl);
-  }  
+  }
 }
 
 static void mpi_send_forces_lb(LB_particle_force_gpu *host_forces){
-	
+
   int n_part;
   int g, pnode;
   Cell *cell;
   int c;
-  int i;	
+  int i;
   int *sizes;
   sizes = malloc(sizeof(int)*n_nodes);
   n_part = cells_get_n_particles();
@@ -393,7 +393,7 @@ static void mpi_send_forces_lb(LB_particle_force_gpu *host_forces){
       if (sizes[pnode] > 0) {
         if (pnode == 0) {
           for (c = 0; c < local_cells.n; c++) {
-            int npart;	
+            int npart;
             cell = local_cells.cell[c];
             npart = cell->n;
             for (i=0;i<npart;i++) {
@@ -406,7 +406,7 @@ static void mpi_send_forces_lb(LB_particle_force_gpu *host_forces){
         }
         else {
         /* and send it back to the slave node */
-        MPI_Send(&host_forces[g], sizes[pnode]*sizeof(LB_particle_force_gpu), MPI_BYTE, pnode, REQ_GETPARTS, comm_cart);			
+        MPI_Send(&host_forces[g], sizes[pnode]*sizeof(LB_particle_force_gpu), MPI_BYTE, pnode, REQ_GETPARTS, comm_cart);
         g += sizes[pnode];
         }
       }
@@ -438,7 +438,7 @@ static void mpi_send_forces_slave_lb(){
     MPI_Recv(host_forces_sl, n_part*sizeof(LB_particle_force_gpu), MPI_BYTE, 0, REQ_GETPARTS,
     comm_cart, &status);
     for (c = 0; c < local_cells.n; c++) {
-      int npart;	
+      int npart;
       cell = local_cells.cell[c];
       npart = cell->n;
       for (i=0;i<npart;i++) {
@@ -449,7 +449,7 @@ static void mpi_send_forces_slave_lb(){
       g += npart;
     }
     free(host_forces_sl);
-  } 
+  }
 }
 /*@}*/
 
@@ -460,19 +460,18 @@ int lb_lbnode_set_extforce_GPU(int ind[3], double f[3])
        ind[2] < 0 || ind[2] >= lbpar_gpu.dim_z )
     return ES_ERROR;
 
-  unsigned int index =
-    ind[0] + ind[1]*lbpar_gpu.dim_x + ind[2]*lbpar_gpu.dim_x*lbpar_gpu.dim_y;
+  unsigned int index = ind[0] + ind[1]*lbpar_gpu.dim_x + ind[2]*lbpar_gpu.dim_x*lbpar_gpu.dim_y;
 
   size_t  size_of_extforces = (n_extern_nodeforces+1)*sizeof(LB_extern_nodeforce_gpu);
   host_extern_nodeforces = realloc(host_extern_nodeforces, size_of_extforces);
-  
+
   host_extern_nodeforces[n_extern_nodeforces].force[0] = (float)f[0];
   host_extern_nodeforces[n_extern_nodeforces].force[1] = (float)f[1];
   host_extern_nodeforces[n_extern_nodeforces].force[2] = (float)f[2];
-  
+
   host_extern_nodeforces[n_extern_nodeforces].index = index;
   n_extern_nodeforces++;
-  
+
   if(lbpar_gpu.external_force == 0)lbpar_gpu.external_force = 1;
 
   lb_init_extern_nodeforces_GPU(n_extern_nodeforces, host_extern_nodeforces, &lbpar_gpu);

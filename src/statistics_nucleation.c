@@ -1,21 +1,21 @@
 /*
   Copyright (C) 2010 The ESPResSo project
   Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010 Max-Planck-Institute for Polymer Research, Theory Group, PO Box 3148, 55021 Mainz, Germany
-  
+
   This file is part of ESPResSo.
-  
+
   ESPResSo is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   ESPResSo is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 /** \file statistics_nucleation.c
  *
@@ -89,7 +89,7 @@ int check_cell_neighbor(int *box_n, int act_index, int direction) {
                                 cell_index[0] += box_n[0];
                         }
                         tmp_index=convert_coordinates_to_index(box_n, cell_index);
-                        if ((tmp_index >= 0) && (tmp_index <= max_index)) return tmp_index;        
+                        if ((tmp_index >= 0) && (tmp_index <= max_index)) return tmp_index;
                         break;
                 case 2:
                         if(cell_index[1] < box_n[1]) {
@@ -98,7 +98,7 @@ int check_cell_neighbor(int *box_n, int act_index, int direction) {
                                 cell_index[1] -= box_n[1];
                         }
                         tmp_index=convert_coordinates_to_index(box_n, cell_index);
-                        if ((tmp_index >= 0) && (tmp_index <= max_index)) return tmp_index;        
+                        if ((tmp_index >= 0) && (tmp_index <= max_index)) return tmp_index;
                         break;
                 case 3:
                         if(cell_index[1] > 0) {
@@ -107,7 +107,7 @@ int check_cell_neighbor(int *box_n, int act_index, int direction) {
                                 cell_index[1] += box_n[1];
                         }
                         tmp_index=convert_coordinates_to_index(box_n, cell_index);
-                        if ((tmp_index >= 0) && (tmp_index <= max_index)) return tmp_index;        
+                        if ((tmp_index >= 0) && (tmp_index <= max_index)) return tmp_index;
                         break;
                 case 4:
                         if(cell_index[2] < box_n[2]) {
@@ -116,7 +116,7 @@ int check_cell_neighbor(int *box_n, int act_index, int direction) {
                                 cell_index[2] -= box_n[2];
                         }
                         tmp_index=convert_coordinates_to_index(box_n, cell_index);
-                        if ((tmp_index >= 0) && (tmp_index <= max_index)) return tmp_index;        
+                        if ((tmp_index >= 0) && (tmp_index <= max_index)) return tmp_index;
                         break;
 
                 case 5:
@@ -126,7 +126,7 @@ int check_cell_neighbor(int *box_n, int act_index, int direction) {
                                 cell_index[2] += box_n[2];
                         }
                         tmp_index=convert_coordinates_to_index(box_n, cell_index);
-                        if ((tmp_index >= 0) && (tmp_index <= max_index)) return tmp_index;        
+                        if ((tmp_index >= 0) && (tmp_index <= max_index)) return tmp_index;
                         break;
                 default:
                         return -1;
@@ -142,7 +142,7 @@ int visit_cell(int i, int v_cnt, int *vapliq, int *box_n, int *tmp_size) {
         int dir_count = 0;
         /* loop all cells */
         /* Check if cell is already labelled */
-        if (vapliq[i] == 1) { 
+        if (vapliq[i] == 1) {
                 *tmp_size += 1;
                 vapliq[i] = v_cnt;
                 /* Analyze cluster and write higher values */
@@ -157,13 +157,13 @@ int visit_cell(int i, int v_cnt, int *vapliq, int *box_n, int *tmp_size) {
 
 /* Particle identified as liquid-like. Label Cell with particle and cells around. */
 void add_liquid_particle(double *p, int *vapliq, int *box_n, double sigma, double sigmah, long long int index_max) {
-        
+
         int ncell[3];
         double xi,yi,zi;
         int vlindex = 0;
 
         int abortflag=0;
-        double xii,yii,zii; 
+        double xii,yii,zii;
 
         /* Label cells around liquid particle as liquid-like */
         for(xi = -1.6*sigma; xi <= 1.6*sigma; xi+=sigmah) {
@@ -175,7 +175,7 @@ void add_liquid_particle(double *p, int *vapliq, int *box_n, double sigma, doubl
                                 ncell[0]=(int)((p[0]+xi)/sigmah);
                                 ncell[1]=(int)((p[1]+yi)/sigmah);
                                 ncell[2]=(int)((p[2]+zi)/sigmah);
-                                
+
                                 for(xii=0;xii<=sigmah;xii+=sigmah) {
                                         for(yii=0;yii<=sigmah;yii+=sigmah) {
                                                 for(zii=0;zii<=sigmah;zii+=sigmah) {
@@ -239,9 +239,9 @@ int count_neighbors(double p_tmp[3], double radius) {
     int neb;
     int i;
     planedims[0] = planedims[1] = planedims[2] = 1;
-    
+
     updatePartCfg(WITHOUT_BONDS);
-    
+
     nbhood(p_tmp, radius, &il, planedims );
     //fprintf(stderr,"%d %f %f %f\n", il.n,p_tmp[j].r.p[0],p_tmp[j].r.p[1],p_tmp[j].r.p[2]);
     fprintf(stderr," Check: %d, Particle(s) ", il.n-1);
@@ -255,7 +255,7 @@ int count_neighbors(double p_tmp[3], double radius) {
 
 double analyze_bubble_volume(Tcl_Interp *interp, double bubble_cut, double sigma) {
 
-        double sigmah = sigma / 2.0;    
+        double sigmah = sigma / 2.0;
 
         int c=0, np1=0, i=0 ,j=0;
         Cell *cell;
@@ -269,19 +269,19 @@ double analyze_bubble_volume(Tcl_Interp *interp, double bubble_cut, double sigma
         int tmp_size = 0;
         long long int cell_cnt = 0;
         int biggest_cluster_label;
-        
+
         /* Number of cells in every direction */
         for(i = 0; i < 3; i++) {
                 box_n[i] = (int) (box_l[i] / sigmah) + 1;
         }
-        
+
         cell_cnt = box_n[0] * box_n[1] * box_n[2];
         if(cell_cnt < 0) {
                 Tcl_AppendResult(interp, "Error: Number of cells is negative!", (char *)NULL);
                 return TCL_ERROR;
         }
 
-        // TODO  
+        // TODO
         //int *vapliq = (int *)malloc(cell_cnt*sizeof(int));
         int vapliq[cell_cnt];
         for(i = 0; i < cell_cnt; i++) {
@@ -290,28 +290,28 @@ double analyze_bubble_volume(Tcl_Interp *interp, double bubble_cut, double sigma
         }
         init_vapliq = 1;
 
-       /* LIQUID PARTICLE SEARCH ALGORITHM */        
-        
+       /* LIQUID PARTICLE SEARCH ALGORITHM */
+
         /* Loop over cells and neighbors, find particles with more than five neighbors */
         for (c = 0; c < local_cells.n; c++) {
             cell = local_cells.cell[c];
             p1   = cell->part;
             np1  = cell->n;
-        
+
             for(j=0; j < np1; j++) {
 
               if(count_neighbors(p1[j].r.p,bubble_cut) > 5) {
                   add_liquid_particle(p1[j].r.p,vapliq,box_n,sigma, sigmah,cell_cnt);
               } // if > 5
             }  // np1: particles in local cell
-            
+
         } // local_cells
-        
+
         /* ADDED LIQUID PARTICLES */
 
        // fclose(fpncl);
        // fclose(fpncv);
-        
+
         /* Analyze connected vapor like cells and calculate volume */
         tmp_size = 0;
         biggest_cluster_label = 0;
@@ -325,7 +325,7 @@ double analyze_bubble_volume(Tcl_Interp *interp, double bubble_cut, double sigma
                         tmp_size = 0;
                         v_cnt++;
                 }
-//                fprintf(stderr,"finding clusters done. Biggest is %d cells.\n",biggest_cluster);  
+//                fprintf(stderr,"finding clusters done. Biggest is %d cells.\n",biggest_cluster);
         } else {
                 // no neighbors were found, all vapor
                 biggest_cluster = cell_cnt;
@@ -374,7 +374,7 @@ void buildClusters(int rootmember) {
     int           clusterQueueHead, clusterQueueTail;
     Particle  *p1, *p2;
     ParticleListP = (int*) malloc(n_total_particles * sizeof(int));
-   
+
     //clusterCount tracks number of clusters actually allocated
     clusterCount = 0;
     clustFlags   = (int*) malloc(n_total_particles * sizeof(int));
@@ -385,7 +385,7 @@ void buildClusters(int rootmember) {
       clust = c->next;
       free(c);
     }
-    
+
     //initialize the clustering
     for (i = 0; i < n_total_particles; i++){
         ParticleListP[i]    = -1;
@@ -406,13 +406,13 @@ void buildClusters(int rootmember) {
 
       if(p1->l.solid) {
           rootId = p1->p.identity;
-          
+
           //if the particle is not already clustered, then it is a cluster
-          //root. 
+          //root.
           if( clustFlags[rootId] == -2 ) {
-            
-            //setting cluster id to -1 
-            //corresponds to coloring the node grey 
+
+            //setting cluster id to -1
+            //corresponds to coloring the node grey
             //in the algorithm from CLR
             clustFlags[rootId] = -1;
 
@@ -427,7 +427,7 @@ void buildClusters(int rootmember) {
             while( clusterQueueHead != -1 ) {
 
               p = clusterQueueHead;
-              
+
               //label the immediate neighbours
               for( j = 0; j < p1->l.neb; j++ )
               {
@@ -437,25 +437,25 @@ void buildClusters(int rootmember) {
                  p2 = &(partCfg[nebId]);
 
                  if(p2->l.solid && clustFlags[nebId] == -2 && nebId != p) {
-                 
-                     //mark this node 'grey'
-                     clustFlags[nebId] = -1; 
 
-                     //add it to back of the queue 
+                     //mark this node 'grey'
+                     clustFlags[nebId] = -1;
+
+                     //add it to back of the queue
                      ParticleListP[clusterQueueTail] = nebId;
                      clusterQueueTail              = nebId;
                  }
               }
-            
+
               //take the particle off the head of the queue
               //because all its neighbours should be on the queue now
               clusterQueueHead = ParticleListP[p];
-            
+
               //add it fully to the cluster
               c->size++;
 
             }
-            
+
             c->next = clust;
             clust   = c;
             clusterCount++;
@@ -572,7 +572,7 @@ int clusterMoment() {
 void visit_part(Particle *p, int clabel, int *tmp_size) {
 
     int c;
-    
+
     /* Check if cell is already labelled */
     if(p->l.clabel == -1) {
         // label particle for current cluster if not labelled
@@ -599,20 +599,20 @@ int kais_cluster() {
         partCfg[i].l.clabel = -1;
     }
 
-    // array of solid particles    
+    // array of solid particles
     for (i = 0; i < n_total_particles; i++) {
 
         if(partCfg[i].l.solid) {
             // dereference
             p1 = &(partCfg[i]);
-            
+
             visit_part(p1,clabel,&tmp_size);
-            
+
             if (biggest_cluster < tmp_size) {
                 biggest_cluster = tmp_size;
                 biggest_cluster_label = clabel;
             }
-            
+
             tmp_size = 0;
             clabel++;
         }
@@ -629,15 +629,15 @@ int kais_cluster() {
 ##################################################################################################
  Begin q6:
 */
-
+//spherical harmoic for l=6
 void y6(Particle *p_tmp, double dr, double dx, double dy, double dz){
-    
+
     double costh,costh2,costh4,costh6,sinth,sinth2,sinth3,sinth4,sinth5,sinth6;
     double cosphi1,cosphi2,cosphi3,cosphi4,cosphi5,cosphi6,twocosphi;
-    double sinphi1,sinphi2,sinphi3,sinphi4,sinphi5,sinphi6;  
+    double sinphi1,sinphi2,sinphi3,sinphi4,sinphi5,sinphi6;
     double Ba;
     double y6[2][7]; // spher. harm. real and imaginary part
-    
+
     // static const ?
     double y6c0 = 1.0/32.0 * sqrt(13.0/M_PI);
     double y6c1 = 1.0/16.0 * sqrt(273.0/(2*M_PI));
@@ -647,7 +647,7 @@ void y6(Particle *p_tmp, double dr, double dx, double dy, double dz){
     double y6c5 = 3.0/32.0 * sqrt(1001.0/M_PI);
     double y6c6 = 1.0/64.0 * sqrt(3003.0/M_PI);
 
-    costh = dz / dr;            
+    costh = dz / dr;
     costh2 = costh*costh;
     costh4 = costh2*costh2;
     costh6 = costh2*costh4;
@@ -657,15 +657,15 @@ void y6(Particle *p_tmp, double dr, double dx, double dy, double dz){
     sinth4 = sinth2*sinth2;
     sinth5 = sinth2*sinth3;
     sinth6 = sinth3*sinth3;
-  
-    if(sinth < 0.000001) {     
+
+    if(sinth < 0.000001) {
 	    cosphi1 = 0.0;
 	    sinphi1 = 0.0;
     } else {
 	    cosphi1 = dx/(dr*sinth);
 	    sinphi1 = dy/(dr*sinth);
-    }             
-  
+    }
+
     twocosphi = 2.0*cosphi1;
     cosphi2 = twocosphi*cosphi1 - 1.0;
     sinphi2 = twocosphi*sinphi1;
@@ -677,25 +677,25 @@ void y6(Particle *p_tmp, double dr, double dx, double dy, double dz){
     sinphi5 = twocosphi*sinphi4 - sinphi3;
     cosphi6 = twocosphi*cosphi5 - cosphi4;
     sinphi6 = twocosphi*sinphi5 - sinphi4;
-  
-    y6[0][0] = y6c0*(-5.0+105.0*costh2-315.0*costh4+231.0*costh6 );                 
-    y6[1][0] = 0.0;     
-    Ba = y6c1 * costh*(5.0 - 30.0 * costh2 + 33.0*costh4)*sinth; 
-    y6[0][1] = - Ba * cosphi1;            
+
+    y6[0][0] = y6c0*(-5.0+105.0*costh2-315.0*costh4+231.0*costh6 );
+    y6[1][0] = 0.0;
+    Ba = y6c1 * costh*(5.0 - 30.0 * costh2 + 33.0*costh4)*sinth;
+    y6[0][1] = - Ba * cosphi1;
     y6[1][1] = - Ba * sinphi1;
     Ba = y6c2 * (1.0 - 18.0 * costh2+ 33.0 * costh4)* sinth2;
     y6[0][2]= Ba *  cosphi2;
     y6[1][2]= Ba * sinphi2;
-    Ba = y6c3 * costh*(-3.0 + 11.0*costh2)*sinth3; 
+    Ba = y6c3 * costh*(-3.0 + 11.0*costh2)*sinth3;
     y6[0][3]= - Ba *  cosphi3;
     y6[1][3]= - Ba * sinphi3;
     Ba =  y6c4*(-1.0 + 11.0 * costh2)* sinth4;
-    y6[0][4]= Ba *  cosphi4;            
+    y6[0][4]= Ba *  cosphi4;
     y6[1][4]= Ba * sinphi4;
     Ba = y6c5 * costh * sinth5;
-    y6[0][5]= - Ba *  cosphi5;            
+    y6[0][5]= - Ba *  cosphi5;
     y6[1][5]= - Ba * sinphi5;
-    Ba = y6c6* sinth6; 
+    Ba = y6c6* sinth6;
     y6[0][6]= Ba *  cosphi6;
     y6[1][6]= Ba * sinphi6;
 
@@ -709,7 +709,7 @@ void y6(Particle *p_tmp, double dr, double dx, double dy, double dz){
 
     //fprintf(stderr,"\n");
 }
-
+//berechnet q6!
 int prepareQ6(double rc){
 
     Particle *p1, *p2;
@@ -718,7 +718,7 @@ int prepareQ6(double rc){
     double rclocal2 = rc*rc; // sphere radius squared around particle for neighbor detection
     double vec21[3];
     int statusOK = 1;
-    
+
     for (i=0;i<n_total_particles;i++) {
             partCfg[i].l.neb=0;
             partCfg[i].l.solid = 0;
@@ -733,7 +733,7 @@ int prepareQ6(double rc){
     // outer loop
     for (i=0;i<n_total_particles;i++) {
 	    p1 = &partCfg[i];                    // pointer to particle 1
-	    
+
         // inner loop
         for(j=0;j<n_total_particles;j++) {
 
@@ -748,9 +748,9 @@ int prepareQ6(double rc){
                         fprintf(stderr,"ERROR: Particle has more neighbors than possible!\n");
                     } else {
                         p1->l.neighbors[p1->l.neb]=p2->p.identity;
-                        
+
                         if(p2->p.identity != j) fprintf(stderr,"DANG!");
-                        
+
                         //p2->l.neighbors[p2->l.neb]=p1->p.identity;
                         p1->l.neb++;
                         //p2->l.neb++;
@@ -762,13 +762,13 @@ int prepareQ6(double rc){
             } // i != j
         } // j
     } // i
-    
-    
+
+
     totneb = 0;
-    
+
     for (i=0;i<n_total_particles;i++) {
 
-	        // PR thesis eq 3.27
+	        // Wolfgang Lechner and Christoph Dellago 2008 eq(1)
             if(partCfg[i].l.neb > 0) {
                 for (m=0; m<=6; m++){
                     partCfg[i].l.q6r[m] /= (float) partCfg[i].l.neb;
@@ -789,7 +789,7 @@ int prepareQ6(double rc){
 	        }
 	        //fprintf(stderr, "Ende: %f\n", partCfg[i].l.q6);
 	        partCfg[i].l.q6 *= (4.0 * M_PI) / 13.0; //normalise by 4pi/13
-	        
+         // Steinhardt order parameter: Wolfgang Lechner and Christoph Dellago 2008 eq(3)
 	        partCfg[i].l.q6 = sqrt(partCfg[i].l.q6);    // This is the local invariant q6 per particle (Eq. 7 in ten Wolde)
 
             // Neigbor count
@@ -797,12 +797,12 @@ int prepareQ6(double rc){
 
             //fprintf(stderr,"Particle %d has %d neighbors. Q6: %f\n",partCfg[i].p.identity,partCfg[i].l.neb,partCfg[i].l.q6);
     }
-    
+
     return statusOK;
 }
 
 void reduceQ6(){
-    
+
     double    Q6r[7], Q6i[7]; //global Q6m, real and imaginary part
     double    Q6;
     int i,m;
@@ -812,7 +812,7 @@ void reduceQ6(){
 	    Q6r[m] = 0.0;
 	    Q6i[m] = 0.0;
     }
-
+//hier schleife ueber local cells, rand -> ghostparts?
     for (i=0;i<n_total_particles;i++) {
 
 	        //accumulate local q6 vector into global average
@@ -834,26 +834,26 @@ void reduceQ6(){
 	    }
     }
 
-    // PR thesis eq 3.29
-    Q6 = 0.5 * ( Q6r[0]*Q6r[0] + Q6i[0]*Q6i[0] ); 
+    // PR thesis eq 3.29 schilling
+    Q6 = 0.5 * ( Q6r[0]*Q6r[0] + Q6i[0]*Q6i[0] );
     for (int m=1; m<=6; m++){
 	    Q6 += Q6r[m]*Q6r[m] + Q6i[m]*Q6i[m];
     }
     Q6 *= 4.0 * M_PI;
     Q6 /= 13.0;
     Q6 = sqrt(Q6);
-    
-}  
+
+}
 
 
 //helper function
 inline double pair_q6q6( Particle *p, Particle *q ) {
 
     double q6q6;
-    
+
     //fprintf(stderr,"Check %f %f\n",p->l.q6,q->l.q6);
-    
-    q6q6  = 0.5 * ( p->l.q6r[0] * q->l.q6r[0] + p->l.q6i[0] * q->l.q6i[0] );  
+
+    q6q6  = 0.5 * ( p->l.q6r[0] * q->l.q6r[0] + p->l.q6i[0] * q->l.q6i[0] );
     for (int m=1; m<=6; m++){
 	    q6q6 += p->l.q6r[m] * q->l.q6r[m] + p->l.q6i[m] * q->l.q6i[m];
     }
@@ -868,14 +868,14 @@ double reduceQ6Q6(double q6q6_min, int min_solid_bonds){
   double    q6q6, eQ6Q6;
   int       bondCount;
   int       i;
-  
+
   Particle  *p1;
-  
+
   solidParticles = 0;
-  
+
   eQ6Q6 = 0.0;
   bondCount      = 0;
-  
+
   for (i = 0; i<n_total_particles; i++) {
 
     p1 = &(partCfg[i]);
@@ -884,37 +884,37 @@ double reduceQ6Q6(double q6q6_min, int min_solid_bonds){
     p1->l.solid      = 0;
 
             // neighbor loop
-            for (int j = 0; j < p1->l.neb; j++) {
+            for(int j = 0; j < p1->l.neb; j++) {
               //fprintf(stderr,"Particle %d (q6: %f) has %d neighbors: %d.\n",p1->p.identity,p1->l.q6,p1->l.neb,partCfg[p1->l.neighbors[j]].p.identity);
 
               q6q6 = pair_q6q6(p1, &partCfg[p1->l.neighbors[j]]);
               //fprintf(stderr,"q6q6: %f\n", q6q6);
-              
+
               //Test against arbitrary threshold
-              if ( q6q6 > q6q6_min ) {
-	            p1->l.solidBonds++;
+              if( q6q6 > q6q6_min ) {
+	               p1->l.solidBonds++;
               }
 
               //accumulate an average stat for the whole system
-            if( p1->l.neighbors[j] > i ) { //avoid double-counting 
-	              eQ6Q6 += q6q6;
-	              bondCount++;
+              if( p1->l.neighbors[j] > i ) { //avoid double-counting
+	               eQ6Q6 += q6q6;
+	               bondCount++;
               }
             } // neighbor loop
 
-            if ( p1->l.solidBonds >= min_solid_bonds ){
-	          p1->l.solid = 1;
-	          
-	          solidParticles++;
+            if( p1->l.solidBonds >= min_solid_bonds ){
+	             p1->l.solid = 1;
+
+	             solidParticles++;
             }
 
     } // n_total_particles
-    
+
     //reduce to get the average
     if( bondCount > 0 ) {
         eQ6Q6 /= (double) bondCount;
     }
-    
+
   fprintf(stderr,"solidParticles %d, average stat: %f\n",solidParticles, eQ6Q6);
   return eQ6Q6;
 
@@ -938,12 +938,12 @@ double analyze_q6(double rc, double q6q6_min, int min_solid_bonds) {
     // q6q6_min = 0.7
 
     init_q6();
-    
+
     prepareQ6(rc);
     reduceQ6();
     avgQ6 = reduceQ6Q6(q6q6_min, min_solid_bonds);
 
-   
+
     freePartCfg();
 
     return avgQ6;
@@ -952,7 +952,7 @@ double analyze_q6(double rc, double q6q6_min, int min_solid_bonds) {
 double analyze_q6_solid(double rc, double q6q6_min, int min_solid_bonds) {
 
     init_q6();
-    
+
     prepareQ6(rc);
     reduceQ6();
     reduceQ6Q6(q6q6_min, min_solid_bonds);
@@ -967,13 +967,13 @@ double analyze_q6_solid_cluster(double rc, double q6q6_min, int min_solid_bonds)
     int biggest_cluster = 0;
 
     init_q6();
-    
+
     prepareQ6(rc);
     reduceQ6();
     solidParticles = reduceQ6Q6(q6q6_min, min_solid_bonds);
-    
+
     biggest_cluster = kais_cluster();
-    
+
     // alternative cluster algorithm
     //biggest_cluster_searchtree = largestCluster();
 
