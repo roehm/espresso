@@ -44,7 +44,6 @@
 #include "particle_data.h"
 #include "interaction_data.h"
 #include "domain_decomposition.h"
-#include "verlet.h"
 #include "forces.h"
 #include "config.h"
 #include "global.h"

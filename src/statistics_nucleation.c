@@ -27,6 +27,10 @@
 #include "statistics.h"
 #include "domain_decomposition.h"
 #include "statistics_nucleation.h"
+#include "communication.h"
+#include "cells.h"
+#include "particle_data.h"
+#include "global.h"
 
 /* convert the 1D array index to 3d cell coordinates */
 void convert_index_to_coordinates(int *box_n, int *ncell, int the_index) {
@@ -347,6 +351,7 @@ int haveClusters = 0;
 int clusterCount;
 int solidParticles = 0;
 int totneb = 0;
+Q6_Parameters q6para = {0.0, 0.0, 0};
 
 typedef struct particleCluster {
     int           size;
@@ -712,13 +717,14 @@ void y6(Particle *p_tmp, double dr, double dx, double dy, double dz){
 //berechnet q6!
 int prepareQ6(double rc){
 
+    //double rc = q6para.rc
     Particle *p1, *p2;
     int i, j, m;
     double dist2;
     double rclocal2 = rc*rc; // sphere radius squared around particle for neighbor detection
     double vec21[3];
     int statusOK = 1;
-
+    
     for (i=0;i<n_total_particles;i++) {
             partCfg[i].l.neb=0;
             partCfg[i].l.solid = 0;
@@ -797,14 +803,168 @@ int prepareQ6(double rc){
 
             //fprintf(stderr,"Particle %d has %d neighbors. Q6: %f\n",partCfg[i].p.identity,partCfg[i].l.neb,partCfg[i].l.q6);
     }
+#if 0
+    int n_part;
+    int g, pnode;
+    Cell *cell;
+    int c;
+    //MPI_Status status;
+    n_part = cells_get_n_particles();
+    g = 0;
+    for (pnode = 0; pnode < n_nodes; pnode++) {
+      //if (sizes[pnode] > 0) {
+        //if (pnode == 0) {
+          for (c = 0; c < local_cells.n; c++) {
+            Particle *part;
+            int npart;
+
+            cell = local_cells.cell[c];
+            part = cell->part;
+            npart = cell->n;
+            for (i=0;i<npart;i++) {
+              //if(partCfg[i].p.identity == )
+              part[i].l.q6 = partCfg[i+g].l.q6;
+
+            }
+            g += npart;
+          }
+       //}
+     }
+#endif
+    return statusOK;
+}
+
+int q6_calculation(double dummy){
+
+
+    double rc = dummy;
+    Particle *p1, *p2;
+    int i, j, m, n;
+    double dist2;
+    double rclocal2 = rc*rc; // sphere radius squared around particle for neighbor detection
+    double vec21[3];
+    int statusOK = 1;
+    //totneb = 0;
+fprintf(stderr, "%d: rclocal2 %lf \n", this_node, rclocal2); 
+    //int n_part;
+    int np, np2;
+    //int g, pnode;
+    Cell *cell;
+    int c;
+    Particle *part, *part2;
+    IA_Neighbor *neighbor;
+    //MPI_Status status;
+    
+    //part on node
+    //n_part = cells_get_n_particles();
+    
+    for (c = 0; c < local_cells.n; c++) {
+      cell = local_cells.cell[c];
+      part = cell->part;
+      np = cell->n;
+       
+      for (i=0;i<np;i++) {
+        part[i].l.neb=0;
+        part[i].l.solid = 0;
+        part[i].l.solidBonds = 0;
+        part[i].l.q6=0.0;
+	       for (int m=0; m<=6; m++){
+	         part[i].l.q6r[m]=0.0;
+	         part[i].l.q6i[m]=0.0;
+	       }
+      }
+    }
+
+      
+    /* Loop local cells */
+    for (c = 0; c < local_cells.n; c++) {
+      cell = local_cells.cell[c];
+      part = cell->part;
+      np  = cell->n;
+      
+      for (i=0;i<np;i++) {
+	       p1 = &part[i];	                        
+        /* Loop cell neighbors */
+        for (n = 0; n < dd.cell_inter[c].n_neighbors; n++) {
+          neighbor = &dd.cell_inter[c].nList[n];
+          part2  = neighbor->pList->part;
+          np2 = neighbor->pList->n;
+          for (j=0;j<np2;j++) {
+            if (i != j) {
+	             p2 = &part2[j];
+	             
+              dist2 = distance2vec(p2->r.p, p1->r.p, vec21);
+              if(dist2 < rclocal2) {
+                //if((p1->l.neb >= 127) || (p2->l.neb >= 127)) {
+                //   fprintf(stderr,"ERROR: Particle has more neighbors than possible!\n");
+                //     errorexit();
+                //}
+                #if 0
+                 else {
+                    p1->l.neighbors[p1->l.neb]=p2->p.identity;
+
+                    if(p2->p.identity != j) fprintf(stderr,"DANG!");
+
+                    //p2->l.neighbors[p2->l.neb]=p1->p.identity;
+                    p1->l.neb++;
+                        //p2->l.neb++;
+                  }
+                  #endif
+                y6( p1, sqrt(dist2), vec21[0], vec21[1], vec21[2]);
+                //y6( p2, sqrt(dist2), vec21[0], vec21[1], vec21[2]);
+              }
+            } // i != j
+          } // j
+        } //cell neighbors
+      } // i   
+    }// local cells
+
+
+    //totneb = 0;
+
+    for (c = 0; c < local_cells.n; c++) {
+      cell = local_cells.cell[c];
+      part = cell->part;
+      np = cell->n;
+       
+      for (i=0;i<np;i++) {
+	       // Wolfgang Lechner and Christoph Dellago 2008 eq(1)
+        if(part[i].l.neb > 0) {
+          for (m=0; m<=6; m++){
+            part[i].l.q6r[m] /= (float) part[i].l.neb;
+            part[i].l.q6i[m] /= (float) part[i].l.neb;
+          }
+        } else {
+	           //Q6 undefined... system needs to collapse a little
+	           //Q6 = 0.0;
+	           part[i].l.q6r[m] = 0.0;
+	           part[i].l.q6i[m] = 0.0;
+	           statusOK = 0;
+	         }
+
+	       part[i].l.q6 = 0.5 * ( part[i].l.q6r[0] * part[i].l.q6r[0] + part[i].l.q6i[0] * part[i].l.q6i[0] );
+	       //fprintf(stderr, "Anfang: %f aus %f und %f\n", part[i].l.q6, part[i].l.q6r[0], part[i].l.q6i[0]);
+	       for (int m=1; m<=6; m++){
+	         part[i].l.q6 += part[i].l.q6r[m] * part[i].l.q6r[m] + part[i].l.q6i[m] * part[i].l.q6i[m];
+	       }
+	       //fprintf(stderr, "Ende: %f\n", part[i].l.q6);
+	       part[i].l.q6 *= (4.0 * M_PI) / 13.0; //normalise by 4pi/13
+        // Steinhardt order parameter: Wolfgang Lechner and Christoph Dellago 2008 eq(3)
+	       part[i].l.q6 = sqrt(part[i].l.q6);    // This is the local invariant q6 per particle (Eq. 7 in ten Wolde)
+
+        // Neigbor count optional
+	       //totneb += part[i].l.neb;
+      }
+            //fprintf(stderr,"Particle %d has %d neighbors. Q6: %f\n",part[i].p.identity,part[i].l.neb,part[i].l.q6);
+    } 
 
     return statusOK;
 }
 
 void reduceQ6(){
 
-    double    Q6r[7], Q6i[7]; //global Q6m, real and imaginary part
-    double    Q6;
+    double Q6r[7], Q6i[7]; //global Q6m, real and imaginary part
+    double Q6;
     int i,m;
 
     // init
@@ -919,7 +1079,13 @@ double reduceQ6Q6(double q6q6_min, int min_solid_bonds){
   return eQ6Q6;
 
 }
-
+#if 0
+void preinit_q6(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds){
+  rc = tcl_rc;
+  q6q6_min = tcl_q6q6_min;
+  min_solid_bonds = tcl_min_solid_bonds;
+}
+#endif
 /* init globals for q6 */
 void init_q6() {
     clust = 0;
@@ -982,5 +1148,27 @@ double analyze_q6_solid_cluster(double rc, double q6q6_min, int min_solid_bonds)
     return biggest_cluster;
 }
 
+int initialize_q6(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds) {
 
+    q6para.rc = tcl_rc;
+    q6para.q6q6_min = tcl_q6q6_min;
+    q6para.min_solid_bonds = tcl_min_solid_bonds;
+    mpi_bcast_q6_params();
+    
+    printf("bcast q6 params ok\n");
 
+    mpi_q6_calculation(q6para.rc);
+
+    printf("mpi_q6_calculation ok\n");
+    
+    return 0;
+
+}
+
+void update_q6() {
+
+    mpi_q6_calculation(q6para.rc);
+    
+    printf("mpi_q6_calculation update ok\n");
+
+}

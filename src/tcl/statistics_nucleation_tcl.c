@@ -57,8 +57,8 @@ int tclcommand_analyze_bubble_volume(Tcl_Interp *interp, int argc, char **argv)
 int tclcommand_analyze_q6(Tcl_Interp *interp, int argc, char **argv) {
 
     char buffer[TCL_DOUBLE_SPACE];
-    double rc, q6q6_min;
-    int min_solid_bonds;
+    double tcl_rc, tcl_q6q6_min;
+    int tcl_min_solid_bonds;
 
     if (n_nodes > 1) {
         Tcl_AppendResult(interp, "Error: Q6 can only be calculated on a single processor", (char *)NULL);
@@ -66,14 +66,14 @@ int tclcommand_analyze_q6(Tcl_Interp *interp, int argc, char **argv) {
     }
 
     /* check parameter types */
-    if( (! ARG_IS_D(0, rc)) ||
-        (! ARG_IS_D(1, q6q6_min))  ||
-        (! ARG_IS_I(2, min_solid_bonds)) ) {
+    if( (! ARG_IS_D(0, tcl_rc)) ||
+        (! ARG_IS_D(1, tcl_q6q6_min))  ||
+        (! ARG_IS_I(2, tcl_min_solid_bonds)) ) {
         Tcl_AppendResult(interp, "Error: Usage: analyze q6 rc_neighbor q6q6_min min_solid_bonds.\n", (char *)NULL);
         return TCL_ERROR;
     }
 
-    Tcl_PrintDouble(interp, analyze_q6(rc, q6q6_min, min_solid_bonds), buffer);
+    Tcl_PrintDouble(interp, analyze_q6(tcl_rc, tcl_q6q6_min, tcl_min_solid_bonds), buffer);
     Tcl_AppendResult(interp, buffer, (char *)NULL);
 
     return TCL_OK;
@@ -82,8 +82,8 @@ int tclcommand_analyze_q6(Tcl_Interp *interp, int argc, char **argv) {
 int tclcommand_analyze_q6_solid(Tcl_Interp *interp, int argc, char **argv) {
 
     char buffer[TCL_DOUBLE_SPACE];
-    double rc, q6q6_min;
-    int min_solid_bonds;
+    double tcl_rc, tcl_q6q6_min;
+    int tcl_min_solid_bonds;
 
 #if 0
     if (n_nodes > 1) {
@@ -92,14 +92,14 @@ int tclcommand_analyze_q6_solid(Tcl_Interp *interp, int argc, char **argv) {
     }
 #endif
     /* check parameter types */
-    if( (! ARG_IS_D(0, rc)) ||
-        (! ARG_IS_D(1, q6q6_min))  ||
-        (! ARG_IS_I(2, min_solid_bonds)) ) {
+    if( (! ARG_IS_D(0, tcl_rc)) ||
+        (! ARG_IS_D(1, tcl_q6q6_min))  ||
+        (! ARG_IS_I(2, tcl_min_solid_bonds)) ) {
         Tcl_AppendResult(interp, "Error: Usage: analyze q6 rc_neighbor q6q6_min min_solid_bonds.\n", (char *)NULL);
         return TCL_ERROR;
     }
 
-    Tcl_PrintDouble(interp, analyze_q6_solid(rc, q6q6_min, min_solid_bonds), buffer);
+    Tcl_PrintDouble(interp, analyze_q6_solid(tcl_rc, tcl_q6q6_min, tcl_min_solid_bonds), buffer);
     Tcl_AppendResult(interp, buffer, (char *)NULL);
 
     return TCL_OK;
@@ -108,8 +108,8 @@ int tclcommand_analyze_q6_solid(Tcl_Interp *interp, int argc, char **argv) {
 int tclcommand_analyze_q6_solid_cluster(Tcl_Interp *interp, int argc, char **argv) {
 
     char buffer[TCL_DOUBLE_SPACE];
-    double rc, q6q6_min;
-    int min_solid_bonds;
+    double tcl_rc, tcl_q6q6_min;
+    int tcl_min_solid_bonds;
 #if 0
     if (n_nodes > 1) {
         Tcl_AppendResult(interp, "Error: Q6 can only be calculated on a single processor", (char *)NULL);
@@ -117,51 +117,55 @@ int tclcommand_analyze_q6_solid_cluster(Tcl_Interp *interp, int argc, char **arg
     }
 #endif
     /* check parameter types */
-    if( (! ARG_IS_D(0, rc)) ||
-        (! ARG_IS_D(1, q6q6_min))  ||
-        (! ARG_IS_I(2, min_solid_bonds)) ) {
+    if( (! ARG_IS_D(0, tcl_rc)) ||
+        (! ARG_IS_D(1, tcl_q6q6_min))  ||
+        (! ARG_IS_I(2, tcl_min_solid_bonds)) ) {
         Tcl_AppendResult(interp, "Error: Usage: analyze q6 rc_neighbor q6q6_min min_solid_bonds.\n", (char *)NULL);
         return TCL_ERROR;
     }
 
-    Tcl_PrintDouble(interp, analyze_q6_solid_cluster(rc, q6q6_min, min_solid_bonds), buffer);
+    Tcl_PrintDouble(interp, analyze_q6_solid_cluster(tcl_rc, tcl_q6q6_min, tcl_min_solid_bonds), buffer);
     Tcl_AppendResult(interp, buffer, (char *)NULL);
 
     return TCL_OK;
 }
 
-int tclcommand_q6(Tcl_Interp *interp, int argc, char **argv) {
-#ifdef Q6
+int tclcommand_q6(ClientData data, Tcl_Interp *interp, int argc, char **argv) {
+#ifdef Q6_PARA
   argc--; argv++;
-  char buffer[TCL_DOUBLE_SPACE];
-  double rc, q6q6_min;
-  int min_solid_bonds;
   
+  double doublearg[2];
+  int intarg;
+
   if (argc < 1) {
     Tcl_AppendResult(interp, "Error: q6 needs at least 1 argument\n", (char *)NULL);
     Tcl_AppendResult(interp, "Usage of \"q6\":\n", (char *)NULL);
     Tcl_AppendResult(interp, "Usage: q6 initialize rc_neighbor q6q6_min min_solid_bonds or q6 update\n", (char *)NULL);
     return TCL_ERROR;
   }
-  else if (ARG0_IS_S("initialize")) {  
-    /* check parameter types */
-    if( (! ARG_IS_D(0, rc)) ||
-        (! ARG_IS_D(1, q6q6_min))  ||
-        (! ARG_IS_I(2, min_solid_bonds)) ) {
-        Tcl_AppendResult(interp, "Error: Usage: q6 initialize rc_neighbor q6q6_min min_solid_bonds.\n", (char *)NULL);
-        return TCL_ERROR;
+  while (argc > 0) {
+    if (ARG0_IS_S("initialize")) { 
+       argc--; argv++;
+      /* check parameter types */
+      if( (! ARG_IS_D(0, doublearg[0])) ||
+          (! ARG_IS_D(1, doublearg[1]))  ||
+          (! ARG_IS_I(2, intarg)) ) {
+          Tcl_AppendResult(interp, "Error: Usage: q6 initialize rc_neighbor q6q6_min min_solid_bonds.\n", (char *)NULL);
+          return TCL_ERROR;
+      }
+      if ( !initialize_q6(doublearg[0], doublearg[1], intarg) == 0 ) {
+	          Tcl_AppendResult(interp, "Unknown Error set q6 paramters", (char *)NULL);
+            return TCL_ERROR;
+      }
     }
-
-    Tcl_PrintDouble(interp, analyze_q6_solid_cluster(rc, q6q6_min, min_solid_bonds), buffer);
-    Tcl_AppendResult(interp, buffer, (char *)NULL);
-    return TCL_OK;
-    
-  }
-  else if (ARG0_IS_S("update")) {
-  
-  
+    else if (ARG0_IS_S("update")) {
+        update_q6();
+    }
     return TCL_OK;
   }
+#else
+  Tcl_AppendResult(interp, "Q6 is not compiled in!", NULL);
+  return TCL_ERROR;
 #endif
 }
 

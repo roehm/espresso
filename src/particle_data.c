@@ -214,7 +214,7 @@ void init_particle(Particle *part)
   part->gamma = -1.0;
 #endif
 
-#ifdef Q6
+#ifdef Q6_PARA
   /* Q6 */
   part->l.neb = 0;
   part->l.solid = 0;

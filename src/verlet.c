@@ -187,10 +187,10 @@ void calculate_verlet_ia()
       np    = dd.cell_inter[c].nList[n].vList.n;
       /* verlet list loop */
       for(i=0; i<2*np; i+=2) {
-	p1 = pairs[i];                    /* pointer to particle 1 */
-	p2 = pairs[i+1];                  /* pointer to particle 2 */
-	dist2 = distance2vec(p1->r.p, p2->r.p, vec21);
-	add_non_bonded_pair_force(p1, p2, vec21, sqrt(dist2), dist2);
+	       p1 = pairs[i];                    /* pointer to particle 1 */
+	       p2 = pairs[i+1];                  /* pointer to particle 2 */
+	       dist2 = distance2vec(p1->r.p, p2->r.p, vec21);
+	       add_non_bonded_pair_force(p1, p2, vec21, sqrt(dist2), dist2);
       }
     }
   }

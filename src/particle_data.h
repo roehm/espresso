@@ -199,7 +199,7 @@ typedef struct {
   int ghost;
 #endif
 
-#ifdef Q6
+#ifdef Q6_PARA
   /* Q6 */
   int neb;
   int solid;

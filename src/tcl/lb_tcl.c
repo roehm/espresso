@@ -420,7 +420,7 @@ int tclcommand_lbfluid(ClientData data, Tcl_Interp *interp, int argc, char **arg
 
 
   return TCL_OK;
-#else /* !defined LB */
+#else /* !defined LB || LB_GPU*/
   Tcl_AppendResult(interp, "LB is not compiled in!", NULL);
   return TCL_ERROR;
 #endif

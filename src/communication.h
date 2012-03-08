@@ -457,6 +457,16 @@ int mpi_sync_topo_part_info(void);
  */
 void mpi_bcast_lb_params(int field);
 
+/** Issue REQ_BCAST_Q6PAR: Broadcast a parameter for Q6 parameter.
+ * @param field References the parameter field to be broadcasted. The references are defined in \ref statistics_nucleation.h "statistics_nucleation"
+ */
+void mpi_bcast_q6_params();
+
+/** Issue REQ_Q6_CALCULATION: performs q6 calculation.
+    @return nonzero on error
+*/
+int mpi_q6_calculation(double dummy);
+
 /** Issue REQ_SEND_FLUID: Send a single lattice site to a processor.
  * @param node  processor to send to
  * @param index index of the lattice site

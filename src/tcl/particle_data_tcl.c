@@ -180,11 +180,11 @@ void tclcommand_part_print_mu_E(Particle *part, char *buffer, Tcl_Interp *interp
 }
 #endif
 
-#ifdef Q6
-void tclcommand_part_print_Q6(Particle *part, char *buffer, Tcl_Interp *interp)
+#ifdef Q6_PARA
+void tclcommand_part_print_q6(Particle *part, char *buffer, Tcl_Interp *interp)
 {
   /* unscale velocities ! */
-  Tcl_PrintDouble(interp, part->p.q6, buffer);
+  Tcl_PrintDouble(interp, part->l.q6, buffer);
   Tcl_AppendResult(interp, buffer, " ", (char *)NULL);
 }
 #endif
@@ -403,6 +403,11 @@ int tclprint_to_result_Particle(Tcl_Interp *interp, int part_num)
   Tcl_AppendResult(interp, buffer, " mu_E ", (char *)NULL);
   tclcommand_part_print_mu_E(&part, buffer, interp);
 #endif
+#ifdef Q6_PARA
+  Tcl_AppendResult(interp, buffer, " q6 ", (char *)NULL);
+  tclcommand_part_print_q6(&part, buffer, interp);
+#endif
+
   Tcl_AppendResult(interp, buffer, " v ", (char *)NULL);
   tclcommand_part_print_v(&part, buffer, interp);
   Tcl_AppendResult(interp, " f ", (char *)NULL);
@@ -558,6 +563,11 @@ int tclcommand_part_parse_print(Tcl_Interp *interp, int argc, char **argv,
 #ifdef LB_ELECTROHYDRODYNAMICS
     else if (ARG0_IS_S("mu_E")) {
       tclcommand_part_print_mu_E(&part, buffer, interp);
+    }
+#endif
+#ifdef Q6_PARA
+    else if (ARG0_IS_S("q6")) {
+      tclcommand_part_print_q6(&part, buffer, interp);
     }
 #endif
     else if (ARG0_IS_S("v"))

@@ -30,12 +30,28 @@
 
 #include <tcl.h>
 
+//struct for Q6 global vars
+typedef struct {
+
+  double rc;
+  double q6q6_min;
+  int min_solid_bonds;
+  
+} Q6_Parameters;
+
+extern Q6_Parameters q6para;
+
+int q6_calculation(double dummy);
+
 double analyze_bubble_volume(Tcl_Interp *interp, double bubble_cut, double sigma);
 
-double analyze_q6(double rc, double q6q6_min, int min_solid_bonds);
+double analyze_q6(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
 
-double analyze_q6_solid(double rc, double q6q6_min, int min_solid_bonds);
+double analyze_q6_solid(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
 
-double analyze_q6_solid_cluster(double rc, double q6q6_min, int min_solid_bonds);
+double analyze_q6_solid_cluster(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
 
+int initialize_q6(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
+
+void update_q6();
 #endif
