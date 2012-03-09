@@ -207,8 +207,10 @@ typedef struct {
   double q6;
   double q6r[14];
   double q6i[14];
+  double q6q6;
   int neighbors[127];
   int clabel;
+  double mean_pos[3];
 #endif
 
 } ParticleLocal;

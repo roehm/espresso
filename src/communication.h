@@ -465,7 +465,7 @@ void mpi_bcast_q6_params();
 /** Issue REQ_Q6_CALCULATION: performs q6 calculation.
     @return nonzero on error
 */
-int mpi_q6_calculation(double dummy);
+int mpi_q6_calculation();
 
 /** Issue REQ_SEND_FLUID: Send a single lattice site to a processor.
  * @param node  processor to send to

@@ -48,4 +48,6 @@ int tclcommand_analyze_q6_solid(Tcl_Interp *interp, int argc, char **argv);
 */
 int tclcommand_analyze_q6_solid_cluster(Tcl_Interp *interp, int argc, char **argv);
 
+int tclcommand_q6(ClientData data, Tcl_Interp *interp, int argc, char **argv);
+
 #endif

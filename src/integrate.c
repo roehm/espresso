@@ -57,7 +57,7 @@
 #include "virtual_sites.h"
 #include "adresso.h"
 #include "statistics_correlation.h"
-
+#include "statistics_nucleation.h"
 /************************************************
  * DEFINES
  ************************************************/
@@ -312,7 +312,12 @@ void integrate_vv(int n_steps)
 #endif
 
     force_calc();
-
+    
+#ifdef LB_GPU
+    if(this_node == 0){
+      if (lattice_switch & LATTICE_LB_GPU) lattice_boltzmann_update_gpu();
+    }
+#endif
     //VIRTUAL_SITES distribute forces
 #ifdef VIRTUAL_SITES
     ghost_communicator(&cell_structure.collect_ghost_force_comm);
@@ -340,12 +345,6 @@ void integrate_vv(int n_steps)
 #ifdef LB
     if (lattice_switch & LATTICE_LB) lattice_boltzmann_update();
     if (check_runtime_errors()) break;
-#endif
-
-#ifdef LB_GPU
-    if(this_node == 0){
-      if (lattice_switch & LATTICE_LB_GPU) lattice_boltzmann_update_gpu();
-    }
 #endif
 
 #ifdef BOND_CONSTRAINT
@@ -378,7 +377,10 @@ void integrate_vv(int n_steps)
     if((this_node==0) && (integ_switch == INTEG_METHOD_NPT_ISO))
       nptiso.p_inst_av += nptiso.p_inst;
 #endif
-
+#ifdef Q6_PARA
+  if(i == 0) reset_mean_part_pos();
+  if(i >= (n_steps-20)) update_mean_part_pos();
+#endif
     /* Propagate time: t = t+dt */
     sim_time += time_step;
   }

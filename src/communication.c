@@ -2575,12 +2575,13 @@ void mpi_iccp3m_init_slave(int node, int dummy)
 }
 
 /********************* REQ_Q6_CALCULATION ********/
-int mpi_q6_calculation(double dummy)
+int mpi_q6_calculation()
 {
 #ifdef Q6_PARA
   mpi_call(mpi_q6_calculation_slave, -1, 0);
 
-  q6_calculation(dummy);
+  q6_calculation();
+  //reduceQ6Q6();
 
   COMM_TRACE(fprintf(stderr, "%d: q6 calculation task %d done.\n", this_node, dummy));
 
@@ -2594,7 +2595,9 @@ int mpi_q6_calculation(double dummy)
 void mpi_q6_calculation_slave(int dummy, int dummy2)
 {
 #ifdef Q6_PARA
-  q6_calculation(dummy);
+  q6_calculation();
+  //reduceQ6Q6();
+  
   
   COMM_TRACE(fprintf(stderr, "%d: q6 calculation task %d done.\n", this_node, dummy2));
 

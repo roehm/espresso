@@ -62,6 +62,7 @@
 #include "statistics_observable.h"
 #include "statistics_correlation.h"
 #include "lb-boundaries.h"
+#include "statistics_nucleation.h"
 
 /** whether the thermostat has to be reinitialized before integration */
 static int reinit_thermo = 1;
@@ -131,7 +132,9 @@ void on_program_start()
 #ifdef LB
   lb_pre_init();
 #endif
-
+#ifdef Q6
+  q6_pre_init();
+#endif
   /*
     call all initializations to do only on the master node here.
   */
