@@ -34,6 +34,7 @@
 
 
 #ifdef Q6_PARA 
+//#define MEAN_OFF
 /* convert the 1D array index to 3d cell coordinates */
 void convert_index_to_coordinates(int *box_n, int *ncell, int the_index) {
         int tmp_index = the_index;
@@ -730,7 +731,7 @@ int prepareQ6(double rc){
     double rclocal2 = rc*rc; // sphere radius squared around particle for neighbor detection
     double vec21[3];
     int statusOK = 1;
-    
+    //fprintf(stderr, "rc: %f\n", rc);
     for (i=0;i<n_total_particles;i++) {
             partCfg[i].l.neb=0;
             partCfg[i].l.solid = 0;
@@ -741,7 +742,7 @@ int prepareQ6(double rc){
 	            partCfg[i].l.q6i[m]=0.0;
 	        }
     } //n_total
-
+int dummy[3] = {0,0,0};
     // outer loop
     for (i=0;i<n_total_particles;i++) {
 	    p1 = &partCfg[i];                    // pointer to particle 1
@@ -750,10 +751,12 @@ int prepareQ6(double rc){
         for(j=0;j<n_total_particles;j++) {
 
             if (i != j) {
-	            p2 = &partCfg[j];                  // pointer to particle 2
-
+	            p2 = &partCfg[j]; 	                             // pointer to particle 2
+	                             
+                fold_position(p1->r.p, dummy);
+                fold_position(p2->r.p, dummy);
                 dist2 = distance2vec(p2->r.p, p1->r.p, vec21);
-
+//fprintf(stderr, "dist2: %f\n", dist2);
                 if(dist2 < rclocal2) {
 
                     if((p1->l.neb >= 127) || (p2->l.neb >= 127)) {
@@ -803,12 +806,23 @@ int prepareQ6(double rc){
 	        partCfg[i].l.q6 *= (4.0 * M_PI) / 13.0; //normalise by 4pi/13
          // Steinhardt order parameter: Wolfgang Lechner and Christoph Dellago 2008 eq(3)
 	        partCfg[i].l.q6 = sqrt(partCfg[i].l.q6);    // This is the local invariant q6 per particle (Eq. 7 in ten Wolde)
-
             // Neigbor count
 	        totneb += partCfg[i].l.neb;
 
             //fprintf(stderr,"Particle %d has %d neighbors. Q6: %f\n",partCfg[i].p.identity,partCfg[i].l.neb,partCfg[i].l.q6);
     }
+    
+    FILE* fp = fopen("q6.vtk", "w");
+	
+	   if(fp == NULL) return 1;
+  
+         /** print of the calculated phys values */
+      fprintf(fp, "# vtk DataFile Version 2.0\nparticles\nASCII\nPOINT_DATA %i\n", n_total_particles);
+        for(i=0; i<n_total_particles; ++i){
+        /** print of the calculated phys values */
+        fprintf(fp, "%lf %lf %lf %lf \n", partCfg[i].r.p[0], partCfg[i].r.p[1], partCfg[i].r.p[2], partCfg[i].l.q6);
+      }
+      
     return statusOK;
 }
 
@@ -816,21 +830,22 @@ int q6_calculation(){
 
 
     double rc = q6para.rc;
-    Particle *p1, *p2;
-    int i, j, m, n;
+    Particle *p1, *p2, **pairs;
+    int i, m, n;
     double dist2;
     double rclocal2 = rc*rc; // sphere radius squared around particle for neighbor detection
     double vec21[3];
     int statusOK = 1;
+    int dummy[3] = {0,0,0};
     //totneb = 0;
 //fprintf(stderr, "%d: rclocal2 %lf \n", this_node, rclocal2); 
     //int n_part;
-    int np, np2;
+    int np;
     //int g, pnode;
     Cell *cell;
     int c;
-    Particle *part, *part2;
-    IA_Neighbor *neighbor;
+    Particle *part;
+    //IA_Neighbor *neighbor;
     //MPI_Status status;
     
     //part on node
@@ -842,7 +857,7 @@ int q6_calculation(){
       np = cell->n;
        
       for (i=0;i<np;i++) {
-        part[i].l.neb=0;
+        part[i].l.neb = 0;
         part[i].l.solid = 0;
         part[i].l.solidBonds = 0;
         part[i].l.q6=0.0;
@@ -853,54 +868,49 @@ int q6_calculation(){
       }
     }
 
-      
     /* Loop local cells */
     for (c = 0; c < local_cells.n; c++) {
-      cell = local_cells.cell[c];
-      part = cell->part;
-      np  = cell->n;
-      
-      for (i=0;i<np;i++) {
-	       p1 = &part[i];	                        
-        /* Loop cell neighbors */
-        for (n = 0; n < dd.cell_inter[c].n_neighbors; n++) {
-          neighbor = &dd.cell_inter[c].nList[n];
-          part2  = neighbor->pList->part;
-          np2 = neighbor->pList->n;
-          for (j=0;j<np2;j++) {
-            //if (i != j) {
-	             p2 = &part2[j];
-	             
-              dist2 = distance2vec(p2->l.mean_pos, p1->l.mean_pos, vec21);
-              //fprintf(stderr, "%d: dist2 %lf \n", this_node, dist2);
-              if(dist2 < rclocal2) {
-              #if 1
-                if((p1->l.neb >= 127)) {
-                   fprintf(stderr,"ERROR: Particle has more neighbors than possible! %i\n", p1->l.neb);
-                     errexit();
-                }
-                #endif
-                 //else {
-                    p1->l.neighbors[p1->l.neb]=p2->p.identity;
 
-                    //if(p2->p.identity != j){ fprintf(stderr,"DANG!");
-                      //errexit();}
-                    //p2->l.neighbors[p2->l.neb]=p1->p.identity;
-                    p1->l.neb++;
-                        //p2->l.neb++;
-                  //}
-                
-                if(dist2 != 0.0) y6( p1, sqrt(dist2), vec21[0], vec21[1], vec21[2]);
-                //if(dist2 != 0.0) y6( p2, sqrt(dist2), vec21[0], vec21[1], vec21[2]);
-              }
-            //} // i != j
-          } // j
-        } //cell neighbors
-      } // i   
-    }// local cells
+      VERLET_TRACE(fprintf(stderr,"%d: cell %d with %d neighbors\n",this_node,c, dd.cell_inter[c].n_neighbors));
+      /* Loop cell neighbors */
+      for (n = 0; n < dd.cell_inter[c].n_neighbors; n++) {
+        pairs = dd.cell_inter[c].nList[n].vList.pair;
+        np    = dd.cell_inter[c].nList[n].vList.n;
+        VERLET_TRACE(fprintf(stderr,"%d: neighbor %d has %d particles\n",this_node,n,np));
 
+        /* verlet list loop */
+        for(i=0; i<2*np; i+=2) {
+	         p1 = pairs[i];                    /* pointer to particle 1 */
+	         p2 = pairs[i+1];                  /* pointer to particle 2 */
+	         #ifdef MEAN_OFF
+	         fold_position(p1->r.p, dummy);
+          fold_position(p2->r.p, dummy);
+          dist2 = distance2vec(p2->r.p, p1->r.p, vec21);
+          //fprintf(stderr, "%d: dist2 %lf \n", this_node, dist2);
+          #else
+	         fold_position(p1->l.mean_pos, dummy);
+          fold_position(p2->l.mean_pos, dummy);
+          dist2 = distance2vec(p2->l.mean_pos, p1->l.mean_pos, vec21);
+          #endif
+	         if(dist2 < rclocal2) {
+            #if 1
+            if((p1->l.neb >= 127 || p2->l.neb >= 127)) {
+              fprintf(stderr,"ERROR: Particle has more neighbors than possible! p1: %i p2: %i ", p1->l.neb, p2->l.neb);
+              fprintf(stderr,"HINT: MEAN POS Q6 need at least one integration step to initialize!");
+              errexit();
+            }
+            #endif
+            p1->l.neighbors[p1->l.neb]=p2->p.identity;
+            p2->l.neighbors[p2->l.neb]=p1->p.identity;
+            p1->l.neb++;
+            p2->l.neb++;
 
-    //totneb = 0;
+            if(dist2 != 0.0) y6(p1, sqrt(dist2), vec21[0], vec21[1], vec21[2]);
+            if(dist2 != 0.0) y6(p2, sqrt(dist2), vec21[0], vec21[1], vec21[2]);
+          }
+        }
+      }
+    }
 
     for (c = 0; c < local_cells.n; c++) {
       cell = local_cells.cell[c];
@@ -1232,11 +1242,10 @@ void reset_mean_part_pos(){
       np  = cell->n;
       
       for (i=0;i<np;i++) {
-	       part[i].l.mean_pos[0] = 0.0;
-	       part[i].l.mean_pos[1] = 0.0;
-	       part[i].l.mean_pos[2] = 0.0;
-	     }
-	     
+	       part[i].l.mean_pos[0] = part[i].r.p[0];
+	       part[i].l.mean_pos[1] = part[i].r.p[1];
+	       part[i].l.mean_pos[2] = part[i].r.p[2];
+	     }	     
 	   }
 
 }
