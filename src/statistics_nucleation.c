@@ -795,7 +795,7 @@ int dummy[3] = {0,0,0};
             } else {
 	            //Q6 undefined... system needs to collapse a little
 	            //Q6 = 0.0;
-	            	for (int m=0; m<=6; m++){
+	            	for (m=0; m<=6; m++){
 	               partCfg[i].q.q6r[m] = 0.0;
 	               partCfg[i].q.q6i[m] = 0.0;
 	             }
@@ -804,7 +804,7 @@ int dummy[3] = {0,0,0};
 
 	        partCfg[i].q.q6 = 0.5 * ( partCfg[i].q.q6r[0] * partCfg[i].q.q6r[0] + partCfg[i].q.q6i[0] * partCfg[i].q.q6i[0] );
 	        //fprintf(stderr, "Anfang: %f aus %f und %f\n", partCfg[i].l.q6, partCfg[i].q.q6r[0], partCfg[i].q.q6i[0]);
-	        for (int m=1; m<=6; m++){
+	        for (m=1; m<=6; m++){
 	            partCfg[i].q.q6 += partCfg[i].q.q6r[m] * partCfg[i].q.q6r[m] + partCfg[i].q.q6i[m] * partCfg[i].q.q6i[m];
 	        }
 	        //fprintf(stderr, "Ende: %f\n", partCfg[i].l.q6);
@@ -881,7 +881,7 @@ int q6_calculation(){
         part[i].l.solid = 0;
         part[i].l.solidBonds = 0;
         part[i].q.q6=0.0;
-	       for (int m=0; m<=6; m++){
+	       for (m=0; m<=6; m++){
 	         part[i].q.q6r[m]=0.0;
 	         part[i].q.q6i[m]=0.0;
 	       }
@@ -995,7 +995,7 @@ int q6_calculation(){
 
 	       part[i].q.q6 = 0.5 * ( part[i].q.q6r[0] * part[i].q.q6r[0] + part[i].q.q6i[0] * part[i].q.q6i[0] );
 	       //fprintf(stderr, "Anfang: %f aus %f und %f\n", part[i].l.q6, part[i].q.q6r[0], part[i].q.q6i[0]);
-	       for (int m=1; m<=6; m++){
+	       for (m=1; m<=6; m++){
 	         part[i].q.q6 += part[i].q.q6r[m] * part[i].q.q6r[m] + part[i].q.q6i[m] * part[i].q.q6i[m];
 	       }
 	       //fprintf(stderr, "Ende: %f\n", part[i].q.q6);
@@ -1033,7 +1033,7 @@ void update_mean_part_pos(){
 //printf("udate mean pos finished\n");
 }
 
-//parallization untested!!!
+//parallization not ready yet!!!
 void reduceQ6(){
 
     double Q6r[7], Q6i[7]; //global Q6m, real and imaginary part
