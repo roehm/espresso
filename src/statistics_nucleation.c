@@ -640,7 +640,7 @@ int kais_cluster() {
 ##################################################################################################
  Begin q6:
 */
-#if 0
+#if 1
 //spherical harmoic for l=6
 void y6(Particle *p_tmp, double dr, double dx, double dy, double dz){
 
@@ -754,9 +754,11 @@ int dummy[3] = {0,0,0};
             if (i != j) {
 	            p2 = &partCfg[j]; 	                             // pointer to particle 2
 	                             
-                fold_position(p1->r.p, dummy);
-                fold_position(p2->r.p, dummy);
-                dist2 = distance2vec(p2->r.p, p1->r.p, vec21);
+                //fold_position(p1->r.p, dummy);
+                //fold_position(p2->r.p, dummy);
+                 
+                get_mi_vector(vec21, p2->r.p, p1->r.p);
+                dist2 = vec21[0]*vec21[0]+vec21[1]*vec21[1]+vec21[2]*vec21[2];
 //fprintf(stderr, "dist2: %f\n", dist2);
                 if(dist2 < rclocal2) {
 
@@ -793,8 +795,10 @@ int dummy[3] = {0,0,0};
             } else {
 	            //Q6 undefined... system needs to collapse a little
 	            //Q6 = 0.0;
-	            partCfg[i].q.q6r[m] = 0.0;
-	            partCfg[i].q.q6i[m] = 0.0;
+	            	for (int m=0; m<=6; m++){
+	               partCfg[i].q.q6r[m] = 0.0;
+	               partCfg[i].q.q6i[m] = 0.0;
+	             }
 	            statusOK = 0;
 	        }
 
@@ -820,6 +824,7 @@ int dummy[3] = {0,0,0};
          /** print of the calculated phys values */
       fprintf(fp, "# vtk DataFile Version 2.0\nparticles\nASCII\nPOINT_DATA %i\n", n_total_particles);
         for(i=0; i<n_total_particles; ++i){
+        fold_position(partCfg[i].r.p, dummy);
         /** print of the calculated phys values */
         fprintf(fp, "%lf %lf %lf %lf \n", partCfg[i].r.p[0], partCfg[i].r.p[1], partCfg[i].r.p[2], partCfg[i].q.q6);
       }
