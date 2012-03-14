@@ -204,6 +204,7 @@ static void register_tcl_commands(Tcl_Interp* interp) {
 #endif
 #ifdef Q6_PARA
   REGISTER_COMMAND("q6", tclcommand_q6);
+#endif
 #ifdef REACTIONS
   REGISTER_COMMAND("reaction", tclcommand_reaction);
 #endif
