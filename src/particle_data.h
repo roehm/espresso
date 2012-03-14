@@ -201,12 +201,12 @@ typedef struct {
 
 #ifdef Q6_PARA
   /* Q6 */
-  int neb;
+  //int neb;
   int solid;
   int solidBonds;
-  double q6;
-  double q6r[14];
-  double q6i[14];
+  //double q6;
+  //double q6r[14];
+  //double q6i[14];
   double q6q6;
   int neighbors[127];
   int clabel;
@@ -214,6 +214,17 @@ typedef struct {
 #endif
 
 } ParticleLocal;
+
+#ifdef Q6_PARA
+typedef struct {
+
+  int neb;
+  double q6;
+  double q6r[14];
+  double q6i[14];
+  
+} ParticleQ6;
+#endif
 
 #ifdef LB
 /** Data related to the Lattice Boltzmann hydrodynamic coupling */
@@ -236,6 +247,10 @@ typedef struct {
   ///
   ParticleLocal l;
   ///
+#ifdef Q6_PARA
+  ParticleQ6 q;
+#endif  
+  
 #ifdef LB
   ParticleLatticeCoupling lc;
 #endif

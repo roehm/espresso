@@ -163,6 +163,7 @@ int tclcommand_q6(ClientData data, Tcl_Interp *interp, int argc, char **argv) {
     }
     return TCL_OK;
   }
+  return TCL_OK;
 #else
   Tcl_AppendResult(interp, "Q6 is not compiled in!", NULL);
   return TCL_ERROR;

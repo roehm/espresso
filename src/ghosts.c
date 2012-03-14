@@ -35,6 +35,7 @@
 #include "grid.h"
 #include "particle_data.h"
 #include "forces.h"
+#include "statistics_nucleation.h"
 
 /** Tag for communication in ghost_comm. */
 #define REQ_GHOST_SEND 100
@@ -108,6 +109,10 @@ int calc_transmit_size(GhostCommunication *gc, int data_parts)
       n_buffer_new += sizeof(ParticleMomentum);
     if (data_parts & GHOSTTRANS_FORCE)
       n_buffer_new += sizeof(ParticleForce);
+#ifdef Q6_PARA
+    if (data_parts & GHOSTTRANS_Q6)
+      n_buffer_new += sizeof(ParticleQ6);
+#endif
 #ifdef LB
     if (data_parts & GHOSTTRANS_COUPLING)
       n_buffer_new += sizeof(ParticleLatticeCoupling);
@@ -173,6 +178,12 @@ void prepare_send_buffer(GhostCommunication *gc, int data_parts)
 	  memcpy(insert, &pt->f, sizeof(ParticleForce));
 	  insert +=  sizeof(ParticleForce);
 	}
+#ifdef Q6_PARA
+	if (data_parts & GHOSTTRANS_Q6) {
+	  memcpy(insert, &pt->q, sizeof(ParticleQ6));
+	  insert +=  sizeof(ParticleQ6);
+	}
+#endif
 #ifdef LB
 	if (data_parts & GHOSTTRANS_COUPLING) {
 	  memcpy(insert, &pt->lc, sizeof(ParticleLatticeCoupling));
@@ -257,6 +268,12 @@ void put_recv_buffer(GhostCommunication *gc, int data_parts)
 	  memcpy(&pt->f, retrieve, sizeof(ParticleForce));
 	  retrieve +=  sizeof(ParticleForce);
 	}
+#ifdef Q6_PARA
+	if (data_parts & GHOSTTRANS_Q6) {
+	  memcpy(&pt->f, retrieve, sizeof(ParticleQ6));
+	  retrieve +=  sizeof(ParticleQ6);
+	}
+#endif 
 #ifdef LB
 	if (data_parts & GHOSTTRANS_COUPLING) {
 	  memcpy(&pt->lc, retrieve, sizeof(ParticleLatticeCoupling));
@@ -298,7 +315,30 @@ void add_forces_from_recv_buffer(GhostCommunication *gc)
   }
 #endif
 }
+void add_q6_from_recv_buffer(GhostCommunication *gc)
+{
+  int pl, p, np;
+  Particle *part, *pt;
+  char *retrieve;
 
+  /* put back data */
+  retrieve = r_buffer;
+  for (pl = 0; pl < gc->n_part_lists; pl++) {
+    np   = gc->part_lists[pl]->n;
+    part = gc->part_lists[pl]->part;
+    for (p = 0; p < np; p++) {
+      pt = &part[p];
+      add_q6(&pt->q, (ParticleQ6 *)retrieve);
+      retrieve +=  sizeof(ParticleQ6);
+    }
+  }
+#ifdef ADDITIONAL_CHECKS
+  if (retrieve - r_buffer != n_r_buffer) {
+    fprintf(stderr, "%d: recv buffer size %d differs from what I put in %d\n", this_node, n_r_buffer, retrieve - r_buffer);
+    errexit();
+  }
+#endif
+}
 void cell_cell_transfer(GhostCommunication *gc, int data_parts)
 {
   int pl, p, np, offset;
@@ -344,6 +384,10 @@ void cell_cell_transfer(GhostCommunication *gc, int data_parts)
 	  memcpy(&pt2->m, &pt1->m, sizeof(ParticleMomentum));
 	if (data_parts & GHOSTTRANS_FORCE)
 	  add_force(&pt2->f, &pt1->f);
+#ifdef Q6_PARA
+	if (data_parts & GHOSTTRANS_Q6)
+	  add_q6(&pt2->q, &pt1->q);
+#endif
 #ifdef LB
 	if (data_parts & GHOSTTRANS_COUPLING)
 	  memcpy(&pt2->lc, &pt1->lc, sizeof(ParticleLatticeCoupling));
@@ -475,8 +519,14 @@ void ghost_communicator(GhostCommunicator *gc)
 	     is integrated into the communication. */
 	  if (data_parts == GHOSTTRANS_FORCE && comm_type != GHOST_RDCE)
 	    add_forces_from_recv_buffer(gcn);
+#ifdef Q6_PARA
+	  else if (data_parts == GHOSTTRANS_Q6){
+	    add_q6_from_recv_buffer(gcn);
+	  }
+#endif
 	  else
 	    put_recv_buffer(gcn, data_parts);
+
 	}
 	else {
 	  GHOST_TRACE(fprintf(stderr, "%d: ghost_comm delaying operation %d, recv from %d\n", this_node, n, node));
@@ -500,10 +550,14 @@ void ghost_communicator(GhostCommunicator *gc)
 	      }
 #endif
 	      /* as above */
-	      if (data_parts == GHOSTTRANS_FORCE && comm_type != GHOST_RDCE)
-		add_forces_from_recv_buffer(gcn2);
+	      if (data_parts == GHOSTTRANS_FORCE && comm_type != GHOST_RDCE)		       add_forces_from_recv_buffer(gcn2);
+#ifdef Q6_PARA
+	      else if (data_parts == GHOSTTRANS_Q6 && comm_type != GHOST_RDCE){
+	        add_q6_from_recv_buffer(gcn2);
+	      }
+#endif
 	      else
-		put_recv_buffer(gcn2, data_parts);
+		       put_recv_buffer(gcn2, data_parts);
 	      break;
 	    }
 	  }

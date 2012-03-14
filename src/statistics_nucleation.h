@@ -138,11 +138,25 @@ MDINLINE void y6(Particle *p_tmp, double dr, double dx, double dy, double dz){
 
     for (int m=0; m<=6; m++){
         //fprintf(stderr,"q6r=%f q6i=%f, ",y6[0][m],y6[1][m]);
-	    p_tmp->l.q6r[m] += y6[0][m];
-	    p_tmp->l.q6i[m] += y6[1][m];
+	    p_tmp->q.q6r[m] += y6[0][m];
+	    p_tmp->q.q6i[m] += y6[1][m];
+	    //fprintf(stderr, "%i: neb %lf real \n", p_tmp->p.identity, p_tmp->q.q6r[m]);
+     //fprintf(stderr, "part %i: %lf im \n",p_tmp->p.identity, p_tmp->q.q6i[m]);
     }
-
+    
     //fprintf(stderr,"\n");
+}
+
+/** add q6 to another. This is used when collecting ghost q6. */
+MDINLINE void add_q6(ParticleQ6 *q6_to, ParticleQ6 *q6_add)
+{
+    q6_to->neb += q6_add->neb; 
+    for (int m=0; m<=6; m++){
+      //fprintf(stderr,"neb %i q6r=%f q6i=%f \n ",q6_add->neb,q6_add->q6r[m],q6_add->q6i[m]);
+	     q6_to->q6r[m] += q6_add->q6r[m];
+	     q6_to->q6i[m] += q6_add->q6i[m];
+    }    
+      //fprintf(stderr, "ghostadd q6 %lf neb %i \n", q6_to->q6, q6_to->neb);
 }
 //#endif
 #endif

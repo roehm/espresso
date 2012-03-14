@@ -184,7 +184,7 @@ void tclcommand_part_print_mu_E(Particle *part, char *buffer, Tcl_Interp *interp
 void tclcommand_part_print_q6(Particle *part, char *buffer, Tcl_Interp *interp)
 {
   /* unscale velocities ! */
-  Tcl_PrintDouble(interp, part->l.q6, buffer);
+  Tcl_PrintDouble(interp, part->q.q6, buffer);
   Tcl_AppendResult(interp, buffer, " ", (char *)NULL);
 }
 void tclcommand_part_print_q6q6(Particle *part, char *buffer, Tcl_Interp *interp)
