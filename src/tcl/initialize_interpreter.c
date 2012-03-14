@@ -42,6 +42,7 @@
 #include "polymer_tcl.h"
 #include "pressure_tcl.h"
 #include "random_tcl.h"
+#include "reaction_tcl.h"
 #include "statistics_chain_tcl.h"
 #include "statistics_cluster_tcl.h"
 #include "statistics_correlation_tcl.h"
@@ -203,6 +204,8 @@ static void register_tcl_commands(Tcl_Interp* interp) {
 #endif
 #ifdef Q6_PARA
   REGISTER_COMMAND("q6", tclcommand_q6);
+#ifdef REACTIONS
+  REGISTER_COMMAND("reaction", tclcommand_reaction);
 #endif
 }
 

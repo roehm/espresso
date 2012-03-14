@@ -62,6 +62,7 @@
 #include "molforces.h"
 #include "mdlc_correction.h"
 #include "statistics_nucleation.h"
+#include "reaction.h"
 
 int this_node = -1;
 int n_nodes = -1;
@@ -402,6 +403,11 @@ void mpi_bcast_event_slave(int node, int event)
   case P3M_COUNT_DIPOLES:
     dp3m_count_magnetic_particles();
     break;
+#endif
+
+#ifdef REACTIONS
+  case REACTION:
+     setup_reaction();
 #endif
 
   default:;
@@ -2674,12 +2680,12 @@ void mpi_bcast_max_mu_slave(int node, int dummy) {
 /******************** REQ_SEND_PARTICLE_T ********************/
 void mpi_set_particle_temperature(int pnode, int part, double _T)
 {
-  mpi_call(mpi_set_particle_temperature_slave, pnode, part); //TODO: really?
+  mpi_call(mpi_set_particle_temperature_slave, pnode, part);
 
   if (pnode == this_node) {
     Particle *p = local_particles[part];
     /* here the setting actually happens, if the particle belongs to the local node */
-    p->T = _T;
+    p->p.T = _T;
   }
   else {
     MPI_Send(&_T, 1, MPI_DOUBLE, pnode, SOME_TAG, comm_cart);
@@ -2698,7 +2704,7 @@ void mpi_set_particle_temperature_slave(int pnode, int part)
     MPI_Status status;
     MPI_Recv(&s_buf, 1, MPI_DOUBLE, 0, SOME_TAG, comm_cart, &status);
     /* here the setting happens for nonlocal nodes */
-    p->T = s_buf;
+    p->p.T = s_buf;
   }
 
   on_particle_change();
@@ -2713,7 +2719,7 @@ void mpi_set_particle_gamma(int pnode, int part, double gamma)
   if (pnode == this_node) {
     Particle *p = local_particles[part];
     /* here the setting actually happens, if the particle belongs to the local node */
-    p->gamma = gamma;
+    p->p.gamma = gamma;
   }
   else {
     MPI_Send(&gamma, 1, MPI_DOUBLE, pnode, SOME_TAG, comm_cart);
@@ -2732,7 +2738,7 @@ void mpi_set_particle_gamma_slave(int pnode, int part)
     MPI_Status status;
     MPI_Recv(&s_buf, 1, MPI_DOUBLE, 0, SOME_TAG, comm_cart, &status);
     /* here the setting happens for nonlocal nodes */
-    p->gamma = s_buf;
+    p->p.gamma = s_buf;
   }
 
   on_particle_change();
