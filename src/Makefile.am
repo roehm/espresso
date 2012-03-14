@@ -84,7 +84,7 @@ libEspresso_a_SOURCES = \
 	statistics_fluid.c statistics_fluid.h \
 	statistics_molecule.c statistics_molecule.h \
 	statistics_observable.c statistics_observable.h \
-    statistics_nucleation.c statistics_nucleation.h \
+  statistics_nucleation.c statistics_nucleation.h \
 	thermostat.c thermostat.h \
 	topology.c topology.h \
 	tuning.c tuning.h \
