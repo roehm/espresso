@@ -62,11 +62,8 @@
 #include "statistics_observable.h"
 #include "statistics_correlation.h"
 #include "lb-boundaries.h"
-<<<<<<< HEAD
 #include "statistics_nucleation.h"
-=======
 #include "domain_decomposition.h"
->>>>>>> master
 
 /** whether the thermostat has to be reinitialized before integration */
 static int reinit_thermo = 1;
@@ -656,16 +653,6 @@ void on_parameter_change(int field)
     break;
   case FIELD_TIMESTEP:
 #ifdef LB_GPU
-<<<<<<< HEAD
-    if(this_node == 0){
-      if(lattice_switch & LATTICE_LB_GPU) {
-        lb_reinit_parameters_gpu();
-       }
-     }
-#endif    
-#ifdef LB
-    if(lattice_switch & LATTICE_LB) lb_reinit_parameters();
-=======
     if(this_node == 0) {
       if (lattice_switch & LATTICE_LB_GPU) {
         lb_reinit_parameters_gpu();
@@ -676,7 +663,6 @@ void on_parameter_change(int field)
     if (lattice_switch & LATTICE_LB) {
       lb_reinit_parameters();
     }
->>>>>>> master
 #endif
   case FIELD_LANGEVIN_GAMMA:
   case FIELD_DPD_TGAMMA:
