@@ -696,6 +696,10 @@ void dd_topology_init(CellPList *old)
   dd_prepare_comm(&cell_structure.update_ghost_pos_comm, update_data);
 
   dd_prepare_comm(&cell_structure.collect_ghost_force_comm, GHOSTTRANS_FORCE);
+#ifdef Q6_PARA
+  dd_prepare_comm(&cell_structure.collect_ghost_q6_comm, GHOSTTRANS_Q6);
+  dd_revert_comm_order(&cell_structure.collect_ghost_q6_comm);
+#endif
   /* collect forces has to be done in reverted order! */
   dd_revert_comm_order(&cell_structure.collect_ghost_force_comm);
 
@@ -703,7 +707,9 @@ void dd_topology_init(CellPList *old)
   dd_assign_prefetches(&cell_structure.exchange_ghosts_comm);
   dd_assign_prefetches(&cell_structure.update_ghost_pos_comm);
   dd_assign_prefetches(&cell_structure.collect_ghost_force_comm);
-
+#ifdef Q6_PARA  
+  dd_assign_prefetches(&cell_structure.collect_ghost_q6_comm);
+#endif
 #ifdef LB
   dd_prepare_comm(&cell_structure.ghost_lbcoupling_comm, GHOSTTRANS_COUPLING) ;
   dd_assign_prefetches(&cell_structure.ghost_lbcoupling_comm) ;
@@ -721,7 +727,7 @@ void dd_topology_init(CellPList *old)
       /* particle does not belong to this node. Just stow away
 	 somewhere for the moment */
       if (nc == NULL)
-	nc = local_cells.cell[0];
+	       nc = local_cells.cell[0];
       append_unindexed_particle(nc, &part[p]);
     }
   }
@@ -752,6 +758,9 @@ void dd_topology_release()
   free_comm(&cell_structure.collect_ghost_force_comm);
 #ifdef LB
   free_comm(&cell_structure.ghost_lbcoupling_comm);
+#endif
+#ifdef Q6_PARA
+  free_comm(&cell_structure.collect_ghost_q6_comm);
 #endif
 }
 

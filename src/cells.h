@@ -141,7 +141,10 @@ typedef struct {
   /** Communicator for particle data used by lattice Boltzmann */
   GhostCommunicator ghost_lbcoupling_comm;
 #endif
-
+#ifdef Q6_PARA
+  /** Communicator to collect ghost q6 parameter. */
+  GhostCommunicator collect_ghost_q6_comm;
+#endif
   /** Cell system dependent function to find the right node for a
       particle at position pos. 
       \param  pos Position of a particle.

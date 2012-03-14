@@ -134,6 +134,10 @@ The ghost communicators are created in the init routines of the cell systems, th
 
 /// resize the receiver particle arrays to the size of the senders
 #define GHOSTTRANS_PARTNUM  64
+
+#ifdef Q6_PARA
+#define GHOSTTRANS_Q6       128
+#endif
 /*@}*/
 
 /** \name Data Types */

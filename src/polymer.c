@@ -147,24 +147,25 @@ int constraint_collision(double *p1, double *p2){
     case CONSTRAINT_WAL:
       calculate_wall_dist(&part1,folded_pos1,&part1,&c->c.wal,&d1,v);
       calculate_wall_dist(&part2,folded_pos2,&part2,&c->c.wal,&d2,v);
-      if(d1*d2<=0.0)
-	return 1;
+      if(d1*d2<=0.0) return 1;
       break;
     case CONSTRAINT_SPH:
       calculate_sphere_dist(&part1,folded_pos1,&part1,&c->c.sph,&d1,v);
       calculate_sphere_dist(&part2,folded_pos2,&part2,&c->c.sph,&d2,v);
-      if(d1*d2<0.0)
-	return 1;
+      if(d1*d2<0.0)	return 1;
       break;
     case CONSTRAINT_CYL:
       calculate_cylinder_dist(&part1,folded_pos1,&part1,&c->c.cyl,&d1,v);
       calculate_cylinder_dist(&part2,folded_pos2,&part2,&c->c.cyl,&d2,v);
-      if(d1*d2<0.0)
-	return 1;
+      if(d1*d2<0.0)	return 1;
       break;
     case CONSTRAINT_MAZE:
     case CONSTRAINT_PORE:
-    case CONSTRAINT_PLATE:
+      calculate_pore_dist(&part1,folded_pos1,&part1,&c->c.pore,&d1,v);
+      calculate_pore_dist(&part2,folded_pos2,&part2,&c->c.pore,&d2,v);
+      //fprintf(stderr,"d1: %f, d2: %f; ",d1,d2);
+      if(d1<1.0 || d2<1.0)	return 1;
+	  break;
     case CONSTRAINT_RHOMBOID:
       break;
     }

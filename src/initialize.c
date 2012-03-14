@@ -63,6 +63,7 @@
 #include "statistics_correlation.h"
 #include "lb-boundaries.h"
 #include "domain_decomposition.h"
+#include "statistics_nucleation.h"
 
 /** whether the thermostat has to be reinitialized before integration */
 static int reinit_thermo = 1;
@@ -137,6 +138,9 @@ void on_program_start()
   reaction.back_rate=-1.0;
 #endif
 
+#ifdef Q6
+  q6_pre_init();
+#endif
   /*
     call all initializations to do only on the master node here.
   */
@@ -187,6 +191,7 @@ void on_integration_start()
     case COULOMB_P3M:   break;
 #endif /*P3M*/
     case COULOMB_EWALD: break;
+    case COULOMB_DH: break;
     default: {
       char *errtext = runtime_error(128);
       ERROR_SPRINTF(errtext,"{014 npt only works with Ewald sum or P3M} ");
@@ -648,16 +653,14 @@ void on_parameter_change(int field)
     break;
   case FIELD_TIMESTEP:
 #ifdef LB_GPU
-    if(this_node == 0) {
-      if (lattice_switch & LATTICE_LB_GPU) {
+    if(this_node == 0){
+      if(lattice_switch & LATTICE_LB_GPU) {
         lb_reinit_parameters_gpu();
-      }
-    }  
+       }
+     }
 #endif    
 #ifdef LB
-    if (lattice_switch & LATTICE_LB) {
-      lb_reinit_parameters();
-    }
+    if(lattice_switch & LATTICE_LB) lb_reinit_parameters();
 #endif
   case FIELD_LANGEVIN_GAMMA:
   case FIELD_DPD_TGAMMA:

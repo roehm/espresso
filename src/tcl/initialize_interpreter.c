@@ -51,6 +51,7 @@
 #include "statistics_tcl.h"
 #include "thermostat_tcl.h"
 #include "virtual_sites_com_tcl.h"
+#include "statistics_nucleation_tcl.h"
 
 #ifdef TK
 #include <tk.h>
@@ -191,6 +192,7 @@ static void register_tcl_commands(Tcl_Interp* interp) {
 #endif
 #ifdef LB_GPU
   /* in lbgpu_cfile.c */
+  //TODO check if this is still true
   REGISTER_COMMAND("lbnode_extforce", tclcommand_lbnode_extforce_gpu);
 #endif
 #ifdef CUDA
@@ -202,6 +204,9 @@ static void register_tcl_commands(Tcl_Interp* interp) {
 #endif
 #ifdef REACTIONS
   REGISTER_COMMAND("reaction", tclcommand_reaction);
+#endif  
+#ifdef Q6_PARA
+  REGISTER_COMMAND("q6", tclcommand_q6);
 #endif
 }
 
