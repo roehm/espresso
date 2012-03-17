@@ -363,7 +363,7 @@ proc writevtkq6q6 {filename {type "all"}} {
 
 	close $fp
 }
-proc writevtkq6+q6q6 {filename {type "all"}} {
+proc writevtkq6_mean {filename {type "all"}} {
 	set max_pid [setmd max_part]
 	set n 0
 	set fp [open $filename "w"]
@@ -381,9 +381,8 @@ proc writevtkq6+q6q6 {filename {type "all"}} {
 			set xpos [expr [lindex [part $pid print folded_pos] 0] - 0.5] ;#shifted since the LB and MD grid are shifted but the vtk output for the LB field doesn't acknowledge that
 			set ypos [expr [lindex [part $pid print folded_pos] 1] - 0.5]
 			set zpos [expr [lindex [part $pid print folded_pos] 2] - 0.5]
-			set paraq6 [part $pid print q6]
-			set paraq6q6 [part $pid print q6q6]
-			puts $fp "$xpos $ypos $zpos $paraq6 $paraq6q6"
+			set paraq6_mean [part $pid print q6_mean]
+			puts $fp "$xpos $ypos $zpos $paraq6_mean"
 		}
 	}
 

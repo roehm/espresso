@@ -193,6 +193,12 @@ void tclcommand_part_print_q6q6(Particle *part, char *buffer, Tcl_Interp *interp
   Tcl_PrintDouble(interp, part->l.q6q6, buffer);
   Tcl_AppendResult(interp, buffer, " ", (char *)NULL);
 }
+void tclcommand_part_print_q6_mean(Particle *part, char *buffer, Tcl_Interp *interp)
+{
+  /* unscale velocities ! */
+  Tcl_PrintDouble(interp, part->q.q6_mean, buffer);
+  Tcl_AppendResult(interp, buffer, " ", (char *)NULL);
+}
 #endif
 
 void tclcommand_part_print_f(Particle *part, char *buffer, Tcl_Interp *interp)
@@ -414,6 +420,8 @@ int tclprint_to_result_Particle(Tcl_Interp *interp, int part_num)
   tclcommand_part_print_q6(&part, buffer, interp);
   Tcl_AppendResult(interp, buffer, " q6q6 ", (char *)NULL);
   tclcommand_part_print_q6q6(&part, buffer, interp);
+  Tcl_AppendResult(interp, buffer, " q6_mean ", (char *)NULL);
+  tclcommand_part_print_q6_mean(&part, buffer, interp);
 #endif
 
   Tcl_AppendResult(interp, buffer, " v ", (char *)NULL);
@@ -579,6 +587,9 @@ int tclcommand_part_parse_print(Tcl_Interp *interp, int argc, char **argv,
     }
     else if (ARG0_IS_S("q6q6")) {
       tclcommand_part_print_q6q6(&part, buffer, interp);
+    }
+    else if (ARG0_IS_S("q6_mean")) {
+      tclcommand_part_print_q6_mean(&part, buffer, interp);
     }
 #endif
     else if (ARG0_IS_S("v"))

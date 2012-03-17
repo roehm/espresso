@@ -759,7 +759,7 @@ int dummy[3] = {0,0,0};
                  
                 get_mi_vector(vec21, p2->r.p, p1->r.p);
                 dist2 = vec21[0]*vec21[0]+vec21[1]*vec21[1]+vec21[2]*vec21[2];
-//fprintf(stderr, "dist2: %f\n", dist2);
+                //fprintf(stderr, "dist2: %f\n", dist2);
                 if(dist2 < rclocal2) {
 
                     if((p1->q.neb >= 127) || (p2->q.neb >= 127)) {
@@ -816,7 +816,7 @@ int dummy[3] = {0,0,0};
 
             //fprintf(stderr,"Particle %d has %d neighbors. Q6: %f\n",partCfg[i].p.identity,partCfg[i].q.neb,partCfg[i].l.q6);
     }
-    
+#if 0    
     FILE* fp = fopen("q6.vtk", "w");
 	
 	   if(fp == NULL) return 1;
@@ -828,7 +828,7 @@ int dummy[3] = {0,0,0};
         /** print of the calculated phys values */
         fprintf(fp, "%lf %lf %lf %lf \n", partCfg[i].r.p[0], partCfg[i].r.p[1], partCfg[i].r.p[2], partCfg[i].q.q6);
       }
-      
+#endif      
     return statusOK;
 }
 
@@ -910,7 +910,7 @@ int q6_calculation(){
           #else
 	         //fold_position(p1->l.mean_pos, dummy);
           //fold_position(p2->l.mean_pos, dummy);
-          dist2 = distance2vec(p2->l.mean_pos, p1->l.mean_pos, vec21);
+          //dist2 = distance2vec(p2->l.mean_pos, p1->l.mean_pos, vec21);
           #endif
 	         if(dist2 < rclocal2) {
             #if 1
@@ -1002,6 +1002,8 @@ int q6_calculation(){
 	       part[i].q.q6 *= (4.0 * M_PI) / 13.0; //normalise by 4pi/13
         // Steinhardt order parameter: Wolfgang Lechner and Christoph Dellago 2008 eq(3)
 	       part[i].q.q6 = sqrt(part[i].q.q6);    // This is the local invariant q6 per particle (Eq. 7 in ten Wolde)
+	       if(part[i].q.q6_mean == 0.0) part[i].q.q6_mean = part[i].q.q6;
+	       part[i].q.q6_mean = (part[i].q.q6 + part[i].q.q6_mean)/2;
         //fprintf(stderr,"Particle %d has %d neighbors. Q6: %f\n",part[i].p.identity,part[i].q.neb,part[i].q.q6);
         // Neigbor count optional
 	       //totneb += part[i].q.neb;
@@ -1010,6 +1012,11 @@ int q6_calculation(){
 
     return statusOK;
 }
+void update_mean_q6_calculation(){
+
+
+}
+
 void update_mean_part_pos(){
     
     int np;
@@ -1022,13 +1029,13 @@ void update_mean_part_pos(){
       cell = local_cells.cell[c];
       part = cell->part;
       np  = cell->n;
-      
+#if 0      
       for (i=0;i<np;i++) {
 	       part[i].l.mean_pos[0] = (part[i].r.p[0]+part[i].l.mean_pos[0])/2;
 	       part[i].l.mean_pos[1] = (part[i].r.p[1]+part[i].l.mean_pos[1])/2;
 	       part[i].l.mean_pos[2] = (part[i].r.p[2]+part[i].l.mean_pos[2])/2;
 	     }
-	     
+#endif	     
 	   }
 //printf("udate mean pos finished\n");
 }
@@ -1253,7 +1260,7 @@ int initialize_q6(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds) {
     q6para.q6q6_min = tcl_q6q6_min;
     q6para.min_solid_bonds = tcl_min_solid_bonds;
     mpi_bcast_q6_params();
-    
+    reset_mean_part_pos();
     //printf("bcast q6 params ok\n");
     
     return 0;
@@ -1296,12 +1303,16 @@ void reset_mean_part_pos(){
       cell = local_cells.cell[c];
       part = cell->part;
       np  = cell->n;
-      
+    
       for (i=0;i<np;i++) {
+        part[i].q.q6_mean = 0.0;
+#if 0
 	       part[i].l.mean_pos[0] = part[i].r.p[0];
 	       part[i].l.mean_pos[1] = part[i].r.p[1];
 	       part[i].l.mean_pos[2] = part[i].r.p[2];
-	     }	     
+#endif
+	     }	    
+
 	   }
 
 }
