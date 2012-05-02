@@ -204,7 +204,7 @@ typedef struct {
   int ghost;
 #endif
 
-#ifdef Q6_PARA
+#ifdef Q6_PARA_LOCAL
   /* Q6 */
   //int neb;
   int solid;
@@ -225,9 +225,11 @@ typedef struct {
 
   int neb;
   double q6;
-  double q6r[14];
-  double q6i[14];
+  double q6r[7];
+  double q6i[7];
+  int neighbors[27];
   double q6_mean;
+  double q6_ave;
   
 } ParticleQ6;
 #endif

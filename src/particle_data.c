@@ -214,17 +214,22 @@ void init_particle(Particle *part)
   part->p.gamma = -1.0;
 #endif
 
+#ifdef Q6_PARA_LOCAL
+  part->l.solid = 0;
+  part->l.solidBonds = 0;
+  part->l.clabel = -1;
+#endif 
+
 #ifdef Q6_PARA
   /* Q6 */
   part->q.neb = 0;
-  part->l.solid = 0;
-  part->l.solidBonds = 0;
+  
   part->q.q6 = 0.0;
   for(m=0; m<=6; m++) {
     part->q.q6r[m]=0.0;
     part->q.q6i[m]=0.0;
   }
-  part->l.clabel = -1;
+
 }
 #endif
 

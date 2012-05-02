@@ -270,7 +270,7 @@ void put_recv_buffer(GhostCommunication *gc, int data_parts)
 	}
 #ifdef Q6_PARA
 	if (data_parts & GHOSTTRANS_Q6) {
-	  memcpy(&pt->f, retrieve, sizeof(ParticleQ6));
+	  memcpy(&pt->q, retrieve, sizeof(ParticleQ6));
 	  retrieve +=  sizeof(ParticleQ6);
 	}
 #endif 

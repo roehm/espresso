@@ -378,6 +378,7 @@ struct particleCluster *clust;
 //build clusters using a breadth-first graph algorithm
 //Algorithm is on page 594 of Cormen, Leiserson & Rivest (3rd edition).
 // Colors: Black = -2, Grey = -1
+#if 0
 void buildClusters(int rootmember) {
 
     struct particleCluster *c;
@@ -637,9 +638,11 @@ int kais_cluster() {
 
 /*
  Clustur algorithms done.
+
 ##################################################################################################
  Begin q6:
 */
+#endif
 #if 1
 //spherical harmoic for l=6
 void y6(Particle *p_tmp, double dr, double dx, double dy, double dz){
@@ -723,8 +726,9 @@ void y6(Particle *p_tmp, double dr, double dx, double dy, double dz){
 }
 #endif
 //berechnet q6!
-int prepareQ6(double rc){
 
+int prepareQ6(double rc){
+#if 0
     //double rc = q6para.rc
     Particle *p1, *p2;
     int i, j, m;
@@ -828,44 +832,41 @@ int dummy[3] = {0,0,0};
         /** print of the calculated phys values */
         fprintf(fp, "%lf %lf %lf %lf \n", partCfg[i].r.p[0], partCfg[i].r.p[1], partCfg[i].r.p[2], partCfg[i].q.q6);
       }
+#endif
 #endif      
-    return statusOK;
+    return 0;
 }
 
-int q6_calculation(){
+int ql6_calculation(){
 
     on_observable_calc();
     double rc = q6para.rc;
     Particle *p1, *p2, **pairs;
-    int i, m, n;
+    int c, i, m, n, np;
     double dist2;
     double rclocal2 = rc*rc; // sphere radius squared around particle for neighbor detection
     double vec21[3];
     int statusOK = 1;
-    int dummy[3] = {0,0,0};
+    //int dummy[3] = {0,0,0};
     //totneb = 0;
 //fprintf(stderr, "%d: rclocal2 %lf \n", this_node, rclocal2); 
     //int n_part;
-    int np;
     //int g, pnode;
     Cell *cell;
-    int c;
     Particle *part;
-    //IA_Neighbor *neighbor;
     //MPI_Status status;
     
     //part on node
     //n_part = cells_get_n_particles();
     
-    for (c = 0; c < local_cells.n; c++) {
-      cell = local_cells.cell[c];
-      part = cell->part;
-      np = cell->n;
+    for (int c = 0; c < local_cells.n; c++) {
+      part = local_cells.cell[c]->part;
+      np = local_cells.cell[c]->n;
        
       for (i=0;i<np;i++) {
         part[i].q.neb = 0;
-        part[i].l.solid = 0;
-        part[i].l.solidBonds = 0;
+        //part[i].l.solid = 0;
+        //part[i].l.solidBonds = 0;
         part[i].q.q6=0.0;
 	       for (int m=0; m<=6; m++){
 	         part[i].q.q6r[m]=0.0;
@@ -878,8 +879,8 @@ int q6_calculation(){
       np   = ghost_cells.cell[c]->n;
       for (i=0;i<np;i++) {
         part[i].q.neb = 0;
-        part[i].l.solid = 0;
-        part[i].l.solidBonds = 0;
+        //part[i].l.solid = 0;
+        //part[i].l.solidBonds = 0;
         part[i].q.q6=0.0;
 	       for (m=0; m<=6; m++){
 	         part[i].q.q6r[m]=0.0;
@@ -914,13 +915,13 @@ int q6_calculation(){
           #endif
 	         if(dist2 < rclocal2) {
             #if 1
-            if((p1->q.neb >= 127 || p2->q.neb >= 127)) {
+            if((p1->q.neb >= 27 || p2->q.neb >= 27)) {
               fprintf(stderr,"ERROR: Particle has more neighbors than possible! p1: %i p2: %i ", p1->q.neb, p2->q.neb);              
               errexit();
             }
             #endif
-            p1->l.neighbors[p1->q.neb]=p2->p.identity;
-            p2->l.neighbors[p2->q.neb]=p1->p.identity;
+            p1->q.neighbors[p1->q.neb]=p2->p.identity;
+            p2->q.neighbors[p2->q.neb]=p1->p.identity;
             p1->q.neb++;
             p2->q.neb++;
             if(dist2 != 0.0) y6(p1, sqrt(dist2), vec21[0], vec21[1], vec21[2]);
@@ -964,10 +965,11 @@ int q6_calculation(){
         //fprintf(stderr,"Particle %d has %d neighbors. Q6: %f\n",part[i].p.identity,part[i].q.neb,part[i].q.q6);
         // Neigbor count optional
 	       //totneb += part[i].q.neb;
-	       #endif
+#endif
       }      
     }    
-#endif    
+#endif 
+
     for (c = 0; c < local_cells.n; c++) {
       cell = local_cells.cell[c];
       part = cell->part;
@@ -992,7 +994,23 @@ int q6_calculation(){
 	           }
 	           //statusOK = 0;
 	         }
+	     } 
+	   } 
+    return statusOK;
+}
 
+int q6_calculation(){
+    int c, i, m, np;
+    Cell *cell;
+    Particle *part;
+    int statusOK = 1;
+        
+    for (c = 0; c < local_cells.n; c++) {
+      cell = local_cells.cell[c];
+      part = cell->part;
+      np = cell->n;
+       
+      for (i=0;i<np;i++) {
 	       part[i].q.q6 = 0.5 * ( part[i].q.q6r[0] * part[i].q.q6r[0] + part[i].q.q6i[0] * part[i].q.q6i[0] );
 	       //fprintf(stderr, "Anfang: %f aus %f und %f\n", part[i].l.q6, part[i].q.q6r[0], part[i].q.q6i[0]);
 	       for (m=1; m<=6; m++){
@@ -1012,6 +1030,7 @@ int q6_calculation(){
 
     return statusOK;
 }
+
 void update_mean_q6_calculation(){
 
 
@@ -1040,9 +1059,9 @@ void update_mean_part_pos(){
 //printf("udate mean pos finished\n");
 }
 
-//parallization not ready yet!!!
+//not parallized !!!
 void reduceQ6(){
-
+#if 0
     double Q6r[7], Q6i[7]; //global Q6m, real and imaginary part
     double Q6;
     int i,m;
@@ -1095,9 +1114,86 @@ void reduceQ6(){
     Q6 *= 4.0 * M_PI;
     Q6 /= 13.0;
     Q6 = sqrt(Q6);
-
+#endif
 }
 
+void averageQ6(){
+
+    double Q6r[7], Q6i[7]; //global Q6m, real and imaginary part
+    int c, i, j, m, k;
+    int np;
+    //int g, pnode;
+    Cell *cell;
+    Particle *part;
+    Particle *part2;
+
+    //MPI_Status status;
+    
+    //part on node
+    //n_part = cells_get_n_particles();
+    
+    for (c = 0; c < local_cells.n; c++) {
+      part = local_cells.cell[c]->part;
+      np = local_cells.cell[c]->n;
+       
+      for (i=0;i<np;i++) {
+        part[i].q.q6_ave=0.0;
+      }
+    }
+    for(c=0; c<ghost_cells.n; c++) {
+      part = ghost_cells.cell[c]->part;
+      np   = ghost_cells.cell[c]->n;
+      
+      for (i=0;i<np;i++) {
+        part[i].q.q6_ave=0.0;
+      }
+    } 
+    for (c = 0; c < local_cells.n; c++) {
+      part = local_cells.cell[c]->part;
+      np = local_cells.cell[c]->n;
+       
+      for (i=0;i<np;i++) {
+	       // Wolfgang Lechner and Christoph Dellago 2008 eq(1)
+        if(part[i].q.neb > 0) {
+        // init
+          for (m=0; m<=6; m++){
+	           Q6r[m] = 0.0;
+	           Q6i[m] = 0.0;
+          }
+	         //accumulate local q6 vector into global average
+	         for(k=0; k<part[i].q.neb; k++){
+            part2 = local_particles[part->q.neighbors[k]];
+	           for (int m=0; m<=6; m++){
+	             Q6r[m] += part2->q.q6r[m];
+	             Q6i[m] += part2->q.q6i[m];
+	           }
+	         }
+	         //add values of particle itself and
+	         //divide with number of neighbors + particle itself (lechner and dellago 2008 eq(6))
+	         for (int m=0; m<=6; m++){
+	             Q6r[m] = (Q6r[m] + part->q.q6r[m])/(part[i].q.neb + 1);
+	             Q6i[m] = (Q6i[m] + part->q.q6i[m])/(part[i].q.neb + 1);
+	           }	         
+	       }
+        else {
+		    //Q6 is undefined
+		        for (int m=0; m<=6; m++){
+		          Q6r[m] = 0.0;
+            Q6i[m] = 0.0;
+          }        
+	       }
+      }
+
+      // calc average q6 lechner and dellago 2008 eq(5)
+      part[i].q.q6_ave = 0.5 * ( Q6r[0]*Q6r[0] + Q6i[0]*Q6i[0] );
+      for (int m=1; m<=6; m++){
+	      part[i].q.q6_ave += Q6r[m]*Q6r[m] + Q6i[m]*Q6i[m];
+      }
+      part[i].q.q6_ave *= 4.0 * M_PI/13.0;
+      part[i].q.q6_ave = sqrt(part[i].q.q6_ave);
+    }
+  
+}
 
 //helper function
 inline double pair_q6q6( Particle *p, Particle *q ) {
@@ -1115,9 +1211,10 @@ inline double pair_q6q6( Particle *p, Particle *q ) {
 
     return( q6q6 );
 }
+
 //parallization does not work fo far due to ghostpart without q6!!!
 double reduceQ6Q6(double q6q6_min, int min_solid_bonds){
-
+#if 0
   solidParticles = 0;
 
   //eQ6Q6 = 0.0;
@@ -1182,16 +1279,19 @@ double reduceQ6Q6(double q6q6_min, int min_solid_bonds){
     //}
 
   //fprintf(stderr,"solidParticles %d:\n",solidParticles);
+#endif
   return 1;
-
 }
-#if 0
+
+
 void preinit_q6(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds){
+#if 0
   rc = tcl_rc;
   q6q6_min = tcl_q6q6_min;
   min_solid_bonds = tcl_min_solid_bonds;
-}
 #endif
+}
+
 /* init globals for q6 */
 void init_q6() {
     clust = 0;
@@ -1244,7 +1344,7 @@ double analyze_q6_solid_cluster(double rc, double q6q6_min, int min_solid_bonds)
     //reduceQ6();
     solidParticles = reduceQ6Q6(q6q6_min, min_solid_bonds);
 
-    biggest_cluster = kais_cluster();
+    //biggest_cluster = kais_cluster();
 
     // alternative cluster algorithm
     //biggest_cluster_searchtree = largestCluster();

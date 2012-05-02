@@ -41,6 +41,7 @@ typedef struct {
 
 extern Q6_Parameters q6para;
 
+int ql6_calculation();
 int q6_calculation();
 
 void q6_pre_init();
@@ -66,7 +67,11 @@ void reset_mean_part_pos();
 /** add q6 to another. This is used when collecting ghost q6. */
 MDINLINE void add_q6(ParticleQ6 *q6_to, ParticleQ6 *q6_add)
 {
-    q6_to->neb += q6_add->neb; 
+    int old_neb = q6_to->neb;
+    q6_to->neb += q6_add->neb;
+    for(int i=old_neb; i<q6_to->neb; i++){
+      q6_to->neighbors[i] = q6_add->neighbors[i-old_neb];
+    }
     for (int m=0; m<=6; m++){
       //fprintf(stderr,"neb %i q6r=%f q6i=%f \n ",q6_add->neb,q6_add->q6r[m],q6_add->q6i[m]);
 	     q6_to->q6r[m] += q6_add->q6r[m];

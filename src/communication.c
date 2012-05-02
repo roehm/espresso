@@ -2586,6 +2586,7 @@ int mpi_q6_calculation()
 #ifdef Q6_PARA
   mpi_call(mpi_q6_calculation_slave, -1, 0);
 
+  ql6_calculation();
   q6_calculation();
   //reduceQ6Q6();
 
@@ -2601,6 +2602,7 @@ int mpi_q6_calculation()
 void mpi_q6_calculation_slave(int dummy, int dummy2)
 {
 #ifdef Q6_PARA
+  ql6_calculation();
   q6_calculation();
   //reduceQ6Q6();
   

@@ -189,9 +189,11 @@ void tclcommand_part_print_q6(Particle *part, char *buffer, Tcl_Interp *interp)
 }
 void tclcommand_part_print_q6q6(Particle *part, char *buffer, Tcl_Interp *interp)
 {
+#ifdef Q6_PARA_LOCAL
   /* unscale velocities ! */
   Tcl_PrintDouble(interp, part->l.q6q6, buffer);
   Tcl_AppendResult(interp, buffer, " ", (char *)NULL);
+#endif
 }
 void tclcommand_part_print_q6_mean(Particle *part, char *buffer, Tcl_Interp *interp)
 {
