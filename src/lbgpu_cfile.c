@@ -204,7 +204,6 @@ void lb_reinit_parameters_gpu() {
     /* Note that the modes are not normalized as in the paper here! */
 
     lbpar_gpu.mu = (float)temperature/c_sound_sq*lbpar_gpu.tau*lbpar_gpu.tau/(lbpar_gpu.agrid*lbpar_gpu.agrid);
-    //lbpar_gpu->mu *= agrid*agrid*agrid;  // Marcello's conjecture
 
     /* lb_coupl_pref is stored in MD units (force)
      * Eq. (16) Ahlrichs and Duenweg, JCP 111(17):8225 (1999).
