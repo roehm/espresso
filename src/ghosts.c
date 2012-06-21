@@ -112,6 +112,8 @@ int calc_transmit_size(GhostCommunication *gc, int data_parts)
 #ifdef Q6_PARA
     if (data_parts & GHOSTTRANS_Q6)
       n_buffer_new += sizeof(ParticleQ6);
+    if (data_parts & GHOSTCOMM_Q6)
+      n_buffer_new += sizeof(ParticleQ6);
 #endif
 #ifdef LB
     if (data_parts & GHOSTTRANS_COUPLING)
@@ -180,6 +182,10 @@ void prepare_send_buffer(GhostCommunication *gc, int data_parts)
 	}
 #ifdef Q6_PARA
 	if (data_parts & GHOSTTRANS_Q6) {
+	  memcpy(insert, &pt->q, sizeof(ParticleQ6));
+	  insert +=  sizeof(ParticleQ6);
+	}
+	if (data_parts & GHOSTCOMM_Q6) {
 	  memcpy(insert, &pt->q, sizeof(ParticleQ6));
 	  insert +=  sizeof(ParticleQ6);
 	}
@@ -270,6 +276,10 @@ void put_recv_buffer(GhostCommunication *gc, int data_parts)
 	}
 #ifdef Q6_PARA
 	if (data_parts & GHOSTTRANS_Q6) {
+	  memcpy(&pt->q, retrieve, sizeof(ParticleQ6));
+	  retrieve +=  sizeof(ParticleQ6);
+	}
+	if (data_parts & GHOSTCOMM_Q6) {
 	  memcpy(&pt->q, retrieve, sizeof(ParticleQ6));
 	  retrieve +=  sizeof(ParticleQ6);
 	}
@@ -364,7 +374,9 @@ void cell_cell_transfer(GhostCommunication *gc, int data_parts)
 #endif
     }
     else {
+      //ghost?
       part1 = gc->part_lists[pl]->part;
+      //real?
       part2 = gc->part_lists[pl + offset]->part;
       for (p = 0; p < np; p++) {
 	pt1 = &part1[p];
@@ -387,6 +399,8 @@ void cell_cell_transfer(GhostCommunication *gc, int data_parts)
 #ifdef Q6_PARA
 	if (data_parts & GHOSTTRANS_Q6)
 	  add_q6(&pt2->q, &pt1->q);
+	if (data_parts & GHOSTCOMM_Q6)
+	  memcpy(&pt2->q, &pt1->q, sizeof(ParticleQ6));
 #endif
 #ifdef LB
 	if (data_parts & GHOSTTRANS_COUPLING)

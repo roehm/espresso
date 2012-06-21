@@ -41,24 +41,16 @@ typedef struct {
 
 extern Q6_Parameters q6para;
 
-int ql6_calculation();
+int q6_ri_calculation();
 int q6_calculation();
 
 void q6_pre_init();
 
-double analyze_bubble_volume(Tcl_Interp *interp, double bubble_cut, double sigma);
+int q6_initialize(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
 
-double analyze_q6(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
+void q6_update();
 
-double analyze_q6_solid(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
-
-double analyze_q6_solid_cluster(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
-
-int initialize_q6(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
-
-double reduceQ6Q6();
-
-void update_q6();
+void q6_average();
 
 void update_mean_part_pos();
 

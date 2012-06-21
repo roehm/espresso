@@ -699,6 +699,7 @@ void dd_topology_init(CellPList *old)
 #ifdef Q6_PARA
   dd_prepare_comm(&cell_structure.collect_ghost_q6_comm, GHOSTTRANS_Q6);
   dd_revert_comm_order(&cell_structure.collect_ghost_q6_comm);
+  dd_prepare_comm(&cell_structure.update_ghost_q6_comm, GHOSTCOMM_Q6);
 #endif
   /* collect forces has to be done in reverted order! */
   dd_revert_comm_order(&cell_structure.collect_ghost_force_comm);
@@ -709,6 +710,7 @@ void dd_topology_init(CellPList *old)
   dd_assign_prefetches(&cell_structure.collect_ghost_force_comm);
 #ifdef Q6_PARA  
   dd_assign_prefetches(&cell_structure.collect_ghost_q6_comm);
+  dd_assign_prefetches(&cell_structure.update_ghost_q6_comm);
 #endif
 #ifdef LB
   dd_prepare_comm(&cell_structure.ghost_lbcoupling_comm, GHOSTTRANS_COUPLING) ;

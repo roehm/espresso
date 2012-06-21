@@ -32,21 +32,9 @@
 
 #include "parser.h"
 
-/** Largest bubble volume of vapor-like particles
-*/
-int tclcommand_analyze_bubble_volume(Tcl_Interp *interp, int argc, char **argv);
 
 /** Local bond order parameter, returns system average
 */
-int tclcommand_analyze_q6(Tcl_Interp *interp, int argc, char **argv);
-
-/** Identify by q6, how many solid particles there are in the system
-*/
-int tclcommand_analyze_q6_solid(Tcl_Interp *interp, int argc, char **argv);
-
-/** Return size of largest solid cluster, identified by q6
-*/
-int tclcommand_analyze_q6_solid_cluster(Tcl_Interp *interp, int argc, char **argv);
 
 int tclcommand_q6(ClientData data, Tcl_Interp *interp, int argc, char **argv);
 

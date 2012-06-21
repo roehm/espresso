@@ -144,6 +144,8 @@ typedef struct {
 #ifdef Q6_PARA
   /** Communicator to collect ghost q6 parameter. */
   GhostCommunicator collect_ghost_q6_comm;
+    /** Communicator to update ghost q6 parameter. */
+  GhostCommunicator update_ghost_q6_comm;
 #endif
   /** Cell system dependent function to find the right node for a
       particle at position pos. 

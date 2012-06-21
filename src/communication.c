@@ -139,8 +139,8 @@ typedef void (SlaveCallback)(int node, int param);
   CB(mpi_set_particle_temperature_slave) \
   CB(mpi_set_particle_gamma_slave) \
   CB(mpi_bcast_q6_params_slave) \
-  CB(mpi_q6_calculation_slave)
-
+  CB(mpi_q6_calculation_slave) \
+  CB(mpi_q6_average_calculation_slave)
 // create the forward declarations
 #define CB(name) void name(int node, int param);
 CALLBACK_LIST
@@ -2586,7 +2586,7 @@ int mpi_q6_calculation()
 #ifdef Q6_PARA
   mpi_call(mpi_q6_calculation_slave, -1, 0);
 
-  ql6_calculation();
+  q6_ri_calculation();
   q6_calculation();
   //reduceQ6Q6();
 
@@ -2602,17 +2602,44 @@ int mpi_q6_calculation()
 void mpi_q6_calculation_slave(int dummy, int dummy2)
 {
 #ifdef Q6_PARA
-  ql6_calculation();
+  q6_ri_calculation();
   q6_calculation();
   //reduceQ6Q6();
-  
   
   COMM_TRACE(fprintf(stderr, "%d: q6 calculation task %d done.\n", this_node, dummy2));
 
   check_runtime_errors();
 #endif
 }
+/********************* REQ_Q6_AVERAGE_CALCULATION ********/
+int mpi_q6_average_calculation()
+{
+#ifdef Q6_PARA
+  mpi_call(mpi_q6_average_calculation_slave, -1, 0);
 
+  q6_average();
+
+  COMM_TRACE(fprintf(stderr, "%d: q6 average calculation task %d done.\n", this_node, dummy));
+
+  return check_runtime_errors();
+#else
+  return 0;
+#endif
+
+}
+
+void mpi_q6_average_calculation_slave(int dummy, int dummy2)
+{
+#ifdef Q6_PARA
+
+  q6_average();
+
+  
+  COMM_TRACE(fprintf(stderr, "%d: q6 average calculation task %d done.\n", this_node, dummy2));
+
+  check_runtime_errors();
+#endif
+}
 /********************* REQ_RECV_FLUID_POPULATIONS ********/
 void mpi_recv_fluid_populations(int node, int index, double *pop) {
 #ifdef LB

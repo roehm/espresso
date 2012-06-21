@@ -2472,10 +2472,7 @@ int tclcommand_analyze(ClientData data, Tcl_Interp *interp, int argc, char **arg
   REGISTER_ANALYSIS_W_ARG("<g3>", tclcommand_analyze_parse_g_av, 3);
   REGISTER_ANALYSIS_W_ARG("formfactor", tclcommand_analyze_parse_formfactor, 0);
   REGISTER_ANALYSIS_W_ARG("<formfactor>", tclcommand_analyze_parse_formfactor, 1);    
-  REGISTER_ANALYSIS("necklace", tclcommand_analyze_parse_necklace); 
-  REGISTER_ANALYSIS("q6", tclcommand_analyze_q6);
-  REGISTER_ANALYSIS("q6_solid", tclcommand_analyze_q6_solid);
-  REGISTER_ANALYSIS("q6_solid_cluster", tclcommand_analyze_q6_solid_cluster);
+  REGISTER_ANALYSIS("necklace", tclcommand_analyze_parse_necklace);
   REGISTER_ANALYSIS("holes", tclcommand_analyze_parse_holes);   
   REGISTER_ANALYSIS("distribution", tclcommand_analyze_parse_distribution);
   REGISTER_ANALYSIS("vel_distr", tclcommand_analyze_parse_vel_distr);
