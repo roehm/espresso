@@ -339,7 +339,7 @@ proc writevtkq6 {filename {type "all"}} {
 	
 	for { set pid 0 } { $pid <= $max_pid } { incr pid } {
 		if {[part $pid print type] == $type || ([part $pid print type] != "na" && $type == "all")} then {
-			set paraq6_ave [part $pid print q6_ave]
+			set paraq6 [part $pid print q6]
 			puts $fp "$paraq6"		
 		}
 	}
