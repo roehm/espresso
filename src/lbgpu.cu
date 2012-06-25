@@ -109,14 +109,28 @@ __device__ inline void atomicadd(float* address, float value){
 __device__ void random_01(LB_randomnr_gpu *rn){
 
   const float mxi = 1.f/(float)(1ul<<31);
-  unsigned int curr = rn->seed;
+  unsigned int state = rn->seed;
 
-  curr = 1103515245 * curr + 12345;
-  rn->randomnr[0] = (float)(curr & ((1ul<<31)-1))*mxi;
-  curr = 1103515245 * curr + 12345;
-  rn->randomnr[1] = (float)(curr & ((1ul<<31)-1))*mxi;
-  rn->seed = curr;
+  state = 1103515245 * state + 12345;
+  rn->randomnr[0] = (float)(state & ((1ul<<31)-1))*mxi;
+  state = 1103515245 * state + 12345;
+  rn->randomnr[1] = (float)(state & ((1ul<<31)-1))*mxi;
+  rn->seed = state;
 
+}
+/**randomgenerator which generates numbers [0,1]
+ * @param *rn	Pointer to randomnumber array of the local node or particle
+*/
+__device__ void random_minstd(LB_randomnr_gpu *rn){
+
+  unsigned int state = rn->seed;
+  const int mxi = (1u << 31) - 1, a = 16807;
+  state = ((long int)state)*a % mxi;
+  rn->randomnr[0] = (float)((state-1)/((1u << 31) - 1));
+  state = ((long int)state)*a % mxi;
+  rn->randomnr[1] = (float)((state-1)/((1u << 31) - 1));
+  rn->seed = state;
+  
 }
 
 /** gaussian random nummber generator for thermalisation

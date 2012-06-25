@@ -374,7 +374,7 @@ void cell_cell_transfer(GhostCommunication *gc, int data_parts)
 #endif
     }
     else {
-      //ghost?
+      //ghost or real depends on direction of com?
       part1 = gc->part_lists[pl]->part;
       //real?
       part2 = gc->part_lists[pl + offset]->part;

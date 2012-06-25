@@ -2633,7 +2633,6 @@ void mpi_q6_average_calculation_slave(int dummy, int dummy2)
 #ifdef Q6_PARA
 
   q6_average();
-
   
   COMM_TRACE(fprintf(stderr, "%d: q6 average calculation task %d done.\n", this_node, dummy2));
 

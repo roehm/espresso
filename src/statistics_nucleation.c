@@ -270,14 +270,13 @@ int q6_ri_calculation(){
 	       // Wolfgang Lechner and Christoph Dellago 2008 eq(1)
         if(part[i].q.neb > 0) {
           for (m=0; m<=6; m++){
-            part[i].q.q6r[m] /= (float) part[i].q.neb;
-            part[i].q.q6i[m] /= (float) part[i].q.neb;
-            //fprintf(stderr, "%i: %lf real %lf im \n", part[i].p.identity, part[i].q.q6r[m],part[i].q.q6i[m]);
+            part[i].q.q6r[m] /= (double) part[i].q.neb;
+            part[i].q.q6i[m] /= (double) part[i].q.neb;
+            //fprintf(stderr, "%i: real: %lf im: %lf \n", part[i].p.identity, part[i].q.q6r[m],part[i].q.q6i[m]);
             //fprintf(stderr,"Particle %d Q6r %f Q6: %f\n",part[i].p.identity,part[i].q.q6r[m],part[i].l.q6);
           }
         } else {
-	           //Q6 undefined... system needs to collapse a little
-	           //Q6 = 0.0;
+	           //Q6 undefined... 
 	           for (m=0; m<=6; m++){
 	             part[i].q.q6r[m] = 0.0;
 	             part[i].q.q6i[m] = 0.0;
@@ -313,8 +312,8 @@ int q6_calculation(){
 	       part[i].q.q6 *= (4.0 * M_PI) / 13.0; //normalise by 4pi/13
         // Steinhardt order parameter: Wolfgang Lechner and Christoph Dellago 2008 eq(3)
 	       part[i].q.q6 = sqrt(part[i].q.q6);    // This is the local invariant q6 per particle (Eq. 7 in ten Wolde)
-	       if(part[i].q.q6_mean == 0.0) part[i].q.q6_mean = part[i].q.q6;
-	       part[i].q.q6_mean = (part[i].q.q6 + part[i].q.q6_mean)/2;
+	       //if(part[i].q.q6_mean == 0.0) part[i].q.q6_mean = part[i].q.q6;
+	       //part[i].q.q6_mean = (part[i].q.q6 + part[i].q.q6_mean)/2;
         //fprintf(stderr,"Particle %d has %d neighbors. Q6: %f\n",part[i].p.identity,part[i].q.neb,part[i].q.q6);
         // Neigbor count optional
 	       //totneb += part[i].q.neb;
@@ -335,9 +334,8 @@ void q6_average(){
     int c, i, j, m, k;
     int np;
     //int g, pnode;
-    Cell *cell;
-    Particle *part;
-    Particle *part2;
+    //Cell *cell;
+    Particle *part, *part2, *partg;
 
     //MPI_Status status;
     
@@ -350,6 +348,9 @@ void q6_average(){
        
       for (i=0;i<np;i++) {
         part[i].q.q6_ave=0.0;
+        //for (int m=0; m<=6; m++){
+        //fprintf(stderr,"real particle %d q6i vor com: %f\n",part[i].p.identity,part[i].q.q6r[m]);
+        //}
       }
     }
     for(c=0; c<ghost_cells.n; c++) {
@@ -358,6 +359,9 @@ void q6_average(){
       
       for (i=0;i<np;i++) {
         part[i].q.q6_ave=0.0;
+        //for (int m=0; m<=6; m++){
+        //fprintf(stderr,"ghost particle %d q6i vor com: %f\n",part[i].p.identity,part[i].q.q6r[m]);
+        //}
       }
     }
 
@@ -369,12 +373,12 @@ void q6_average(){
       part = ghost_cells.cell[c]->part;
       np   = ghost_cells.cell[c]->n;
       for (i=0;i<np;i++) {
-	       fprintf(stderr,"ghost particle %d q6 nach com: %f\n",part[i].p.identity,part[i].q.q6);
+	       fprintf(stderr,"ghost particle %d q6i nach com: %f\n",part[i].p.identity,part[i].q.q6r);
       }
     }       
 #endif 
-    
-    for (c = 0; c < local_cells.n; c++) {
+
+    for (int c = 0; c < local_cells.n; c++) {
       part = local_cells.cell[c]->part;
       np = local_cells.cell[c]->n;
        
@@ -385,30 +389,31 @@ void q6_average(){
           for (m=0; m<=6; m++){
 	           Q6r[m] = 0.0;
 	           Q6i[m] = 0.0;
-          }
-	         //accumulate local q6 vector into global average
+          }         
 	         for(k=0; k<part[i].q.neb; k++){
-            part2 = local_particles[part[i].q.neighbors[k]];
-	           for (int m=0; m<=6; m++){
-	             Q6r[m] += part[i].q.q6r[m];
-	             Q6i[m] += part[i].q.q6i[m];
-	           }
+	      
+	           part2 = local_particles[part[i].q.neighbors[k]];
+	             for (int m=0; m<=6; m++){
+	                 //neighbor particle q6r, q6i
+	               Q6r[m] += part2->q.q6r[m];
+	               Q6i[m] += part2->q.q6i[m];
+	                 //fprintf(stderr,"particle %d neb Q6r: %f\n",part[i].p.identity,Q6r[m]);
+	             }
+	           
 	         }
-	         //add values of particle itself and
-	         //divide with number of neighbors + particle itself (lechner and dellago 2008 eq(6))
+	       	   //add values of particle itself and
+	           //divide with number of neighbors + particle itself (lechner and dellago 2008 eq(6))
 	         for (int m=0; m<=6; m++){
-	             Q6r[m] = (Q6r[m] + part[i].q.q6r[m])/(part[i].q.neb + 1);
-	             Q6i[m] = (Q6i[m] + part[i].q.q6i[m])/(part[i].q.neb + 1);
-	           }	         
-	       }
-        else {
-		    //Q6 is undefined
+	           Q6r[m] = (Q6r[m] + part[i].q.q6r[m])/(double)(part[i].q.neb + 1);
+	           Q6i[m] = (Q6i[m] + part[i].q.q6i[m])/(double)(part[i].q.neb + 1);
+	         }	   
+	       } else {
+		        //Q6 is undefined
 		        for (int m=0; m<=6; m++){
 		          Q6r[m] = 0.0;
             Q6i[m] = 0.0;
           }        
-	       }
-
+	       } 
       // calc average q6 lechner and dellago 2008 eq(5)
       part[i].q.q6_ave = 0.5 * ( Q6r[0]*Q6r[0] + Q6i[0]*Q6i[0] );
       for (int m=1; m<=6; m++){
@@ -416,10 +421,10 @@ void q6_average(){
       }
       part[i].q.q6_ave *= 4.0 * M_PI/13.0;
       part[i].q.q6_ave = sqrt(part[i].q.q6_ave);
-      //fprintf(stderr,"ghost particle %d ave_q6: %f\n",part[i].p.identity,part[i].q.q6_ave);
-      }
-    }    
-  
+      //if(part[i].q.q6_ave>10.0)fprintf(stderr,"particle %d ave_q6: %f\n",part[i].p.identity,part[i].q.q6_ave);
+	       
+	    }
+	  } 
 }
 /** initializes and communicates the tcl parameters for q6 usage
  * 
