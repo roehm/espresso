@@ -229,9 +229,8 @@ void init_particle(Particle *part)
     part->q.q6r[m]=0.0;
     part->q.q6i[m]=0.0;
   }
-
-}
 #endif
+}
 
 void free_particle(Particle *part) {
   realloc_intlist(&(part->bl), 0);

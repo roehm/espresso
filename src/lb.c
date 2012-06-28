@@ -601,6 +601,7 @@ int lb_lbfluid_print_velocity(char* filename) {
 }
 int lb_lbfluid_save_checkpoint(char* filename, int binary) {
   if(lattice_switch & LATTICE_LB_GPU) {
+#ifdef LB_GPU
   		FILE* cpfile;
 		  cpfile=fopen(filename, "w");
 		  if (!cpfile) {
@@ -631,6 +632,7 @@ int lb_lbfluid_save_checkpoint(char* filename, int binary) {
     free(host_checkpoint_force);
     //fprintf(stderr, "LB checkpointing not implemented for GPU\n");
     return ES_OK;
+#endif
   }
   else
 	if(lattice_switch & LATTICE_LB) {

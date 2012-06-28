@@ -57,6 +57,7 @@ void update_mean_part_pos();
 void reset_mean_part_pos();
 
 /** add q6 to another. This is used when collecting ghost q6. */
+#ifdef Q6_PARA
 MDINLINE void add_q6(ParticleQ6 *q6_to, ParticleQ6 *q6_add)
 {
     int old_neb = q6_to->neb;
@@ -69,7 +70,7 @@ MDINLINE void add_q6(ParticleQ6 *q6_to, ParticleQ6 *q6_add)
 	     q6_to->q6r[m] += q6_add->q6r[m];
 	     q6_to->q6i[m] += q6_add->q6i[m];
     }    
-      //fprintf(stderr, "ghostadd q6 %lf neb %i \n", q6_to->q6, q6_to->neb);
+      //fprintf(stderr, "ghostadd q6 %lf neb %i \n", q6_to->q6, q6_to->neb);i
 }
-//#endif
+#endif
 #endif

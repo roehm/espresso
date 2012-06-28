@@ -327,6 +327,7 @@ void add_forces_from_recv_buffer(GhostCommunication *gc)
 }
 void add_q6_from_recv_buffer(GhostCommunication *gc)
 {
+#ifdef Q6_PARA
   int pl, p, np;
   Particle *part, *pt;
   char *retrieve;
@@ -347,6 +348,7 @@ void add_q6_from_recv_buffer(GhostCommunication *gc)
     fprintf(stderr, "%d: recv buffer size %d differs from what I put in %d\n", this_node, n_r_buffer, retrieve - r_buffer);
     errexit();
   }
+#endif
 #endif
 }
 void cell_cell_transfer(GhostCommunication *gc, int data_parts)

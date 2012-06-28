@@ -85,6 +85,7 @@ static void wall_sort_particles() {
   counter=1;
 }
 static void wall_sort_q6() {
+#ifdef Q6_PARA
   //printf("\nwall sort start!\n");
   //ATTENTION IF STATEMENT only for my personal purpose!!!!!!!!
   //if(allo==0){
@@ -139,6 +140,7 @@ static void wall_sort_q6() {
   //printf("\nwall sort finshed!\n");
   q6_on = 1;
   counter=1;
+#endif
 }
 static int printpeaks(char* filename){
  if (num_of_sets==0){
@@ -236,10 +238,12 @@ static int updatemean(){
       //realloc_grained_intlist(&part_in_bin[s], part_in_bin[s].n + 1, 8);
       //part_in_bin[s].e[part_in_bin[s].n++] = i;
       part_in_bin[s].n++;
+#ifdef Q6_PARA
       if(q6_on == 1){
         q6_in_bin[s].n++;
         q6_in_bin[s].e[0] += partCfg[i].q.q6;
       }
+#endif
     }
   counter++;
   return 0;
