@@ -62,6 +62,9 @@ int tclcommand_q6(ClientData data, Tcl_Interp *interp, int argc, char **argv) {
     else if (ARG0_IS_S("average")) {
         q6_average_update();
     }
+    else if (ARG0_IS_S("assign_ave")) {
+        q6_assign_average();
+    }
     return TCL_OK;
   }
   return TCL_OK;

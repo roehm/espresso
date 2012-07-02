@@ -42,7 +42,10 @@ typedef struct {
 extern Q6_Parameters q6para;
 
 int q6_ri_calculation();
+
 int q6_calculation();
+
+int q6_assign_ave();
 
 void q6_pre_init();
 
@@ -51,6 +54,10 @@ int q6_initialize(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
 void q6_update();
 
 void q6_average();
+
+void q6_average_update();
+
+void q6_assign_average();
 
 void update_mean_part_pos();
 
@@ -65,6 +72,7 @@ MDINLINE void add_q6(ParticleQ6 *q6_to, ParticleQ6 *q6_add)
     for(int i=old_neb; i<q6_to->neb; i++){
       q6_to->neighbors[i] = q6_add->neighbors[i-old_neb];
     }
+    q6_to->solid_bonds += q6_add->solid_bonds;
     for (int m=0; m<=6; m++){
       //fprintf(stderr,"neb %i q6r=%f q6i=%f \n ",q6_add->neb,q6_add->q6r[m],q6_add->q6i[m]);
 	     q6_to->q6r[m] += q6_add->q6r[m];

@@ -125,11 +125,6 @@ void on_program_start()
   dp3m_pre_init();
 #endif
 
-#ifdef LB_GPU
-  if(this_node == 0){
-    //lb_pre_init_gpu();
-  }
-#endif
 #ifdef LB
   lb_pre_init();
 #endif
@@ -535,6 +530,13 @@ void on_boxl_change() {
 #ifdef LB
   if(lattice_switch & LATTICE_LB) {
     lb_init();
+  }
+#endif
+#ifdef LB_GPU
+  if(this_node == 0) {
+    if(lattice_switch & LATTICE_LB_GPU) {
+      lb_init_gpu();
+    }
   }
 #endif
 }

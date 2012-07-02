@@ -472,6 +472,11 @@ int mpi_q6_calculation();
 */
 int mpi_q6_average_calculation();
 
+/** Issue REQ_Q6_CALCULATION: performs assignment of q6 average calculation.
+    @return nonzero on error
+*/
+int mpi_q6_assign_average_calculation();
+
 /** Issue REQ_SEND_FLUID: Send a single lattice site to a processor.
  * @param node  processor to send to
  * @param index index of the lattice site

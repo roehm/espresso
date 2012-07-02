@@ -224,12 +224,15 @@ typedef struct {
 typedef struct {
 
   int neb;
+  int solid_state;
+  int solid_bonds;
   double q6;
   double q6r[7];
   double q6i[7];
   int neighbors[27];
   double q6_mean;
   double q6_ave;
+  double q6q6;
   
 } ParticleQ6;
 #endif

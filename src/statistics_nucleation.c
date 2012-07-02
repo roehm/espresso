@@ -156,8 +156,8 @@ int q6_ri_calculation(){
        
       for (i=0;i<np;i++) {
         part[i].q.neb = 0;
+        part[i].q.solid_bonds=0;
         //part[i].l.solid = 0;
-        //part[i].l.solidBonds = 0;
         part[i].q.q6=0.0;
 	       for (int m=0; m<=6; m++){
 	         part[i].q.q6r[m]=0.0;
@@ -170,8 +170,8 @@ int q6_ri_calculation(){
       np   = ghost_cells.cell[c]->n;
       for (i=0;i<np;i++) {
         part[i].q.neb = 0;
+        part[i].q.solid_bonds=0;
         //part[i].l.solid = 0;
-        //part[i].l.solidBonds = 0;
         part[i].q.q6=0.0;
 	       for (m=0; m<=6; m++){
 	         part[i].q.q6r[m]=0.0;
@@ -330,12 +330,13 @@ int q6_calculation(){
 
 void q6_average(){
 
+    //TODO: need? on_observable_calc();
     double Q6r[7], Q6i[7]; //global Q6m, real and imaginary part
-    int c, i, j, m, k;
+    int c, i, m, k;
     int np;
     //int g, pnode;
     //Cell *cell;
-    Particle *part, *part2, *partg;
+    Particle *part, *part2;
 
     //MPI_Status status;
     
@@ -426,8 +427,119 @@ void q6_average(){
 	    }
 	  } 
 }
+
+inline double pair_q6q6( Particle *p1, Particle *p2 ) {
+
+    double q6q6;
+
+    //fprintf(stderr,"Check %f %f\n",p1->q.q6,p2->q.q6);
+
+    q6q6  = 0.5 * ( p1->q.q6r[0] * p2->q.q6r[0] + p1->q.q6i[0] * p2->q.q6i[0] );
+    for (int m=1; m<=6; m++){
+	    q6q6 += p1->q.q6r[m] * p2->q.q6r[m] + p1->q.q6i[m] * p2->q.q6i[m];
+    }
+    q6q6 /= ( p1->q.q6 * p2->q.q6 ); //why normalise by these factors? Tanja?
+    q6q6 *= (4.0 * M_PI) / 13.0; //normalise by 4pi/13
+
+    return( q6q6 );
+}
+
+int q6_assign_ave(){
+
+
+//TODO: is
+    on_observable_calc(); 
+    //necessary?
+    //solidParticles = 0;
+    //bondCount      = 0;
+    int np;
+    Particle *part1, *part2, **pairs;
+    int i, n, c;
+
+    
+    for (c = 0; c < local_cells.n; c++) {
+      part1 = local_cells.cell[c]->part;
+      np = local_cells.cell[c]->n;
+       
+      for (i=0;i<np;i++) {
+        part1[i].q.solid_bonds=0;
+        part1[i].q.solid_state=0;
+      }
+    }
+    for(c=0; c<ghost_cells.n; c++) {
+      part1 = ghost_cells.cell[c]->part;
+      np   = ghost_cells.cell[c]->n;
+      
+      for (i=0;i<np;i++) {
+        part1[i].q.solid_bonds=0;
+        part1[i].q.solid_state=0;
+      }
+    }
+
+    ghost_communicator(&cell_structure.update_ghost_q6_comm);
+    /* Loop local cells */
+    for (c = 0; c < local_cells.n; c++) {
+
+      VERLET_TRACE(fprintf(stderr,"%d: cell %d with %d neighbors\n",this_node,c, dd.cell_inter[c].n_neighbors));
+      /* Loop cell neighbors */
+      for (n = 0; n < dd.cell_inter[c].n_neighbors; n++) {
+        pairs = dd.cell_inter[c].nList[n].vList.pair;
+        np    = dd.cell_inter[c].nList[n].vList.n;
+        VERLET_TRACE(fprintf(stderr,"%d: neighbor %d has %d particles\n",this_node,n,np));
+
+        /* verlet list loop */
+        for(i=0; i<2*np; i+=2) {
+	         part1 = pairs[i];
+	         part2 = pairs[i+1];
+           if(part1->q.q6 != 0.0 && part2->q.q6 != 0.0){
+               part1->q.q6q6 = pair_q6q6(part1, part2);
+               part2->q.q6 = part1->q.q6;
+           } else {
+               part1->q.q6q6 = 0.0;
+               part2->q.q6q6 = 0.0;
+             }
+           //TODO find out if negative q6q6 is correct
+           //if(part1->q.q6q6 <0.0) printf("partcle %i q6q6: %f bonds: %i\n", part1->p.identity,part1->q.q6q6, part1->q.solid_bonds);
+
+           //Test against arbitrary threshold
+           if(part1->q.q6q6 > q6para.q6q6_min) {
+              part1->q.solid_bonds++;
+              part2->q.solid_bonds++;
+           }
+
+           //fprintf(stderr,"solid_bonds: %i\n", part1->q.solid_bonds);
+           //accumulate an average stat for the whole system
+           //if( p1->l.neighbors[j] > i ) { //avoid double-counting
+	         //  eQ6Q6 += p1->l.q6q6;
+	         //  bondCount++;
+           //}
+        }//vv loop 
+      }// neighbor loop
+          
+    }//cells loops
+    //communicate the number of bonds from ghosts to real part 
+    ghost_communicator(&cell_structure.collect_ghost_q6_comm);
+
+    for (c = 0; c < local_cells.n; c++) {
+      part1 = local_cells.cell[c]->part;
+      np = local_cells.cell[c]->n;
+       
+      for (i=0;i<np;i++) {
+        if(part1[i].q.solid_bonds >= q6para.min_solid_bonds) {
+	         part1[i].q.solid_state = 1;
+        }
+      }
+    }
+    //reduce to get the average
+    //if( bondCount > 0 ) {
+    //    eQ6Q6 /= (double) bondCount;
+    //}
+
+  //fprintf(stderr,"solidParticles %d:\n",solidParticles);
+  return 1;
+}
 /** initializes and communicates the tcl parameters for q6 usage
- * 
+ 
 */
 int q6_initialize(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds) {
 
@@ -458,6 +570,11 @@ void q6_average_update() {
 
 }
 
+void q6_assign_average() {
+
+    mpi_q6_assign_average_calculation();
+
+}
 /**********************************************************************************/
 /** pre_init (for later use or can be removed)
  * 

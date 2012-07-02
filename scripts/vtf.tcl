@@ -378,7 +378,7 @@ proc writevtkq6ave {filename {type "all"}} {
 	close $fp
 }
 
-proc writevtkq6_mean {filename {type "all"}} {
+proc writevtkq6solid {filename {type "all"}} {
 	set max_pid [setmd max_part]
 	set n 0
 	set fp [open $filename "w"]
@@ -389,18 +389,25 @@ proc writevtkq6_mean {filename {type "all"}} {
 		}
 	}
 
-	puts $fp "# vtk DataFile Version 2.0\nparticles\nASCII\nPOINT_DATA $n"
+	puts $fp "# vtk DataFile Version 2.0\nparticles\nASCII\nDATASET UNSTRUCTURED_GRID\nPOINTS $n float"
 
 	for { set pid 0 } { $pid <= $max_pid } { incr pid } {
 		if {[part $pid print type] == $type || ([part $pid print type] != "na" && $type == "all")} then {
 			set xpos [expr [lindex [part $pid print folded_pos] 0] - 0.5] ;#shifted since the LB and MD grid are shifted but the vtk output for the LB field doesn't acknowledge that
 			set ypos [expr [lindex [part $pid print folded_pos] 1] - 0.5]
 			set zpos [expr [lindex [part $pid print folded_pos] 2] - 0.5]
-			set paraq6_mean [part $pid print q6_mean]
-			puts $fp "$xpos $ypos $zpos $paraq6_mean"
+			puts $fp "$xpos $ypos $zpos"
 		}
 	}
-
+	
+	puts $fp "POINT_DATA $n\nSCALARS scalars float 1\nLOOKUP_TABLE default"
+	
+	for { set pid 0 } { $pid <= $max_pid } { incr pid } {
+		if {[part $pid print type] == $type || ([part $pid print type] != "na" && $type == "all")} then {
+			set paraq6_solid [part $pid print q6_solid_state]
+			puts $fp "$paraq6_solid"		
+		}
+	}
 	close $fp
 }
 # get the VMD pid of a given ESPResSo-PID
