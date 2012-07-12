@@ -2582,8 +2582,7 @@ void mpi_iccp3m_init_slave(int node, int dummy)
 }
 
 /********************* REQ_Q6_CALCULATION ********/
-int mpi_q6_calculation()
-{
+int mpi_q6_calculation() {
 #ifdef Q6_PARA
   mpi_call(mpi_q6_calculation_slave, -1, 0);
 
@@ -2599,8 +2598,7 @@ int mpi_q6_calculation()
 
 }
 
-void mpi_q6_calculation_slave(int dummy, int dummy2)
-{
+void mpi_q6_calculation_slave(int dummy, int dummy2) {
 #ifdef Q6_PARA
   q6_ri_calculation();
   q6_calculation();
@@ -2611,8 +2609,7 @@ void mpi_q6_calculation_slave(int dummy, int dummy2)
 #endif
 }
 /********************* REQ_Q6_AVERAGE_CALCULATION ********/
-int mpi_q6_average_calculation()
-{
+int mpi_q6_average_calculation() {
 #ifdef Q6_PARA
   mpi_call(mpi_q6_average_calculation_slave, -1, 0);
 
@@ -2628,10 +2625,8 @@ int mpi_q6_average_calculation()
 
 }
 
-void mpi_q6_average_calculation_slave(int dummy, int dummy2)
-{
+void mpi_q6_average_calculation_slave(int dummy, int dummy2) {
 #ifdef Q6_PARA
-
   q6_ri_calculation();
   q6_average();
   
@@ -2641,8 +2636,7 @@ void mpi_q6_average_calculation_slave(int dummy, int dummy2)
 #endif
 }
 /********************* REQ_Q6_ASSIGN_AVERAGE_CALCULATION ********/
-int mpi_q6_assign_average_calculation()
-{
+int mpi_q6_assign_average_calculation() {
 #ifdef Q6_PARA
   mpi_call(mpi_q6_assign_average_calculation_slave, -1, 0);
 
@@ -2650,7 +2644,7 @@ int mpi_q6_assign_average_calculation()
   q6_calculation();
   q6_assign_ave();
 
-  COMM_TRACE(fprintf(stderr, "%d: q6 average calculation task %d done.\n", this_node, dummy));
+  COMM_TRACE(fprintf(stderr, "%d: q6 assign average calculation task %d done.\n", this_node, dummy));
 
   return check_runtime_errors();
 #else
@@ -2659,15 +2653,13 @@ int mpi_q6_assign_average_calculation()
 
 }
 
-void mpi_q6_assign_average_calculation_slave(int dummy, int dummy2)
-{
+void mpi_q6_assign_average_calculation_slave(int dummy, int dummy2) {
 #ifdef Q6_PARA
-
   q6_ri_calculation();
   q6_calculation();
   q6_assign_ave();
   
-  COMM_TRACE(fprintf(stderr, "%d: q6 average calculation task %d done.\n", this_node, dummy2));
+  COMM_TRACE(fprintf(stderr, "%d: q6 assign average calculation task %d done.\n", this_node, dummy2));
 
   check_runtime_errors();
 #endif

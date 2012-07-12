@@ -114,6 +114,8 @@ int calc_transmit_size(GhostCommunication *gc, int data_parts)
       n_buffer_new += sizeof(ParticleQ6);
     if (data_parts & GHOSTCOMM_Q6)
       n_buffer_new += sizeof(ParticleQ6);
+    if (data_parts & GHOSTCOMM_Q6_SOLID_BONDS)
+      n_buffer_new += sizeof(ParticleQ6);
 #endif
 #ifdef LB
     if (data_parts & GHOSTTRANS_COUPLING)
@@ -186,6 +188,10 @@ void prepare_send_buffer(GhostCommunication *gc, int data_parts)
 	  insert +=  sizeof(ParticleQ6);
 	}
 	if (data_parts & GHOSTCOMM_Q6) {
+	  memcpy(insert, &pt->q, sizeof(ParticleQ6));
+	  insert +=  sizeof(ParticleQ6);
+	}
+	if (data_parts & GHOSTCOMM_Q6_SOLID_BONDS) {
 	  memcpy(insert, &pt->q, sizeof(ParticleQ6));
 	  insert +=  sizeof(ParticleQ6);
 	}
@@ -283,6 +289,10 @@ void put_recv_buffer(GhostCommunication *gc, int data_parts)
 	  memcpy(&pt->q, retrieve, sizeof(ParticleQ6));
 	  retrieve +=  sizeof(ParticleQ6);
 	}
+	if (data_parts & GHOSTCOMM_Q6_SOLID_BONDS) {
+	  memcpy(&pt->q, retrieve, sizeof(ParticleQ6));
+	  retrieve +=  sizeof(ParticleQ6);
+	}
 #endif 
 #ifdef LB
 	if (data_parts & GHOSTTRANS_COUPLING) {
@@ -325,13 +335,12 @@ void add_forces_from_recv_buffer(GhostCommunication *gc)
   }
 #endif
 }
-void add_q6_from_recv_buffer(GhostCommunication *gc)
+void add_q6_from_recv_buffer(GhostCommunication *gc, int data_parts)
 {
 #ifdef Q6_PARA
   int pl, p, np;
   Particle *part, *pt;
   char *retrieve;
-
   /* put back data */
   retrieve = r_buffer;
   for (pl = 0; pl < gc->n_part_lists; pl++) {
@@ -339,7 +348,8 @@ void add_q6_from_recv_buffer(GhostCommunication *gc)
     part = gc->part_lists[pl]->part;
     for (p = 0; p < np; p++) {
       pt = &part[p];
-      add_q6(&pt->q, (ParticleQ6 *)retrieve);
+      if (data_parts == GHOSTTRANS_Q6) add_q6(&pt->q, (ParticleQ6 *)retrieve);
+      else add_q6_solid_bonds(&pt->q, (ParticleQ6 *)retrieve);      
       retrieve +=  sizeof(ParticleQ6);
     }
   }
@@ -403,6 +413,8 @@ void cell_cell_transfer(GhostCommunication *gc, int data_parts)
 	  add_q6(&pt2->q, &pt1->q);
 	if (data_parts & GHOSTCOMM_Q6)
 	  memcpy(&pt2->q, &pt1->q, sizeof(ParticleQ6));
+	if (data_parts & GHOSTCOMM_Q6_SOLID_BONDS)
+	  add_q6_solid_bonds(&pt2->q, &pt1->q);
 #endif
 #ifdef LB
 	if (data_parts & GHOSTTRANS_COUPLING)
@@ -537,7 +549,10 @@ void ghost_communicator(GhostCommunicator *gc)
 	    add_forces_from_recv_buffer(gcn);
 #ifdef Q6_PARA
 	  else if (data_parts == GHOSTTRANS_Q6){
-	    add_q6_from_recv_buffer(gcn);
+	    add_q6_from_recv_buffer(gcn, data_parts);
+	  }
+	  else if (data_parts == GHOSTCOMM_Q6_SOLID_BONDS){
+	    add_q6_from_recv_buffer(gcn, data_parts);
 	  }
 #endif
 	  else
@@ -569,7 +584,10 @@ void ghost_communicator(GhostCommunicator *gc)
 	      if (data_parts == GHOSTTRANS_FORCE && comm_type != GHOST_RDCE)		       add_forces_from_recv_buffer(gcn2);
 #ifdef Q6_PARA
 	      else if (data_parts == GHOSTTRANS_Q6 && comm_type != GHOST_RDCE){
-	        add_q6_from_recv_buffer(gcn2);
+	        add_q6_from_recv_buffer(gcn2, data_parts);
+	      }
+	      else if (data_parts == GHOSTCOMM_Q6_SOLID_BONDS && comm_type != GHOST_RDCE){
+	        add_q6_from_recv_buffer(gcn2, data_parts);
 	      }
 #endif
 	      else

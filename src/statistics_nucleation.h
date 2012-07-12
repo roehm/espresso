@@ -53,7 +53,7 @@ int q6_initialize(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
 
 void q6_update();
 
-void q6_average();
+int q6_average();
 
 void q6_average_update();
 
@@ -72,13 +72,36 @@ MDINLINE void add_q6(ParticleQ6 *q6_to, ParticleQ6 *q6_add)
     for(int i=old_neb; i<q6_to->neb; i++){
       q6_to->neighbors[i] = q6_add->neighbors[i-old_neb];
     }
-    q6_to->solid_bonds += q6_add->solid_bonds;
+    //q6_to->solid_bonds += q6_add->solid_bonds;
+    //fprintf(stderr, "ghostadd q6 solid bounds_to %i solid bounds_add %i \n", q6_to->solid_bonds, q6_add->solid_bonds);
     for (int m=0; m<=6; m++){
       //fprintf(stderr,"neb %i q6r=%f q6i=%f \n ",q6_add->neb,q6_add->q6r[m],q6_add->q6i[m]);
 	     q6_to->q6r[m] += q6_add->q6r[m];
 	     q6_to->q6i[m] += q6_add->q6i[m];
     }    
-      //fprintf(stderr, "ghostadd q6 %lf neb %i \n", q6_to->q6, q6_to->neb);i
+      //fprintf(stderr, "ghostadd q6 %lf neb %i \n", q6_to->q6, q6_to->neb);
+}
+
+MDINLINE void add_q6_solid_bonds(ParticleQ6 *q6_to, ParticleQ6 *q6_add)
+{
+    q6_to->solid_bonds += q6_add->solid_bonds;
+    //fprintf(stderr, "ghostadd q6 solid bounds_to %i solid bounds_add %i \n", q6_to->solid_bonds, q6_add->solid_bonds);
+}
+
+MDINLINE double pair_q6q6( Particle *p1, Particle *p2 ) {
+
+    double q6q6;
+
+    //fprintf(stderr,"Check %f %f\n",p1->q.q6,p2->q.q6);
+
+    q6q6  = 0.5 * ( p1->q.q6r[0] * p2->q.q6r[0] + p1->q.q6i[0] * p2->q.q6i[0] );
+    for (int m=1; m<=6; m++){
+	      q6q6 += p1->q.q6r[m] * p2->q.q6r[m] + p1->q.q6i[m] * p2->q.q6i[m];
+    }
+    q6q6 /= ( p1->q.q6 * p2->q.q6 ); //why normalise by these factors? Tanja?
+    q6q6 *= (4.0 * M_PI) / 13.0; //normalise by 4pi/13
+
+    return( q6q6 );
 }
 #endif
 #endif

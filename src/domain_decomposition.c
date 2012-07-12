@@ -702,7 +702,8 @@ void dd_topology_init(CellPList *old)
   dd_prepare_comm(&cell_structure.collect_ghost_q6_comm, GHOSTTRANS_Q6);
   dd_revert_comm_order(&cell_structure.collect_ghost_q6_comm);
   dd_prepare_comm(&cell_structure.update_ghost_q6_comm, GHOSTCOMM_Q6);
-  //dd_revert_comm_order(&cell_structure.update_ghost_q6_comm);
+  dd_prepare_comm(&cell_structure.collect_ghost_q6_solid_bonds_comm, GHOSTCOMM_Q6_SOLID_BONDS);
+  dd_revert_comm_order(&cell_structure.collect_ghost_q6_solid_bonds_comm);
 #endif
   dd_assign_prefetches(&cell_structure.ghost_cells_comm);
   dd_assign_prefetches(&cell_structure.exchange_ghosts_comm);

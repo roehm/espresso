@@ -144,8 +144,10 @@ typedef struct {
 #ifdef Q6_PARA
   /** Communicator to collect ghost q6 parameter. */
   GhostCommunicator collect_ghost_q6_comm;
-    /** Communicator to update ghost q6 parameter. */
+  /** Communicator to update (transmit) q6 parameter to ghosts. */
   GhostCommunicator update_ghost_q6_comm;
+  /** Communicator to collect ghost solid bonds depending on pair q6q6 parameter. */
+  GhostCommunicator collect_ghost_q6_solid_bonds_comm;    
 #endif
   /** Cell system dependent function to find the right node for a
       particle at position pos. 

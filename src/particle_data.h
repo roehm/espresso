@@ -204,6 +204,7 @@ typedef struct {
   int ghost;
 #endif
 
+#if 0
 #ifdef Q6_PARA_LOCAL
   /* Q6 */
   //int neb;
@@ -217,7 +218,7 @@ typedef struct {
   int clabel;
   //double mean_pos[3];
 #endif
-
+#endif
 } ParticleLocal;
 
 #ifdef Q6_PARA

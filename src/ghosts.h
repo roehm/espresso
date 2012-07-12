@@ -139,6 +139,9 @@ The ghost communicators are created in the init routines of the cell systems, th
 #define GHOSTTRANS_Q6       128
 
 #define GHOSTCOMM_Q6        256
+
+#define GHOSTCOMM_Q6_SOLID_BONDS        512
+
 #endif
 /*@}*/
 

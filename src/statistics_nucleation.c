@@ -35,7 +35,7 @@
 
 
 #ifdef Q6_PARA 
-#define MEAN_OFF
+
 /*
 ##################################################################################################
  Begin q6:
@@ -138,11 +138,6 @@ int q6_ri_calculation(){
     double rclocal2 = rc*rc; // sphere radius squared around particle for neighbor detection
     double vec21[3];
     int statusOK = 1;
-    //int dummy[3] = {0,0,0};
-    //totneb = 0;
-//fprintf(stderr, "%d: rclocal2 %lf \n", this_node, rclocal2); 
-    //int n_part;
-    //int g, pnode;
     Cell *cell;
     Particle *part;
     //MPI_Status status;
@@ -152,8 +147,7 @@ int q6_ri_calculation(){
     
     for (int c = 0; c < local_cells.n; c++) {
       part = local_cells.cell[c]->part;
-      np = local_cells.cell[c]->n;
-       
+      np = local_cells.cell[c]->n;      
       for (i=0;i<np;i++) {
         part[i].q.neb = 0;
         part[i].q.solid_bonds=0;
@@ -196,21 +190,13 @@ int q6_ri_calculation(){
         for(i=0; i<2*np; i+=2) {
 	         p1 = pairs[i];                    /* pointer to particle 1 */
 	         p2 = pairs[i+1];                  /* pointer to particle 2 */
-	         #ifdef MEAN_OFF
           dist2 = distance2vec(p2->r.p, p1->r.p, vec21);
           //fprintf(stderr, "%i: dist2 %lf vec %lf %lf %lf\n", p1->p.identity, dist2, vec21[0], vec21[1], vec21[2]);
-          #else
-	         //fold_position(p1->l.mean_pos, dummy);
-          //fold_position(p2->l.mean_pos, dummy);
-          //dist2 = distance2vec(p2->l.mean_pos, p1->l.mean_pos, vec21);
-          #endif
 	         if(dist2 < rclocal2) {
-            #if 1
             if((p1->q.neb >= 27 || p2->q.neb >= 27)) {
               fprintf(stderr,"ERROR: Particle has more neighbors than possible! p1: %i p2: %i ", p1->q.neb, p2->q.neb);              
               errexit();
             }
-            #endif
             p1->q.neighbors[p1->q.neb]=p2->p.identity;
             p2->q.neighbors[p2->q.neb]=p1->p.identity;
             p1->q.neb++;
@@ -254,8 +240,6 @@ int q6_ri_calculation(){
         // Steinhardt order parameter: Wolfgang Lechner and Christoph Dellago 2008 eq(3)
 	       part[i].q.q6 = sqrt(part[i].q.q6);    // This is the local invariant q6 per particle (Eq. 7 in ten Wolde)
         //fprintf(stderr,"Particle %d has %d neighbors. Q6: %f\n",part[i].p.identity,part[i].q.neb,part[i].q.q6);
-        // Neigbor count optional
-	       //totneb += part[i].q.neb;
 #endif
       }      
     }    
@@ -312,11 +296,6 @@ int q6_calculation(){
 	       part[i].q.q6 *= (4.0 * M_PI) / 13.0; //normalise by 4pi/13
         // Steinhardt order parameter: Wolfgang Lechner and Christoph Dellago 2008 eq(3)
 	       part[i].q.q6 = sqrt(part[i].q.q6);    // This is the local invariant q6 per particle (Eq. 7 in ten Wolde)
-	       //if(part[i].q.q6_mean == 0.0) part[i].q.q6_mean = part[i].q.q6;
-	       //part[i].q.q6_mean = (part[i].q.q6 + part[i].q.q6_mean)/2;
-        //fprintf(stderr,"Particle %d has %d neighbors. Q6: %f\n",part[i].p.identity,part[i].q.neb,part[i].q.q6);
-        // Neigbor count optional
-	       //totneb += part[i].q.neb;
       }      
     }    
 
@@ -328,41 +307,30 @@ int q6_calculation(){
  * 
 */
 
-void q6_average(){
+int q6_average(){
 
-    //TODO: need? on_observable_calc();
     double Q6r[7], Q6i[7]; //global Q6m, real and imaginary part
     int c, i, m, k;
     int np;
-    //int g, pnode;
-    //Cell *cell;
     Particle *part, *part2;
+    int statusOK = 1;
 
-    //MPI_Status status;
-    
+    //MPI_Status status;   
     //part on node
     //n_part = cells_get_n_particles();
     
     for (c = 0; c < local_cells.n; c++) {
       part = local_cells.cell[c]->part;
-      np = local_cells.cell[c]->n;
-       
+      np = local_cells.cell[c]->n;       
       for (i=0;i<np;i++) {
         part[i].q.q6_ave=0.0;
-        //for (int m=0; m<=6; m++){
-        //fprintf(stderr,"real particle %d q6i vor com: %f\n",part[i].p.identity,part[i].q.q6r[m]);
-        //}
       }
     }
     for(c=0; c<ghost_cells.n; c++) {
       part = ghost_cells.cell[c]->part;
-      np   = ghost_cells.cell[c]->n;
-      
+      np   = ghost_cells.cell[c]->n;     
       for (i=0;i<np;i++) {
         part[i].q.q6_ave=0.0;
-        //for (int m=0; m<=6; m++){
-        //fprintf(stderr,"ghost particle %d q6i vor com: %f\n",part[i].p.identity,part[i].q.q6r[m]);
-        //}
       }
     }
 
@@ -422,45 +390,22 @@ void q6_average(){
       }
       part[i].q.q6_ave *= 4.0 * M_PI/13.0;
       part[i].q.q6_ave = sqrt(part[i].q.q6_ave);
-      //if(part[i].q.q6_ave>10.0)fprintf(stderr,"particle %d ave_q6: %f\n",part[i].p.identity,part[i].q.q6_ave);
-	       
+      //fprintf(stderr,"particle %d ave_q6: %f\n",part[i].p.identity,part[i].q.q6_ave);       
 	    }
-	  } 
+	  }
+	  return statusOK; 
 }
 
-inline double pair_q6q6( Particle *p1, Particle *p2 ) {
+int q6_assign_ave() {
 
-    double q6q6;
-
-    //fprintf(stderr,"Check %f %f\n",p1->q.q6,p2->q.q6);
-
-    q6q6  = 0.5 * ( p1->q.q6r[0] * p2->q.q6r[0] + p1->q.q6i[0] * p2->q.q6i[0] );
-    for (int m=1; m<=6; m++){
-	    q6q6 += p1->q.q6r[m] * p2->q.q6r[m] + p1->q.q6i[m] * p2->q.q6i[m];
-    }
-    q6q6 /= ( p1->q.q6 * p2->q.q6 ); //why normalise by these factors? Tanja?
-    q6q6 *= (4.0 * M_PI) / 13.0; //normalise by 4pi/13
-
-    return( q6q6 );
-}
-
-int q6_assign_ave(){
-
-
-//TODO: is
-    on_observable_calc(); 
-    //necessary?
-    //solidParticles = 0;
-    //bondCount      = 0;
     int np;
     Particle *part1, *part2, **pairs;
     int i, n, c;
-
+    int statusOK = 1;
     
-    for (c = 0; c < local_cells.n; c++) {
+    for (c=0; c<local_cells.n; c++) {
       part1 = local_cells.cell[c]->part;
-      np = local_cells.cell[c]->n;
-       
+      np = local_cells.cell[c]->n;       
       for (i=0;i<np;i++) {
         part1[i].q.solid_bonds=0;
         part1[i].q.solid_state=0;
@@ -468,17 +413,16 @@ int q6_assign_ave(){
     }
     for(c=0; c<ghost_cells.n; c++) {
       part1 = ghost_cells.cell[c]->part;
-      np   = ghost_cells.cell[c]->n;
-      
+      np   = ghost_cells.cell[c]->n;     
       for (i=0;i<np;i++) {
         part1[i].q.solid_bonds=0;
         part1[i].q.solid_state=0;
       }
     }
-
+    //copy q6 particle struct to ghosts
     ghost_communicator(&cell_structure.update_ghost_q6_comm);
-    /* Loop local cells */
-    for (c = 0; c < local_cells.n; c++) {
+    /* Loop local cells via verlet list (includes ghosts)*/
+    for (c=0; c<local_cells.n; c++) {
 
       VERLET_TRACE(fprintf(stderr,"%d: cell %d with %d neighbors\n",this_node,c, dd.cell_inter[c].n_neighbors));
       /* Loop cell neighbors */
@@ -493,12 +437,12 @@ int q6_assign_ave(){
 	         part2 = pairs[i+1];
            if(part1->q.q6 != 0.0 && part2->q.q6 != 0.0){
                part1->q.q6q6 = pair_q6q6(part1, part2);
-               part2->q.q6 = part1->q.q6;
+               part2->q.q6q6 = part1->q.q6q6;
            } else {
                part1->q.q6q6 = 0.0;
                part2->q.q6q6 = 0.0;
              }
-           //TODO find out if negative q6q6 is correct
+           //TODO find out if negative q6q6 is correct -> q6 can be negative
            //if(part1->q.q6q6 <0.0) printf("partcle %i q6q6: %f bonds: %i\n", part1->p.identity,part1->q.q6q6, part1->q.solid_bonds);
 
            //Test against arbitrary threshold
@@ -512,45 +456,43 @@ int q6_assign_ave(){
            //if( p1->l.neighbors[j] > i ) { //avoid double-counting
 	         //  eQ6Q6 += p1->l.q6q6;
 	         //  bondCount++;
-           //}
-        }//vv loop 
+        }//verlet list loop 
       }// neighbor loop
           
     }//cells loops
-    //communicate the number of bonds from ghosts to real part 
-    ghost_communicator(&cell_structure.collect_ghost_q6_comm);
+    //collect the number of bonds from ghosts and add to real part 
+    ghost_communicator(&cell_structure.collect_ghost_q6_solid_bonds_comm);
 
     for (c = 0; c < local_cells.n; c++) {
       part1 = local_cells.cell[c]->part;
       np = local_cells.cell[c]->n;
-       
       for (i=0;i<np;i++) {
         if(part1[i].q.solid_bonds >= q6para.min_solid_bonds) {
 	         part1[i].q.solid_state = 1;
         }
+        //fprintf(stderr,"solid_bonds: %i \n",part1[i].q.solid_bonds);
       }
     }
     //reduce to get the average
     //if( bondCount > 0 ) {
     //    eQ6Q6 /= (double) bondCount;
     //}
-
-  //fprintf(stderr,"solidParticles %d:\n",solidParticles);
-  return 1;
+  return statusOK;
 }
 /** initializes and communicates the tcl parameters for q6 usage
  
 */
 int q6_initialize(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds) {
 
+    int statusOK=1;
     q6para.rc = tcl_rc;
     q6para.q6q6_min = tcl_q6q6_min;
     q6para.min_solid_bonds = tcl_min_solid_bonds;
     mpi_bcast_q6_params();
     reset_mean_part_pos();
     //printf("bcast q6 params ok\n");
-    
-    return 0;
+    statusOK=0;
+    return statusOK;
 
 }
 /** updates (recalcs) the initializes local invariant q6 with mpi
