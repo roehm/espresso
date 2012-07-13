@@ -378,7 +378,7 @@ proc writevtkq6ave {filename {type "all"}} {
 	close $fp
 }
 
-proc writevtkq6solid {filename {type "all"}} {
+proc writevtkq6solidstate {filename {type "all"}} {
 	set max_pid [setmd max_part]
 	set n 0
 	set fp [open $filename "w"]

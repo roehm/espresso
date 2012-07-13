@@ -87,9 +87,10 @@ static void wall_sort_particles() {
 static void wall_sort_q6() {
 #ifdef Q6_PARA
   //printf("\nwall sort start!\n");
-  //ATTENTION IF STATEMENT only for my personal purpose!!!!!!!!
-  //if(allo==0){
+  //number of variables (double) per bin
+  int n_var=1; 
    // 1. reallocate the boxes for the particle identities
+  
   // free old boxes
   for (int i = 0; i < n_part_bins; ++i) {
     realloc_intlist(&part_in_bin[i], part_in_bin[i].n = 0);
@@ -100,7 +101,7 @@ static void wall_sort_q6() {
   for (int i = n_part_bins; i < boundaries.n-1; ++i) {
     init_intlist(&part_in_bin[i]);
     init_doublelist(&q6_in_bin[i]);
-    q6_in_bin[i].e = realloc(q6_in_bin[i].e, sizeof(double));
+    q6_in_bin[i].e = realloc(q6_in_bin[i].e, n_var*sizeof(double));
     q6_in_bin[i].e[0] = 0;
   }
   n_part_bins = boundaries.n-1;
@@ -128,7 +129,9 @@ static void wall_sort_q6() {
     //part_in_bin[s].e[part_in_bin[s].n++] = i;
     part_in_bin[s].n++;
     q6_in_bin[s].n++;
-    q6_in_bin[s].e[0] += partCfg[i].q.q6;
+//Attention: q6 average is used instead of simple q6!!!
+    q6_in_bin[s].e[0] += partCfg[i].q.q6_ave;
+    
   }
 //  for (int i = n_part_bins; i < boundaries.n-1; ++i) {
 //    q6_in_bin[s].e = q6_in_bin[s].d/part_in_bin[s].n;
@@ -241,7 +244,8 @@ static int updatemean(){
 #ifdef Q6_PARA
       if(q6_on == 1){
         q6_in_bin[s].n++;
-        q6_in_bin[s].e[0] += partCfg[i].q.q6;
+//Attention: q6 average is used instead of simple q6!!!
+        q6_in_bin[s].e[0] += partCfg[i].q.q6_ave;
       }
 #endif
     }
