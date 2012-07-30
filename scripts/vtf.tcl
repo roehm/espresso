@@ -58,8 +58,8 @@ proc writevsf { file args } {
 		    set r [expr 0.5*($lj_sigma+$lj_offset)]
 		    lset list $type $r
 		} else {
-		    # default radius is 1.0
-		    lset list $type 1.0
+		    # default radius is 0.5
+		    lset list $type 0.5
 		}
 	    }
 	}
@@ -287,6 +287,7 @@ proc writevcf { file args } {
     if { ! $short } then { puts $file "" }
 }
 
+<<<<<<< HEAD
 #dumps particle positions into a file so that paraview can visualize them
 proc writevtk {filename {type "all"}} {
 	set max_pid [setmd max_part]
