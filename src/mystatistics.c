@@ -131,7 +131,11 @@ static void wall_sort_q6() {
     q6_in_bin[s].n++;
 //Attention: q6 average is used instead of simple q6!!!
     q6_in_bin[s].e[0] += partCfg[i].q.q6_ave;
-    
+    if(partCfg[i].q.q6_ave > 1.0){
+       printf("ERROR q6_ave: %lf too large\n", partCfg[i].q.q6_ave);
+       printf("Maybe uninitialized q6_ave values used!!!\n use tcl cmd: q6 average in front\n");
+       exit(EXIT_FAILURE);
+    }
   }
 //  for (int i = n_part_bins; i < boundaries.n-1; ++i) {
 //    q6_in_bin[s].e = q6_in_bin[s].d/part_in_bin[s].n;
@@ -246,6 +250,7 @@ static int updatemean(){
         q6_in_bin[s].n++;
 //Attention: q6 average is used instead of simple q6!!!
         q6_in_bin[s].e[0] += partCfg[i].q.q6_ave;
+        //printf("q6_ave: %lf\n", q6_in_bin[s].e[0]);
       }
 #endif
     }
