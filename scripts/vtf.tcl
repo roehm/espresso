@@ -287,7 +287,6 @@ proc writevcf { file args } {
     if { ! $short } then { puts $file "" }
 }
 
-<<<<<<< HEAD
 #dumps particle positions into a file so that paraview can visualize them
 proc writevtk {filename {type "all"}} {
 	set max_pid [setmd max_part]
