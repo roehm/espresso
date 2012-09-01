@@ -85,6 +85,7 @@ libEspresso_a_SOURCES = \
 	statistics_molecule.c statistics_molecule.h \
 	statistics_observable.c statistics_observable.h \
   statistics_nucleation.c statistics_nucleation.h \
+	statistics_wallstuff.c statistics_wallstuff.h \
 	thermostat.c thermostat.h \
 	topology.c topology.h \
 	tuning.c tuning.h \
@@ -183,6 +184,7 @@ libEspresso_a_SOURCES += \
 	tcl/statistics_fluid_tcl.c tcl/statistics_fluid_tcl.h \
 	tcl/statistics_nucleation_tcl.c tcl/statistics_nucleation_tcl.h \
 	tcl/statistics_observable_tcl.c tcl/statistics_observable_tcl.h \
+	tcl/statistics_wallstuff_tcl.c tcl/statistics_wallstuff_tcl.h \
 	tcl/statistics_tcl.c tcl/statistics_tcl.h \
 	tcl/thermostat_tcl.c tcl/thermostat_tcl.h \
 	tcl/topology_tcl.c \
