@@ -62,6 +62,7 @@
 #include "statistics_observable.h"
 #include "statistics_correlation.h"
 #include "lb-boundaries.h"
+#include "ghmc.h"
 #include "domain_decomposition.h"
 #include "statistics_nucleation.h"
 

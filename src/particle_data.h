@@ -219,6 +219,12 @@ typedef struct {
   //double mean_pos[3];
 #endif
 #endif
+#ifdef GHMC
+  /** Data for the ghmc thermostat, last saved 
+      position and monentum of particle */
+  ParticlePosition r_ls;
+  ParticleMomentum m_ls;
+#endif
 } ParticleLocal;
 
 #ifdef Q6_PARA
