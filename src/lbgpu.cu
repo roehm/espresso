@@ -1324,6 +1324,13 @@ if (_err!=cudaSuccess){ \
 */
 void lb_init_GPU(LB_parameters_gpu *lbpar_gpu){
 
+  cudaFree(nodes_a.vd);
+  cudaFree(nodes_b.vd);
+  cudaFree(nodes_a.seed);
+  cudaFree(nodes_b.seed);
+  cudaFree(nodes_a.boundary);
+  cudaFree(nodes_b.boundary);
+  cudaFree(node_f.force);
   /** Allocate structs in device memory*/
   size_of_values = lbpar_gpu->number_of_nodes * sizeof(LB_values_gpu);
   size_of_forces = lbpar_gpu->number_of_particles * sizeof(LB_particle_force_gpu);
@@ -1409,6 +1416,7 @@ void lb_reinit_GPU(LB_parameters_gpu *lbpar_gpu){
 */
 void lb_realloc_particle_GPU(LB_parameters_gpu *lbpar_gpu, LB_particle_gpu **host_data){
 
+  cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
   /** Allocate struct for particle positions */
   size_of_forces = lbpar_gpu->number_of_particles * sizeof(LB_particle_force_gpu);
   size_of_positions = lbpar_gpu->number_of_particles * sizeof(LB_particle_gpu);
@@ -1427,7 +1435,7 @@ void lb_realloc_particle_GPU(LB_parameters_gpu *lbpar_gpu, LB_particle_gpu **hos
   cudaFree(particle_data);
   cudaFree(part);
 
-  cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
+  //cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
 
   cuda_safe_mem(cudaMalloc((void**)&particle_force, size_of_forces));
   cuda_safe_mem(cudaMalloc((void**)&particle_data, size_of_positions));
@@ -1771,14 +1779,14 @@ void lb_integrate_GPU(){
 /** free gpu memory kernel called from the host (not used anymore) */
 void lb_free_GPU(){
   // Free device memory
-  cudaFree(device_values);
-  cudaFree(&para);
+  //cudaFree(device_values);
+  //cudaFree(&para);
   cudaFree(&nodes_a);
   cudaFree(&nodes_b);
-  cudaFree(particle_force);
-  cudaFree(particle_data);
+  //cudaFree(particle_force);
+  //cudaFree(particle_data);
   cudaFree(&node_f);
-  cudaFree(part);
-  cudaStreamDestroy(stream[0]);
+  //cudaFree(part);
+  //cudaStreamDestroy(stream[0]);
 }
 #endif /* LB_GPU */
