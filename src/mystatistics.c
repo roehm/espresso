@@ -39,6 +39,8 @@ int dummy[3] = {0,0,0};
 int num_of_sets = 0;  
 char *savefilename;
 int q6_on = 0;
+
+
 static void wall_sort_particles() {
 
   //ATTENTION IF STATEMENT only for my personal purpose!!!!!!!!
@@ -74,9 +76,10 @@ static void wall_sort_particles() {
       if (x >= boundaries.e[c]) s = c; else e = c;
     }
     // and add the particle to the resulting list
-    //realloc_grained_intlist(&part_in_bin[s], part_in_bin[s].n + 1, 8);
-    //part_in_bin[s].e[part_in_bin[s].n++] = i;
-    part_in_bin[s].n++;
+    if(s<0 || s>=n_part_bins) continue;
+    realloc_grained_intlist(&part_in_bin[s], part_in_bin[s].n + 1, 8);
+    part_in_bin[s].e[part_in_bin[s].n++] = i;
+   // part_in_bin[s].n++;
   }
   //allo=1;
   //if(num_of_sets!=0) counter++;
@@ -270,14 +273,16 @@ static void calc_wallmsdyz(double *g, int bin)
   for(int k = 1; k < n_configs; k++) {
     g[k] = 0.0;
     // loop over all particles in the specified bin and add up MSD
-    for (int i = 0; i < part_in_bin[bin].n; ++i) {
-      int p = part_in_bin[bin].e[i];
-      g[k] +=
-	+ SQR(configs[n_configs-1][3*p + 1]-configs[n_configs-1-k][3*p + 1])
-	+ SQR(configs[n_configs-1][3*p + 2]-configs[n_configs-1-k][3*p + 2]);
+    if(part_in_bin[bin].n){
+      for (int i = 0; i < part_in_bin[bin].n; ++i) {
+        int p = part_in_bin[bin].e[i];
+        g[k] +=
+	      + SQR(configs[n_configs-1][3*p + 1]-configs[n_configs-1-k][3*p + 1])
+	      + SQR(configs[n_configs-1][3*p + 2]-configs[n_configs-1-k][3*p + 2]);
+      }
+      // normalize
+      g[k] /= part_in_bin[bin].n;
     }
-    // normalize
-    g[k] /= part_in_bin[bin].n;
   }
 }
 
@@ -287,11 +292,13 @@ static void calc_wallmsdx(double *g, int bin)
   g[0] = 0;
   for(int k = 1; k < n_configs; k++) {
     g[k] = 0.0;
-    for (int i = 0; i < part_in_bin[bin].n; ++i) {
+    if(part_in_bin[bin].n){
+      for (int i = 0; i < part_in_bin[bin].n; ++i) {
       int p = part_in_bin[bin].e[i];
       g[k] += SQR(configs[n_configs-1][3*p]-configs[n_configs-1-k][3*p]);
+      }
+      g[k] /= part_in_bin[bin].n;
     }
-    g[k] /= part_in_bin[bin].n;
   }
 }
 

@@ -46,7 +46,7 @@
 #ifndef D3Q19
 #error The implementation only works for D3Q19 so far!
 #endif
-
+//test
 /** Struct holding the Lattice Boltzmann parameters */
 LB_parameters_gpu lbpar_gpu = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0 ,0.0, -1.0, 0, 0, 0, 0, 0, 0, 1, 0, {0.0, 0.0, 0.0}, 12345, 0};
 LB_values_gpu *host_values = NULL;
