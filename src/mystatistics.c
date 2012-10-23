@@ -28,10 +28,13 @@
 #ifdef MY_STAT
 // list of the currently specified box boundaries
 DoubleList boundaries = { NULL, 0 };
+DoubleList boundaries_q6 = { NULL, 0 };
 // number of boxes
 int n_part_bins = 0;
+int n_part_bins_q6 = 0;
 // the boxes with the particle identities
 IntList *part_in_bin = NULL;
+IntList *part_in_bin_q6 = NULL;
 DoubleList *q6_in_bin = NULL;
 int allo=0;
 int counter=1;
@@ -40,7 +43,19 @@ int num_of_sets = 0;
 char *savefilename;
 int q6_on = 0;
 
+#if 0
+void realloc_grained_intlist2(IntList *il, int size, int grain)
+{
+  if(size >= il->max)
+    il->max = grain*((size + grain - 1)/grain);
+  else
+    /* shrink not as fast, just lose half, rounded up */
+    il->max = grain*(((il->max + size + 1)/2 +
+		      grain - 1)/grain);
 
+  il->e = (int *) realloc(il->e, sizeof(int)*il->max);
+}
+#endif
 static void wall_sort_particles() {
 
   //ATTENTION IF STATEMENT only for my personal purpose!!!!!!!!
@@ -76,6 +91,7 @@ static void wall_sort_particles() {
       if (x >= boundaries.e[c]) s = c; else e = c;
     }
     // and add the particle to the resulting list
+    //fprintf(stderr, ".e:%i bn: %i \n", boundaries.e, boundaries.n);
     if(s<0 || s>=n_part_bins) continue;
     realloc_grained_intlist(&part_in_bin[s], part_in_bin[s].n + 1, 8);
     part_in_bin[s].e[part_in_bin[s].n++] = i;
@@ -95,19 +111,19 @@ static void wall_sort_q6() {
    // 1. reallocate the boxes for the particle identities
   
   // free old boxes
-  for (int i = 0; i < n_part_bins; ++i) {
-    realloc_intlist(&part_in_bin[i], part_in_bin[i].n = 0);
+  for (int i = 0; i < n_part_bins_q6; ++i) {
+    realloc_intlist(&part_in_bin_q6[i], part_in_bin_q6[i].n = 0);
   }
-  part_in_bin = realloc(part_in_bin, (boundaries.n - 1)*sizeof(IntList));
-  q6_in_bin = realloc(q6_in_bin, (boundaries.n - 1)*sizeof(IntList));
+  part_in_bin_q6 = realloc(part_in_bin_q6, (boundaries_q6.n - 1)*sizeof(IntList));
+  q6_in_bin = realloc(q6_in_bin, (boundaries_q6.n - 1)*sizeof(IntList));
   // initialize new ones
-  for (int i = n_part_bins; i < boundaries.n-1; ++i) {
-    init_intlist(&part_in_bin[i]);
+  for (int i = n_part_bins_q6; i < boundaries_q6.n-1; ++i) {
+    init_intlist(&part_in_bin_q6[i]);
     init_doublelist(&q6_in_bin[i]);
     q6_in_bin[i].e = realloc(q6_in_bin[i].e, n_var*sizeof(double));
     q6_in_bin[i].e[0] = 0;
   }
-  n_part_bins = boundaries.n-1;
+  n_part_bins_q6 = boundaries_q6.n-1;
 
   // 2. for each particle, find the box and put its
   // identity there
@@ -118,19 +134,19 @@ static void wall_sort_q6() {
     fold_position(rp, dummy);
     double x = rp[0];
     // ignore particles outside the boundaries
-    if (x < boundaries.e[0] || x > boundaries.e[boundaries.n-1])
+    if (x < boundaries_q6.e[0] || x > boundaries_q6.e[boundaries_q6.n-1])
       continue;
     // simple bisection on the particle's x-coordinate
     int s = 0;
-    int e = boundaries.n - 1;
+    int e = boundaries_q6.n - 1;
     while (e - s > 1) {
       int c = (e + s)/2;
-      if (x >= boundaries.e[c]) s = c; else e = c;
+      if (x >= boundaries_q6.e[c]) s = c; else e = c;
     }
     // and add the particle to the resulting list
     //realloc_grained_intlist(&part_in_bin[s], part_in_bin[s].n + 1, 8);
     //part_in_bin[s].e[part_in_bin[s].n++] = i;
-    part_in_bin[s].n++;
+    part_in_bin_q6[s].n++;
     q6_in_bin[s].n++;
 //Attention: q6 average is used instead of simple q6!!!
     q6_in_bin[s].e[0] += partCfg[i].q.q6_ave;
@@ -196,23 +212,23 @@ static int printq6peaks(char* filename){
 	
 	   if(fp == NULL)
 	  	  return 1;
-	  	for(int s=0; s<boundaries.n-1; s++) {
+	  	for(int s=0; s<boundaries_q6.n-1; s++) {
 #if 1
       if(s==0) {
-        if(part_in_bin[s].n > part_in_bin[s+1].n) {
-          fprintf(fp, "%lf \t %lf \t %lf \n", ((s+0.5)*box_l[0])/(boundaries.n-1), (boundaries.n-1)*part_in_bin[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]), q6_in_bin[s].e[0]/(q6_in_bin[s].n));
+        if(part_in_bin_q6[s].n > part_in_bin_q6[s+1].n) {
+          fprintf(fp, "%lf \t %lf \t %lf \n", ((s+0.5)*box_l[0])/(boundaries_q6.n-1), (boundaries_q6.n-1)*part_in_bin_q6[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]), q6_in_bin[s].e[0]/(q6_in_bin[s].n));
         }
       }
       if(s==boundaries.n-1) {
-        if(part_in_bin[s].n > part_in_bin[s-1].n) {
-          fprintf(fp, "%lf \t %lf \t %lf\n", ((s+0.5)*box_l[0])/(boundaries.n-1), (boundaries.n-1)*part_in_bin[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]), q6_in_bin[s].e[0]/(q6_in_bin[s].n));
+        if(part_in_bin_q6[s].n > part_in_bin_q6[s-1].n) {
+          fprintf(fp, "%lf \t %lf \t %lf\n", ((s+0.5)*box_l[0])/(boundaries_q6.n-1), (boundaries_q6.n-1)*part_in_bin_q6[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]), q6_in_bin[s].e[0]/(q6_in_bin[s].n));
         }
       }else
-        if(part_in_bin[s].n > part_in_bin[s-1].n && part_in_bin[s].n > part_in_bin[s+1].n) {
-          fprintf(fp, "%lf \t %lf \t %lf\n", ((s+0.5)*box_l[0])/(boundaries.n-1), (boundaries.n-1)*part_in_bin[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]), q6_in_bin[s].e[0]/(q6_in_bin[s].n));
+        if(part_in_bin_q6[s].n > part_in_bin_q6[s-1].n && part_in_bin_q6[s].n > part_in_bin_q6[s+1].n) {
+          fprintf(fp, "%lf \t %lf \t %lf\n", ((s+0.5)*box_l[0])/(boundaries_q6.n-1), (boundaries_q6.n-1)*part_in_bin_q6[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]), q6_in_bin[s].e[0]/(q6_in_bin[s].n));
         }
      #else
-     fprintf(fp, "%lf \t %lf \t %lf\n", ((s+0.5)*box_l[0])/(boundaries.n-1), (boundaries.n-1)*part_in_bin[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]), q6_in_bin[s].e[0]/(q6_in_bin[s].n));
+     fprintf(fp, "%lf \t %lf \t %lf\n", ((s+0.5)*box_l[0])/(boundaries_q6.n-1), (boundaries_q6.n-1)*part_in_bin_q6[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]), q6_in_bin[s].e[0]/(q6_in_bin[s].n));
     #endif
     }
         
@@ -235,19 +251,19 @@ static int updatemean(){
       fold_position(rp, dummy);
       double x = rp[0];
       // ignore particles outside the boundaries
-      if (x < boundaries.e[0] || x > boundaries.e[boundaries.n-1])
+      if (x < boundaries_q6.e[0] || x > boundaries_q6.e[boundaries_q6.n-1])
         continue;
       // simple bisection on the particle's x-coordinate
       int s = 0;
-      int e = boundaries.n - 1;
+      int e = boundaries_q6.n - 1;
       while (e - s > 1) {
         int c = (e + s)/2;
-        if (x >= boundaries.e[c]) s = c; else e = c;
+        if (x >= boundaries_q6.e[c]) s = c; else e = c;
       }
       // and add the particle to the resulting list
       //realloc_grained_intlist(&part_in_bin[s], part_in_bin[s].n + 1, 8);
       //part_in_bin[s].e[part_in_bin[s].n++] = i;
-      part_in_bin[s].n++;
+      part_in_bin_q6[s].n++;
 #ifdef Q6_PARA
       if(q6_on == 1){
         q6_in_bin[s].n++;
@@ -686,16 +702,16 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
   }
   else if (ARG0_IS_S("-printpeaks") && argc >= 2) {
     job = PEAKS;
-	 }     
-		else if (ARG0_IS_S("-updatemean")) {
-		  job = UPDATEMEAN;
-		}
-		else if (ARG0_IS_S("-q6bins")) {
+  }     
+  else if (ARG0_IS_S("-updatemean")) {
+    job = UPDATEMEAN;
+  }
+  else if (ARG0_IS_S("-q6bins")) {
     job = Q6BINS;
   }
   else if (ARG0_IS_S("-printq6peaks") && argc >= 2) {
     job = Q6PEAKS;
-	 } 
+  } 
   else if (ARG0_IS_S("-mx") && argc == 2) {
     job = MX;
   }
@@ -735,11 +751,11 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
     }
     break;
   case Q6BINS:
-    realloc_doublelist(&boundaries, boundaries.n = 0);
-    if (!ARG_IS_DOUBLELIST(1, boundaries)) {
+    realloc_doublelist(&boundaries_q6, boundaries_q6.n = 0);
+    if (!ARG_IS_DOUBLELIST(1, boundaries_q6)) {
       return TCL_ERROR;
     }
-    if (boundaries.n < 2) {
+    if (boundaries_q6.n < 2) {
       return (TCL_ERROR);
     }
     break;
@@ -880,22 +896,22 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
     break;
   case PEAKS:
     if(printpeaks(argv[1]) != 0) {
-				   Tcl_AppendResult(interp, "Error at printpeaks", (char *)NULL);
-				   return (TCL_ERROR);
-				}
-				break;
-		case Q6PEAKS:
+      Tcl_AppendResult(interp, "Error at printpeaks", (char *)NULL);
+      return (TCL_ERROR);
+    }
+    break;
+  case Q6PEAKS:
     if(printq6peaks(argv[1]) != 0) {
-				   Tcl_AppendResult(interp, "Error at printpeaks", (char *)NULL);
-				   return (TCL_ERROR);
-				}
-				break;
-		case UPDATEMEAN:
-		  if(updatemean() != 0) {
-				  Tcl_AppendResult(interp, "Error at updatemean", (char *)NULL);
-				   return (TCL_ERROR);
-				}
-				break;
+      Tcl_AppendResult(interp, "Error at printpeaks", (char *)NULL);
+      return (TCL_ERROR);
+    }
+    break;
+  case UPDATEMEAN:
+    if(updatemean() != 0) {
+      Tcl_AppendResult(interp, "Error at updatemean", (char *)NULL);
+      return (TCL_ERROR);
+    }
+    break;
   }
 
   // print out double results, if any
