@@ -76,10 +76,10 @@ static void wall_sort_particles() {
   // identity there
 
   for(int i=0; i<n_total_particles; i++) {
-    //double x = partCfg[i].r.p[0];
-    double* rp = partCfg[i].r.p;
-    fold_position(rp, dummy);
-    double x = rp[0];
+    double x = partCfg[i].r.p[0];
+    //double* rp = partCfg[i].r.p;
+    //fold_position(rp, dummy);
+    //double x = rp[0];
     // ignore particles outside the boundaries
     if (x < boundaries.e[0] || x > boundaries.e[boundaries.n-1])
       continue;
@@ -129,10 +129,7 @@ static void wall_sort_q6() {
   // identity there
 
   for(int i=0; i<n_total_particles; i++) {
-    //double x = partCfg[i].r.p[0];
-    double* rp = partCfg[i].r.p;
-    fold_position(rp, dummy);
-    double x = rp[0];
+    double x = partCfg[i].r.p[0];
     // ignore particles outside the boundaries
     if (x < boundaries_q6.e[0] || x > boundaries_q6.e[boundaries_q6.n-1])
       continue;
@@ -247,9 +244,7 @@ static int updatemean(){
   updatePartCfg(WITHOUT_BONDS);
   
     for(int i=0; i<n_total_particles; i++) {
-      double* rp = partCfg[i].r.p;
-      fold_position(rp, dummy);
-      double x = rp[0];
+      double x = partCfg[i].r.p[0];
       // ignore particles outside the boundaries
       if (x < boundaries_q6.e[0] || x > boundaries_q6.e[boundaries_q6.n-1])
         continue;
@@ -292,9 +287,12 @@ static void calc_wallmsdyz(double *g, int bin)
     if(part_in_bin[bin].n){
       for (int i = 0; i < part_in_bin[bin].n; ++i) {
         int p = part_in_bin[bin].e[i];
-        g[k] +=
-	      + SQR(configs[n_configs-1][3*p + 1]-configs[n_configs-1-k][3*p + 1])
-	      + SQR(configs[n_configs-1][3*p + 2]-configs[n_configs-1-k][3*p + 2]);
+        if (k==80)
+           printf("%d %f %f\n", p, configs[n_configs-1][3*p + 2],configs[n_configs-1-k][3*p + 2]);
+        g[k] += SQR(configs[n_configs-1][3*p + 2]-configs[n_configs-1-k][3*p + 2]);
+        //g[k] +=
+	      //+ SQR(configs[n_configs-1][3*p + 1]-configs[n_configs-1-k][3*p + 1])
+	      //+ SQR(configs[n_configs-1][3*p + 2]-configs[n_configs-1-k][3*p + 2]);
       }
       // normalize
       g[k] /= part_in_bin[bin].n;
