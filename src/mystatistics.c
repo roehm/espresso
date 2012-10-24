@@ -287,12 +287,9 @@ static void calc_wallmsdyz(double *g, int bin)
     if(part_in_bin[bin].n){
       for (int i = 0; i < part_in_bin[bin].n; ++i) {
         int p = part_in_bin[bin].e[i];
-        if (k==80)
-           printf("%d %f %f\n", p, configs[n_configs-1][3*p + 2],configs[n_configs-1-k][3*p + 2]);
-        g[k] += SQR(configs[n_configs-1][3*p + 2]-configs[n_configs-1-k][3*p + 2]);
-        //g[k] +=
-	      //+ SQR(configs[n_configs-1][3*p + 1]-configs[n_configs-1-k][3*p + 1])
-	      //+ SQR(configs[n_configs-1][3*p + 2]-configs[n_configs-1-k][3*p + 2]);
+        g[k] +=
+	      + SQR(configs[n_configs-1][3*p + 1]-configs[n_configs-1-k][3*p + 1])
+	      + SQR(configs[n_configs-1][3*p + 2]-configs[n_configs-1-k][3*p + 2]);
       }
       // normalize
       g[k] /= part_in_bin[bin].n;
