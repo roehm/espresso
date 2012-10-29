@@ -144,7 +144,7 @@ void lb_send_forces_gpu(){
 void lb_realloc_particles_gpu(){
 
   lbpar_gpu.number_of_particles = n_total_particles;
-  LB_TRACE (printf("#particles realloc\t %u \n", lbpar_gpu.number_of_particles));
+  LB_TRACE (printf("number of (re-)alloc particles:\t %u \n", lbpar_gpu.number_of_particles));
   //fprintf(stderr, "%u \t \n", lbpar_gpu.number_of_particles);
   /**-----------------------------------------------------*/
   /** allocating of the needed memory for several structs */
@@ -155,7 +155,7 @@ void lb_realloc_particles_gpu(){
 
   lbpar_gpu.your_seed = (unsigned int)i_random(max_ran);
 
-  LB_TRACE (fprintf(stderr,"test your_seed %u \n", lbpar_gpu.your_seed));
+  LB_TRACE (fprintf(stderr,"your_seed: %u \n", lbpar_gpu.your_seed));
   lb_realloc_particle_GPU(&lbpar_gpu, &host_data);
 }
 /** (Re-)initializes the fluid according to the given value of rho. */
@@ -168,7 +168,7 @@ void lb_reinit_fluid_gpu() {
     lbpar_gpu.reinit = 1;
   }
 
-  LB_TRACE (fprintf(stderr,"lb_reinit_fluid_gpu \n"));
+  LB_TRACE (fprintf(stderr,"lb_reinit_fluid_gpu succeeded \n"));
 }
 
 /** Release the fluid. */
@@ -202,7 +202,7 @@ void lb_reinit_parameters_gpu() {
   if (temperature > 0.0) {  /* fluctuating hydrodynamics ? */
 
     lbpar_gpu.fluct = 1;
-	 LB_TRACE (fprintf(stderr, "fluct on \n"));
+	 LB_TRACE (fprintf(stderr, "fluct are enabled! \n"));
     /* Eq. (51) Duenweg, Schiller, Ladd, PRE 76(3):036704 (2007).*/
     /* Note that the modes are not normalized as in the paper here! */
 
@@ -224,9 +224,9 @@ void lb_reinit_parameters_gpu() {
     lbpar_gpu.lb_coupl_pref = 0.0;
     lbpar_gpu.lb_coupl_pref2 = 0.0;
   }
-	LB_TRACE (fprintf(stderr,"lb_reinit_prarameters_gpu \n"));
 
   reinit_parameters_GPU(&lbpar_gpu);
+	LB_TRACE (fprintf(stderr,"lb_reinit_prarameters_gpu successful\n"));
 }
 
 /** Performs a full initialization of
