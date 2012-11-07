@@ -550,36 +550,42 @@ int tclcommand_observable_dipole_moment(Tcl_Interp* interp, int argc, char** arg
 #endif
 }
 
-//int tclcommand_observable_structure_factor(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
-//  int order;
-//  int* order_p;
+int tclcommand_observable_structure_factor(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
+  int order[3] = {0, 0, 0};
 //
-////  Tcl_AppendResult(interp, "Structure Factor not available yet!!", (char *)NULL);
-////  return TCL_ERROR;
-//  if (argc > 1 && ARG1_IS_I(order)) {
-//    obs->fun = &observable_structure_factor;
-//    order_p=malloc(sizeof(int));
-//    *order_p=order;
-//    obs->args=(void*) order_p;
-//    int order2,i,j,k,l,n ; 
-//    order2=order*order;
-//    l=0;
-//    // lets counter the number of entries for the DSF
-//    for(i=-order; i<=order; i++) 
-//      for(j=-order; j<=order; j++) 
-//        for(k=-order; k<=order; k++) {
-//          n = i*i + j*j + k*k;
-//          if ((n<=order2) && (n>=1)) 
-//            l=l+2;
-//  }
-//    obs->n=l;
-//    *change=2;
-//    return TCL_OK;
-//  } else { 
-//    sf_print_usage(interp);
-//    return TCL_ERROR; 
-//  }
-//}
+  if (argc == 4 &&
+      ARG_IS_I(1, order[0]) &&
+      ARG_IS_I(2, order[1]) &&
+      ARG_IS_I(3, order[2])
+      ) {
+    obs->fun = &observable_structure_factor;
+    observable_sf_params* params_p=(observable_sf_params*) malloc(sizeof(observable_sf_params));
+    params_p->order[0]=order[0];
+    params_p->order[1]=order[1];
+    params_p->order[2]=order[2];
+    obs->args=(void*)params_p;
+    int order2,i,j,k,l,n ; 
+    //order2=order*order;
+    //printf("order x %i, y %i, z %i \n", params_p->order[0], params_p->order[1], params_p->order[2]); fflush(stdout);
+    l=0;
+    // lets counter the number of entries for the DSF
+    for(i=-order[2]; i<=order[2]; i++) 
+      for(j=-order[1]; j<=order[1]; j++) { 
+        for(k=-order[0]; k<=order[0]; k++) {
+          //n = i*i + j*j + k*k;
+          //if (n<=order2) { 
+            l=l+2;
+          //}
+        }
+      }
+    obs->n=l;
+    *change=2;
+    return TCL_OK;
+  } else { 
+    sf_print_usage(interp);
+    return TCL_ERROR; 
+  }
+}
 
 // FIXME this is the old implementation of structure factor (before observables and correlations were strictly separated)
 //int parse_structure_factor (Tcl_Interp* interp, int argc, char** argv, int* change, void** A_args, int *tau_lin_p, double *tau_max_p, double* delta_t_p) {
@@ -824,7 +830,7 @@ int tclcommand_observable(ClientData data, Tcl_Interp *interp, int argc, char **
     REGISTER_OBSERVABLE(particle_currents, tclcommand_observable_particle_currents,id);
     REGISTER_OBSERVABLE(currents, tclcommand_observable_currents,id);
     REGISTER_OBSERVABLE(dipole_moment, tclcommand_observable_dipole_moment,id);
-//    REGISTER_OBSERVABLE(structure_factor, tclcommand_observable_structure_factor,id);
+    REGISTER_OBSERVABLE(structure_factor, tclcommand_observable_structure_factor,id);
     REGISTER_OBSERVABLE(interacts_with, tclcommand_observable_interacts_with,id);
   //  REGISTER_OBSERVABLE(obs_nothing, tclcommand_observable_obs_nothing,id);
   //  REGISTER_OBSERVABLE(flux_profile, tclcommand_observable_flux_profile,id);
@@ -1297,7 +1303,7 @@ int tclcommand_observable_print_formatted(Tcl_Interp* interp, int argc, char** a
 
 
 int sf_print_usage(Tcl_Interp* interp) {
-  Tcl_AppendResult(interp, "\nusage: structure_factor order delta_t tau_max  tau_lin", (char *)NULL);
+  Tcl_AppendResult(interp, "\nusage: structure_factor order: structure_factor x_order y_order z_order ", (char *)NULL);
   return TCL_ERROR;
 }
 

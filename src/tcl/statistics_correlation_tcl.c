@@ -656,7 +656,8 @@ int double_correlation_print_spherically_averaged_sf(double_correlation* self, T
   q_vals=params->q_vals;
   q_density=params->q_density;
   dim_sf=params->dim_sf;
-  order2=params->order*params->order;
+  //FIXME no spherical struct fact available anymore
+  order2=params->order[0]*params->order[0];
   
   av_sf_Re=(double*)malloc(order2*sizeof(double));
   av_sf_Im=(double*)malloc(order2*sizeof(double));

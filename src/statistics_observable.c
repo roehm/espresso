@@ -650,46 +650,51 @@ int observable_stress_tensor_acf_obs(void* params_p, double* A, unsigned int n_A
 int observable_structure_factor(void* params_p, double* A, unsigned int n_A) {
   // FIXME Currently scattering length is hardcoded as 1.0
   int i,j,k,l,p;
-  int order, order2, n;
+  int order[3], order2, n;
   double twoPI_L, C_sum, S_sum, qr; 
 //  DoubleList *scattering_length;
-  observable_sf_params* params;
-  params = (observable_sf_params*)params_p;
+  observable_sf_params* params = (observable_sf_params*)params_p;
 //  scattering_length = params->scattering_length;
   const double scattering_length=1.0;
-  order = params->order;
-  order2=order*order;
+  order[0] = params->order[0];
+  order[1] = params->order[1];
+  order[2] = params->order[2];
+  //order2=order*order;
   twoPI_L = 2*PI/box_l[0];
   
   sortPartCfg();
 
-    for(p=0; p<n_A; p++) {
-       A[p]   = 0.0;
-    }
+  for(p=0; p<n_A; p++) {
+     A[p] = 0.0;
+  }
 
-    l=0;
-    //printf("n_A: %d, dim_sf: %d\n",n_A, params.dim_sf); fflush(stdout);
-    for(i=-order; i<=order; i++) {
-      for(j=-order; j<=order; j++) {
-        for(k=-order; k<=order; k++) {
-	  n = i*i + j*j + k*k;
-	  if ((n<=order2) && (n>=1)) {
-	    C_sum = S_sum = 0.0;
-            //printf("l: %d, n: %d %d %d\n",l,i,j,k); fflush(stdout);
-	    for(p=0; p<n_total_particles; p++) {
-	      qr = twoPI_L * ( i*partCfg[p].r.p[0] + j*partCfg[p].r.p[1] + k*partCfg[p].r.p[2] );
-	      C_sum+= scattering_length * cos(qr);
-	      S_sum-= scattering_length * sin(qr);
+  l=0;
+  //printf("n_A: %d, order: %i\n",n_A, order); fflush(stdout);
+  for(i=-order[2]; i<=order[2]; i++) {
+    for(j=-order[1]; j<=order[1]; j++) {
+      for(k=-order[0]; k<=order[0]; k++) {
+	       //n = i*i + j*j + k*k;
+	       //if (n<=order2) {
+	          C_sum = S_sum = 0.0;
+          //printf("l: %d, n: %d %d %d\n",l,i,j,k); fflush(stdout);
+	          for(p=0; p<n_total_particles; p++) {
+	            qr = twoPI_L * ( i*partCfg[p].r.p[0] + j*partCfg[p].r.p[1] + k*partCfg[p].r.p[2] );
+	            C_sum += scattering_length * cos(qr);
+	            S_sum -= scattering_length * sin(qr);
+	          }
+            A[l]   = C_sum;
+            A[l+1] = S_sum;
+            l= l+2;
+	       //}
 	    }
-            A[l]   =C_sum;
-            A[l+1] =S_sum;
-            l=l+2;
-	  }
-	}
-      }
     }
-    //printf("finished calculating sf\n"); fflush(stdout);
-    return 0;
+  }
+  //Stefans conjecture
+  for(p=0; p<n_A; p++) {
+     A[p] /= box_l[0] * box_l[1] * box_l[2];
+  }
+  //printf("finished calculating sf\n"); fflush(stdout);
+  return 0;
 }
 
 int observable_interacts_with (void* params_p, double* A, unsigned int n_A) {
