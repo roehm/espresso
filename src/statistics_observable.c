@@ -651,7 +651,8 @@ int observable_structure_factor(void* params_p, double* A, unsigned int n_A) {
   // FIXME Currently scattering length is hardcoded as 1.0
   int i,j,k,l,p;
   int order[3], order2, n;
-  double twoPI_L, C_sum, S_sum, qr; 
+  double twoPI_L, C_sum, S_sum, qr;
+  double *q_density;
 //  DoubleList *scattering_length;
   observable_sf_params* params = (observable_sf_params*)params_p;
 //  scattering_length = params->scattering_length;
@@ -659,22 +660,28 @@ int observable_structure_factor(void* params_p, double* A, unsigned int n_A) {
   order[0] = params->order[0];
   order[1] = params->order[1];
   order[2] = params->order[2];
-  //order2=order*order;
+  order2=order[0]*order[0];
   twoPI_L = 2*PI/box_l[0];
-  
+
+  q_density = (double*)malloc(n_A/2*sizeof(double));
+
   sortPartCfg();
 
+  for(p=0; p<n_A/2; p++) {
+    q_density[p] = 0.0;
+  }
   for(p=0; p<n_A; p++) {
      A[p] = 0.0;
   }
 
-  l=0;
-  //printf("n_A: %d, order: %i\n",n_A, order); fflush(stdout);
+  l = 0;
+  //printf("n_A/2: %d, order: %i\n",n_A/2, order[0]); fflush(stdout);
   for(i=-order[2]; i<=order[2]; i++) {
     for(j=-order[1]; j<=order[1]; j++) {
       for(k=-order[0]; k<=order[0]; k++) {
-	       //n = i*i + j*j + k*k;
-	       //if (n<=order2) {
+         //spherical sf:
+	       n = i*i + j*j + k*k;
+	       if (n<=order2) {
 	          C_sum = S_sum = 0.0;
           //printf("l: %d, n: %d %d %d\n",l,i,j,k); fflush(stdout);
 	          for(p=0; p<n_total_particles; p++) {
@@ -684,16 +691,26 @@ int observable_structure_factor(void* params_p, double* A, unsigned int n_A) {
 	          }
             A[l]   = C_sum;
             A[l+1] = S_sum;
-            l= l+2;
-	       //}
+      	    //q_density[l] += 1.0;
+            l = l+2;
+	       }
 	    }
     }
   }
-  //Stefans conjecture
-  for(p=0; p<n_A; p++) {
-     A[p] /= box_l[0] * box_l[1] * box_l[2];
+
+  //printf("l: %i, n_A: %i \n",l,n_A); fflush(stdout);
+  n = 0;
+  for(p=0; p<n_total_particles; p++) {
+      n++;
   }
-  //printf("finished calculating sf\n"); fflush(stdout);
+
+ l = 0;
+ for(k=0;k<n_A/2;k++) {
+    //devide by the sqrt(number_of_particle) due to complex product and no k-vector averaging so far
+       A[l] /= sqrt(n);
+       A[l+1] /= sqrt(n);
+       l=l+2;
+ }
   return 0;
 }
 

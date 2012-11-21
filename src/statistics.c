@@ -907,20 +907,21 @@ void calc_structurefactor(int type, int order, double **_ff) {
     for(i=0; i<=order; i++) {
       for(j=-order; j<=order; j++) {
         for(k=-order; k<=order; k++) {
-	  n = i*i + j*j + k*k;
-	  if ((n<=order2) && (n>=1)) {
-	    C_sum = S_sum = 0.0;
-	    for(p=0; p<n_total_particles; p++) {
-	      if (partCfg[p].p.type == type) {
-		qr = twoPI_L * ( i*partCfg[p].r.p[0] + j*partCfg[p].r.p[1] + k*partCfg[p].r.p[2] );
-		C_sum+= cos(qr);
-		S_sum+= sin(qr);
+	         n = i*i + j*j + k*k;
+	         if ((n<=order2) && (n>=1)) {
+	           C_sum = S_sum = 0.0;
+	           for(p=0; p<n_total_particles; p++) {
+	              if (partCfg[p].p.type == type) {
+		              qr = twoPI_L * ( i*partCfg[p].r.p[0] + j*partCfg[p].r.p[1] + k*partCfg[p].r.p[2] );
+		              C_sum+= cos(qr);
+		              S_sum+= sin(qr);
+	              }
+	           }
+	           ff[2*n-2]+= C_sum*C_sum + S_sum*S_sum;
+             //k density?
+	           ff[2*n-1]++;
+	         }
 	      }
-	    }
-	    ff[2*n-2]+= C_sum*C_sum + S_sum*S_sum;
-	    ff[2*n-1]++;
-	  }
-	}
       }
     }
     n = 0;

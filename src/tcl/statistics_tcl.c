@@ -1627,7 +1627,7 @@ int tclcommand_analyze_parse_structurefactor(Tcl_Interp *interp, int argc, char 
   qfak = 2.0*PI/box_l[0];
   for(i=0; i<order*order; i++) { 
     if (sf[2*i+1]> 0) { 
-      sprintf(buffer,"{%f %f} ",qfak*sqrt(i+1),sf[2*i]);
+      sprintf(buffer,"%f %f\n ",qfak*sqrt(i+1),sf[2*i]);
       Tcl_AppendResult(interp, buffer, (char *)NULL);
     }
   }

@@ -564,18 +564,19 @@ int tclcommand_observable_structure_factor(Tcl_Interp* interp, int argc, char** 
     params_p->order[1]=order[1];
     params_p->order[2]=order[2];
     obs->args=(void*)params_p;
-    int order2,i,j,k,l,n ; 
-    //order2=order*order;
+    int order2,i,j,k,l,n ;
+    //spherical sf:
+    order2=order[0]*order[0];
     //printf("order x %i, y %i, z %i \n", params_p->order[0], params_p->order[1], params_p->order[2]); fflush(stdout);
     l=0;
     // lets counter the number of entries for the DSF
     for(i=-order[2]; i<=order[2]; i++) 
       for(j=-order[1]; j<=order[1]; j++) { 
         for(k=-order[0]; k<=order[0]; k++) {
-          //n = i*i + j*j + k*k;
-          //if (n<=order2) { 
+          n = i*i + j*j + k*k;
+          if (n<=order2) { 
             l=l+2;
-          //}
+          }
         }
       }
     obs->n=l;
