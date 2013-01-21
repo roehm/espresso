@@ -75,7 +75,7 @@ set temp          1.0
 set skin          0.5
 
 set mom_prec      1.e-2
-set mass_prec     1.e-8
+set mass_prec     5.e-1
 set temp_confidence 10
 
 # Other parameters
@@ -168,11 +168,11 @@ for { set i 1 } { $i <= $int_times } { incr i } {
     integrate $int_steps
 
     # check fluid mass conservation
-    #set dmass [expr abs([analyze fluid mass]-$fluidmass)]
-    #if { $dmass > $mass_prec } {
-	#error "mass deviation too large $dmass"
-    #}
-    #if { $dmass > $max_dmass } { set max_dmass $dmass }
+    set dmass [expr abs([analyze fluid mass]-$fluidmass)]
+    if { $dmass > $mass_prec } {
+	    error "mass deviation too large $dmass"
+    }
+    if { $dmass > $max_dmass } { set max_dmass $dmass }
 
     # check total momentum conservation
     set p_mom [analyze momentum particles]
