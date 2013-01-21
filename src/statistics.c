@@ -245,7 +245,10 @@ void momentum_calc(double *momentum)
 
     mpi_gather_stats(4, momentum_particles, NULL, NULL, NULL);
 #ifdef LB
-    mpi_gather_stats(6, momentum_fluid, NULL, NULL, NULL);
+    if(lattice_switch & LATTICE_LB)mpi_gather_stats(6, momentum_fluid, NULL, NULL, NULL);
+#endif
+#ifdef LB_GPU
+    if(lattice_switch & LATTICE_LB_GPU)lb_calc_fluid_momentum_GPU(momentum_fluid);
 #endif
 
     momentum[0] = momentum_fluid[0] + momentum_particles[0];
