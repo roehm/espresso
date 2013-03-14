@@ -1,5 +1,5 @@
-/*
-   Copyright (C) 2010,2011,2012 The ESPResSo project
+/* 
+   Copyright (C) 2010,2011,2012,2013 The ESPResSo project
 
    This file is part of ESPResSo.
 
@@ -29,6 +29,7 @@
 
 extern "C" {
 #include "lbgpu.h"
+#include "config.h"
 }
 
 #ifdef LB_GPU
@@ -1325,6 +1326,7 @@ if (_err!=cudaSuccess){ \
 void lb_init_GPU(LB_parameters_gpu *lbpar_gpu){
 
   if(initflag){
+    cudaFree(device_values);
     cudaFree(nodes_a.vd);
     cudaFree(nodes_b.vd);
     cudaFree(nodes_a.seed);
@@ -1332,6 +1334,7 @@ void lb_init_GPU(LB_parameters_gpu *lbpar_gpu){
     cudaFree(nodes_a.boundary);
     cudaFree(nodes_b.boundary);
     cudaFree(node_f.force);
+    cudaFree(gpu_check);
   }
   /** Allocate structs in device memory*/
   size_of_values = lbpar_gpu->number_of_nodes * sizeof(LB_values_gpu);
@@ -1464,6 +1467,10 @@ void lb_realloc_particle_GPU(LB_parameters_gpu *lbpar_gpu, LB_particle_gpu **hos
 */
 void lb_init_boundaries_GPU(int number_of_boundnodes, int *host_boundindex){
 
+  if (initflag!=0)
+    cudaFree(boundindex);
+
+
   size_of_boundindex = number_of_boundnodes*sizeof(int);
   cuda_safe_mem(cudaMalloc((void**)&boundindex, size_of_boundindex));
   cudaMemcpy(boundindex, host_boundindex, size_of_boundindex, cudaMemcpyHostToDevice);
@@ -1522,7 +1529,7 @@ void lb_init_extern_nodeforces_GPU(int n_extern_nodeforces, LB_extern_nodeforce_
   cuda_safe_mem(cudaMalloc((void**)&extern_nodeforces, size_of_extern_nodeforces));
   cudaMemcpy(extern_nodeforces, host_extern_nodeforces, size_of_extern_nodeforces, cudaMemcpyHostToDevice);
 
-  if(para.external_force == 0)cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
+  if(lbpar_gpu->external_force == 0)cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu))); 
 
   int threads_per_block_exf = 64;
   int blocks_per_grid_exf_y = 4;

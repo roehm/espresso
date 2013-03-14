@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2010,2011,2012 The ESPResSo project
+  Copyright (C) 2010,2011,2012,2013 The ESPResSo project
   Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010 
     Max-Planck-Institute for Polymer Research, Theory Group
   
@@ -152,6 +152,14 @@ void tclcommand_part_print_dip(Particle *part, char *buffer, Tcl_Interp *interp)
 void tclcommand_part_print_virtual(Particle *part, char *buffer, Tcl_Interp *interp)
 {
   sprintf(buffer,"%i", part->p.isVirtual);
+  Tcl_AppendResult(interp, buffer, (char *)NULL);
+}
+#endif
+
+#ifdef ROTATION_PER_PARTICLE
+void tclcommand_part_print_rotation(Particle *part, char *buffer, Tcl_Interp *interp)
+{
+  sprintf(buffer,"%i", part->p.rotation);
   Tcl_AppendResult(interp, buffer, (char *)NULL);
 }
 #endif
@@ -452,6 +460,11 @@ int tclprint_to_result_Particle(Tcl_Interp *interp, int part_num)
   tclcommand_part_print_torque(&part, buffer, interp);
 #endif
 
+#ifdef ROTATION_PER_PARTICLE
+  Tcl_AppendResult(interp, " rotation ", (char *)NULL);
+  tclcommand_part_print_rotation(&part, buffer, interp);
+#endif
+
 #ifdef ROTATIONAL_INERTIA
   /* print information about rotational inertia */
   Tcl_AppendResult(interp, " rinertia ", (char *)NULL);
@@ -630,6 +643,10 @@ int tclcommand_part_parse_print(Tcl_Interp *interp, int argc, char **argv,
     else if (ARG0_IS_S("tbf"))
       tclcommand_part_print_torque_body_frame(&part, buffer, interp);
 #endif
+#ifdef ROTATION_PER_PARTICLE
+    else if (ARG0_IS_S("rotation"))
+      tclcommand_part_print_rotation(&part, buffer, interp);
+#endif
 
 #ifdef ROTATIONAL_INERTIA
     else if (ARG0_IS_S("rinertia"))
@@ -776,6 +793,34 @@ int tclcommand_part_parse_mass(Tcl_Interp *interp, int argc, char **argv,
     return TCL_OK;
 }
 #endif
+
+#ifdef ROTATION_PER_PARTICLE
+int tclcommand_part_parse_rotation(Tcl_Interp *interp, int argc, char **argv,
+		 int part_num, int * change)
+{
+    int rot;
+
+    *change = 1;
+
+    if (argc < 1) {
+      Tcl_AppendResult(interp, "rotation requires 1 argument", (char *) NULL);
+      return TCL_ERROR;
+    }
+
+    /* set rotation flag */
+    if (! ARG0_IS_I(rot))
+      return TCL_ERROR;
+
+    if (set_particle_rotation(part_num, rot) == TCL_ERROR) {
+      Tcl_AppendResult(interp, "set particle position first", (char *)NULL);
+
+      return TCL_ERROR;
+    }
+
+    return TCL_OK;
+}
+#endif
+
 
 #ifdef  ROTATIONAL_INERTIA
 int tclcommand_part_parse_rotational_inertia(Tcl_Interp *interp, int argc, char **argv,
@@ -1118,6 +1163,14 @@ int tclcommand_part_parse_type(Tcl_Interp *interp, int argc, char **argv,
 
     return TCL_ERROR;
   }
+//#ifdef GRANDCANONICAL
+//  if ( Type_array_init ) { 
+//	  if ( add_particle_to_list(part_num) ==  ES_ERROR ){
+//		  Tcl_AppendResult(interp, "gc particle add failed", (char *) NULL);
+//		  return TCL_ERROR;
+//	  }
+//  }
+//#endif
 
   return TCL_OK;
 }
@@ -1396,6 +1449,132 @@ int part_parse_gamma(Tcl_Interp *interp, int argc, char **argv,
   }
 
   return TCL_OK;
+}
+
+#endif
+
+#ifdef GRANDCANONICAL
+int part_parse_gc(Tcl_Interp *interp, int argc, char **argv){
+	if (argc < 1) {
+	  Tcl_AppendResult(interp, "gc requires at least particle type as argument\nUsage: part gc {<part_type> | {find | delete} <part_type> }\nThe call with only a part_type will init the array lists for the given type\nfind will return a randomly chosen particle id that has the given type\ndelete consequently removes a random particle of given type", (char *) NULL);
+	  return TCL_ERROR;
+	} else if (ARG0_IS_S("delete")) {
+		//delete particle of certain type
+		argc--;
+		argv++;
+		if ( argc < 1 ){
+		  Tcl_AppendResult(interp, "gc delete needs particle type as argument", (char *) NULL);
+		  return TCL_ERROR;
+		}
+		int type = atoi (argv[0]);
+		if (type < 0 ) {
+		  Tcl_AppendResult(interp, "no negative types", (char *) NULL);
+		  return TCL_ERROR;
+		}
+		if ( Type_array_init ) {
+			if (delete_particle_of_type(type) == ES_ERROR ) {
+			  Tcl_AppendResult(interp, "no particles with type left", (char *) NULL);
+			  return TCL_ERROR;
+			}
+		} else {
+			Tcl_AppendResult(interp, "particle lists not initialized", (char *) NULL);
+			return TCL_ERROR;
+		}
+	} else if (ARG0_IS_S("find")) {
+		argc--;
+		argv++;
+		if ( argc < 1 ){ 
+		  Tcl_AppendResult(interp, "gc find needs a particle type as argument", (char *) NULL);
+		  return TCL_ERROR;
+		}
+		int type = atoi (argv[0]);
+		if (type < 0 ) {
+		  Tcl_AppendResult(interp, "no negative types", (char *) NULL);
+		  return TCL_ERROR;
+		}
+		int id;
+		if (find_particle_type(type, &id) == ES_ERROR ){
+			//char buffer[TCL_INTEGER_SPACE + 32];
+			//sprintf(buffer, "no particle of type %d found", type);
+			Tcl_AppendResult(interp, "-1", (char *) NULL);
+			return TCL_OK;
+		}
+		char buffer[32+TCL_INTEGER_SPACE];
+		sprintf(buffer, "%d", id);
+		Tcl_AppendResult(interp, buffer, (char *) NULL);
+	
+	} else if ( ARG0_IS_S("status") ) {
+		argc--;
+		argv++;
+		if ( argc < 1 ) {
+			Tcl_AppendResult(interp, "gc status need type as argument", (char *) NULL);
+			return TCL_ERROR;
+		}
+		int type = atoi( argv[0] );
+		if ( type < 0 ) {
+		  Tcl_AppendResult(interp, "no negative types", (char *) NULL);
+		  return TCL_ERROR;
+		}
+		//if ( gc_status(type) == ES_ERROR ) {
+		if ( type_array!=(TypeList *) 0 && type_array[Index.type[type]].max_entry!= 0 ) {
+			int indexed=0;
+			for ( int i=0; i<Type.max_entry; i++) {
+				if (type==Type.index[i]) {
+					indexed=1;
+					break;
+				}
+			}
+			if ( indexed ) {
+				char buffer[32 + TCL_INTEGER_SPACE];
+				Tcl_AppendResult(interp, "{ ", (char *) NULL);
+				for (int i=0; i<type_array[Index.type[type]].max_entry; i++ ) {
+					sprintf(buffer, "%d ", type_array[Index.type[type]].id_list[i]);
+					Tcl_AppendResult(interp, buffer, (char *) NULL);
+				}
+				Tcl_AppendResult(interp, " }", (char *) NULL);
+				//free(buffer);
+			}
+		}
+		else {
+			Tcl_AppendResult(interp, "no list for particle", (char *) NULL);
+			return TCL_ERROR;
+		}
+		return TCL_OK;
+	} else if ( ARG0_IS_S("number") ) {
+		argc--;
+		argv++;
+		if ( argc < 1 ) {
+			Tcl_AppendResult(interp, "number expects type as argument", (char *) NULL);
+			return TCL_ERROR;
+		}
+		int type = atoi( argv[0] );
+		int number;
+		if ( type < 0 ) {
+		  Tcl_AppendResult(interp, "no negative types", (char *) NULL);
+		  return TCL_ERROR;
+		}
+		if ( number_of_particles_with_type(type, &number) == NOT_INDEXED ) {
+			Tcl_AppendResult(interp, "no list for particle", (char *) NULL);
+			return TCL_OK;
+		}
+		char buffer[32 + TCL_INTEGER_SPACE];
+		sprintf(buffer, "%d", number);
+		Tcl_AppendResult(interp, buffer, (char *) NULL);
+		return TCL_OK;
+	} else if ( argc == 1 ) {
+		// initialize particle array for given type
+		int type = atoi(argv[0]);
+		if (type < 0 ) {
+		  Tcl_AppendResult(interp, "no negative types", (char *) NULL);
+		  return TCL_ERROR;
+		}
+		if (init_type_array(type) == ES_ERROR ) {
+			Tcl_AppendResult(interp, "gc init failed", (char *) NULL);
+			return TCL_ERROR;
+		}
+
+	}
+	return TCL_OK;
 }
 #endif
 
@@ -1694,8 +1873,13 @@ int tclcommand_part_parse_cmd(Tcl_Interp *interp, int argc, char **argv,
       err = tclcommand_part_parse_rotational_inertia(interp, argc-1, argv+1, part_num, &change);
 #endif
 
-#ifdef DIPOLES
+#ifdef ROTATION_PER_PARTICLE
+    else if (ARG0_IS_S("rotation"))
+      err = tclcommand_part_parse_rotation(interp, argc-1, argv+1, part_num, &change);
+#endif
 
+
+#ifdef DIPOLES
     else if (ARG0_IS_S("dip")) {
       if (quat_set) {
 	      Tcl_AppendResult(interp, "(vector) dipole and orientation can not be set at the same time", (char *)NULL);	
@@ -1762,6 +1946,13 @@ int tclcommand_part_parse_cmd(Tcl_Interp *interp, int argc, char **argv,
 	else if (ARG0_IS_S("gamma"))
 	  err = part_parse_gamma(interp, argc-1, argv+1, part_num, &change);
 #endif
+#ifdef GRANDCANONICAL
+	else if (ARG0_IS_S("gc")) { 
+	  argc--;
+	  argv++;
+	  err = part_parse_gc(interp, argc, argv);
+	}
+#endif
 
     else {
       Tcl_AppendResult(interp, "unknown particle parameter \"",
@@ -1823,6 +2014,17 @@ int tclcommand_part(ClientData data, Tcl_Interp *interp,
     return TCL_OK;
   }
 #endif
+
+#ifdef GRANDCANONICAL
+  else if ( ARG1_IS_S("gc")) {
+	 argc-=2;
+	 argv+=2;
+	 if (part_parse_gc(interp, argc, argv) == TCL_ERROR)
+		 return TCL_ERROR;
+	 return TCL_OK;
+  }
+#endif
+  
 
   /* only one argument is given */
   if (argc == 2) {
