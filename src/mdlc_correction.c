@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2010,2011,2012 The ESPResSo project
+  Copyright (C) 2010,2011,2012,2013 The ESPResSo project
   Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010 
   Max-Planck-Institute for Polymer Research, Theory Group
   
@@ -142,7 +142,7 @@ double slab_dip_count_mu(double *mt, double *mx, double *my)
 
 double get_DLC_dipolar(int kcut,double *fx, double *fy, double *fz, double *tx, double *ty, double *tz){
 
-  int    ix,iy,kcut2,ip; 
+  int    ix,iy,ip; 
   double gx,gy,gr;
 
   double S[4] = {0.0,0.0,0.0,0.0}; // S of Brodka methode, oder is S[4] = {Re(S+), Im(S+), Re(S-), Im(S-)}
@@ -173,12 +173,8 @@ double get_DLC_dipolar(int kcut,double *fx, double *fy, double *fz, double *tx, 
   ReGrad_Mum = (double *) malloc(sizeof(double)*n_local_particles);
   ImGrad_Mum = (double *) malloc(sizeof(double)*n_local_particles);
 
-  kcut2=kcut*kcut;
-    
   for(ix=-kcut;ix<=+kcut;ix++){
     for(iy=-kcut;iy<=+kcut;iy++){
-
-		
       if(!(ix==0 && iy==0)){  
 	gx=(double)ix*facux;
 	gy=(double)iy*facuy;
@@ -359,7 +355,7 @@ double get_DLC_dipolar(int kcut,double *fx, double *fy, double *fz, double *tx, 
 
 double get_DLC_energy_dipolar(int kcut){
 
-  int    ix,iy,kcut2,ip; 
+  int    ix,iy,ip; 
   double gx,gy,gr;
 
   double S[4], global_S[4];
@@ -385,8 +381,6 @@ double get_DLC_energy_dipolar(int kcut){
   
   energy=0.0;
 
-  kcut2=kcut*kcut;
- 
   for(ix=-kcut;ix<=+kcut;ix++){ 	
     for(iy=-kcut;iy<=+kcut;iy++){ 	
 

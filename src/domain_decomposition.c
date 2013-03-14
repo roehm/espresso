@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2010,2011,2012 The ESPResSo project
+  Copyright (C) 2010,2011,2012,2013 The ESPResSo project
   Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010 
     Max-Planck-Institute for Polymer Research, Theory Group
   
@@ -97,12 +97,11 @@ double max_skin   = 0.0;
 void dd_create_cell_grid()
 {
   int i,n_local_cells,new_cells,min_ind;
-  double cell_range[3], min_box_l, min_size, scale, volume;
+  double cell_range[3], min_size, scale, volume;
   CELL_TRACE(fprintf(stderr, "%d: dd_create_cell_grid: max_range %f\n",this_node,max_range));
   CELL_TRACE(fprintf(stderr, "%d: dd_create_cell_grid: local_box %f-%f, %f-%f, %f-%f,\n",this_node,my_left[0],my_right[0],my_left[1],my_right[1],my_left[2],my_right[2]));
   
   /* initialize */
-  min_box_l = dmin(dmin(local_box_l[0],local_box_l[1]),local_box_l[2]);
   cell_range[0]=cell_range[1]=cell_range[2] = max_range;
 
   if (max_range < ROUND_ERROR_PREC*box_l[0]) {
@@ -1078,10 +1077,12 @@ void calculate_link_cell_virials(int v_comp)
     for(i = 0; i < np1; i++)  {
       add_kinetic_virials(&p1[i], v_comp);
       add_bonded_virials(&p1[i]);
+#ifdef BOND_ANGLE_OLD
+      add_three_body_bonded_stress(&p1[i]);
+#endif
 #ifdef BOND_ANGLE
       add_three_body_bonded_stress(&p1[i]);
 #endif
-
       if (rebuild_verletlist)
         memcpy(p1[i].l.p_old, p1[i].r.p, 3*sizeof(double));
     }

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2010,2011,2012 The ESPResSo project
+  Copyright (C) 2010,2011,2012,2013 The ESPResSo project
   Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010 
     Max-Planck-Institute for Polymer Research, Theory Group
   
@@ -114,6 +114,10 @@ void pressure_calc(double *result, double *result_t, double *result_nb, double *
     nsq_calculate_virials(v_comp);
   }
   /* rescale kinetic energy (=ideal contribution) */
+#ifdef ROTATION_PER_PARTICLE
+    fprintf(stderr, "Switching rotation per particle (#define ROTATION_PER_PARTICLE) and pressure calculation are incompatible.\n");
+#endif
+  
   virials.data.e[0] /= (3.0*volume*time_step*time_step);
 
   calc_long_range_virials();
@@ -123,8 +127,9 @@ void pressure_calc(double *result, double *result_t, double *result_nb, double *
 
     
  /* stress tensor part */
- /* ROTATION option does not effect stress tensor calculations since rotational
-    energy is not included in the ideal term (unlike for the pressure) */
+ /* The ROTATION option does not effect stress tensor calculations
+    since rotational energy is not included in the ideal term (unlike
+    for the pressure) */
   for(i=0; i<9; i++)
     p_tensor.data.e[i] /= (volume*time_step*time_step);
   
@@ -325,15 +330,13 @@ int getintersection(double pos1[3], double pos2[3],int given, int get, double va
   /*this procedure returns the value of r[get] at that point                                   */
 
   double p2r[3];
-  double oldvalue;
   int i;
 
   for (i=0;i<3;i++) {
     p2r[i] = drem_down((pos2[i]-pos1[i])+box_size[i]/2.0,box_size[i])-box_size[i]/2.0;
   }
-  oldvalue =value;
   value = drem_down((value-pos1[given])+box_size[given]/2.0,box_size[given])-box_size[given]/2.0;
-  //PTENSOR_TRACE(fprintf(stderr,"%d: getintersection: p1 is %f %f %f p2 is %f %f %f p2r is %f %f %f value is %f newvalue is %f\n",this_node,pos1[0],pos1[1],pos1[2],pos2[0],pos2[1],pos2[2],p2r[0],p2r[1],p2r[2],oldvalue,value););
+  //PTENSOR_TRACE(fprintf(stderr,"%d: getintersection: p1 is %f %f %f p2 is %f %f %f p2r is %f %f %f newvalue is %f\n",this_node,pos1[0],pos1[1],pos1[2],pos2[0],pos2[1],pos2[2],p2r[0],p2r[1],p2r[2],value););
   
   if ((value)*(p2r[given]) < -0.0001) {
     char *errtxt = runtime_error(128 + 3*ES_INTEGER_SPACE);
@@ -736,7 +739,7 @@ int distribute_tensors(DoubleList *TensorInBin, double *force, int bins[3], doub
     
     if (calclength - length >0.0000000001) {
       char *errtxt = runtime_error(128 + 3*ES_INTEGER_SPACE);
-      ERROR_SPRINTF(errtxt, "{%d: analyze stess_profile: bug in distribute tensor code - calclength is %e and length is %e}",this_node,calclength,length);
+      ERROR_SPRINTF(errtxt, "{%d: analyze stress_profile: bug in distribute tensor code - calclength is %e and length is %e}",this_node,calclength,length);
       return 0;
     }
     free(occupiedzbins);
@@ -903,9 +906,9 @@ int local_stress_tensor_calc(DoubleList *TensorInBin, int bins[3], int periodic[
      skin from on opposite sides of the box overlaps then we produce an error message.  To code dround this would be
      creating unnecessary work since I can't imagine when we might want that */
 
-  if (skin < 0) {
+  if (skin < 0.0) {
     char *errtxt = runtime_error(128 + 3*ES_INTEGER_SPACE);
-    ERROR_SPRINTF(errtxt, "{analyze stess_profile: skin cannot be negative}");
+    ERROR_SPRINTF(errtxt, "{analyze stress_profile: parameter skin not set}");
     return 0;
   }
   for (i=0;i<3;i++) {

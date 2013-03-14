@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2010,2011,2012 The ESPResSo project
+  Copyright (C) 2010,2011,2012,2013 The ESPResSo project
   Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010 
     Max-Planck-Institute for Polymer Research, Theory Group
   
@@ -187,7 +187,17 @@ void mpi_send_rotational_inertia(int node, int part, double rinertia[3]);
 */
 void mpi_send_quat(int node, int part, double quat[4]);
 
-/** Issue REQ_SET_LAMBDA: send particle angular velocity.
+
+/** Issue REQ_SET_ROTATION: send particle rotation flag
+    Also calls \ref on_particle_change.
+    \param part the particle.
+    \param node the node it is attached to.
+    \param rot the rotation flag
+*/
+void mpi_send_rotation(int pnode, int part, int rot);
+
+
+/* Issue REQ_SET_LAMBDA: send particle angular velocity.
     Also calls \ref on_particle_change.
     \param part the particle.
     \param node the node it is attached to.
@@ -203,6 +213,7 @@ void mpi_send_omega(int node, int part, double omega[3]);
 */
 void mpi_send_torque(int node, int part, double torque[3]);
 #endif
+
 
 #ifdef DIPOLES 
 /** Issue REQ_SET_DIP: send particle dipole orientation.
@@ -410,16 +421,16 @@ void mpi_random_seed(int cnt, long *seed);
 void mpi_random_stat(int cnt, RandomStatus *stat);
 
 /** Issue REQ_BCAST_LJFORCECAP: initialize LJ force capping. */
-void mpi_lj_cap_forces(double force_cap);
+void mpi_cap_forces(double force_cap);
 
 /** Issue REQ_BCAST_MORSEFORCECAP: initialize Morse force capping. */
-void mpi_morse_cap_forces(double force_cap);
+//void mpi_morse_cap_forces(double force_cap);
 
 /** Issue REQ_BCAST_BUCKFORCECAP: initialize Buckingham force capping. */
-void mpi_buck_cap_forces(double force_cap);
+//void mpi_buck_cap_forces(double force_cap);
 
 /** Issue REQ_BCAST_TABFORCECAP: initialize tabulated force capping. */
-void mpi_tab_cap_forces(double force_cap);
+//void mpi_tab_cap_forces(double force_cap);
 
 /** Issue REQ_GET_CONSFOR: get force acting on constraint */
 void mpi_get_constraint_force(int constraint, double force[3]);
@@ -440,7 +451,7 @@ void mpi_bcast_cell_structure(int cs);
 void mpi_bcast_nptiso_geom(void);
 
 /** Issue REQ_BCAST_LJANGLEFORCECAP: initialize LJANGLE force capping. */
-void mpi_ljangle_cap_forces(double force_cap);
+//void mpi_ljangle_cap_forces(double force_cap);
 
 
 /** Issue REQ_UPDATE_MOL_IDS: Update the molecule ids so that they are
@@ -539,7 +550,6 @@ int mpi_gather_runtime_errors(char **errors);
 #define INVALIDATE_SYSTEM 1
 #define CHECK_PARTICLES   2
 #define MAGGS_COUNT_CHARGES 3
-#define EWALD_COUNT_CHARGES 4
 #define P3M_COUNT_DIPOLES   5
 #define REACTION 6
 /*@}*/

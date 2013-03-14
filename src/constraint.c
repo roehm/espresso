@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2010,2011,2012 The ESPResSo project
+  Copyright (C) 2010,2011,2012,2013 The ESPResSo project
   Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010 
     Max-Planck-Institute for Polymer Research, Theory Group
   
@@ -889,7 +889,7 @@ void calculate_pore_dist(Particle *p1, double ppos[3], Particle *c_p, Constraint
   double e_z[3], e_r[3];    /* unit vectors in the cylindrical coordinate system */
   /* helper variables, for performance reasons should the be move the the
    * constraint struct*/
-     double slope, average_radius, z_left, z_right;
+     double slope, z_left, z_right;
   /* and another helper that is hopefully optmized out */
      double norm;
      double c1_r, c1_z, c2_r, c2_z;
@@ -897,7 +897,6 @@ void calculate_pore_dist(Particle *p1, double ppos[3], Particle *c_p, Constraint
 
      
      slope = (c->rad_right - c->rad_left)/2./(c->length-c->smoothing_radius);
-     average_radius = 0.5*(c->rad_left + c->rad_right);
 
   /* compute the position relative to the center of the pore */
   for(i=0;i<3;i++) {

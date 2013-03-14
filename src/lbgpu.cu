@@ -1,5 +1,5 @@
-/*
-   Copyright (C) 2010,2011,2012 The ESPResSo project
+/* 
+   Copyright (C) 2010,2011,2012,2013 The ESPResSo project
 
    This file is part of ESPResSo.
 
@@ -29,6 +29,7 @@
 
 extern "C" {
 #include "lbgpu.h"
+#include "config.h"
 }
 
 #ifdef LB_GPU
@@ -79,6 +80,8 @@ cudaStream_t stream[1];
 
 cudaError_t err;
 cudaError_t _err;
+int initflag = 0;
+int partinitflag = 0;
 /*-------------------------------------------------------*/
 /*********************************************************/
 /** \name device funktions called by kernel funktions */
@@ -109,14 +112,28 @@ __device__ inline void atomicadd(float* address, float value){
 __device__ void random_01(LB_randomnr_gpu *rn){
 
   const float mxi = 1.f/(float)(1ul<<31);
-  unsigned int curr = rn->seed;
+  unsigned int state = rn->seed;
 
-  curr = 1103515245 * curr + 12345;
-  rn->randomnr[0] = (float)(curr & ((1ul<<31)-1))*mxi;
-  curr = 1103515245 * curr + 12345;
-  rn->randomnr[1] = (float)(curr & ((1ul<<31)-1))*mxi;
-  rn->seed = curr;
+  state = 1103515245 * state + 12345;
+  rn->randomnr[0] = (float)(state & ((1ul<<31)-1))*mxi;
+  state = 1103515245 * state + 12345;
+  rn->randomnr[1] = (float)(state & ((1ul<<31)-1))*mxi;
+  rn->seed = state;
 
+}
+/**randomgenerator which generates numbers [0,1]
+ * @param *rn	Pointer to randomnumber array of the local node or particle
+*/
+__device__ void random_minstd(LB_randomnr_gpu *rn){
+
+  unsigned int state = rn->seed;
+  const int mxi = (1u << 31) - 1, a = 16807;
+  state = ((long int)state)*a % mxi;
+  rn->randomnr[0] = (float)((state-1)/((1u << 31) - 1));
+  state = ((long int)state)*a % mxi;
+  rn->randomnr[1] = (float)((state-1)/((1u << 31) - 1));
+  rn->seed = state;
+  
 }
 
 /** gaussian random nummber generator for thermalisation
@@ -666,8 +683,9 @@ __device__ void calc_viscous_force(LB_nodes_gpu n_a, float *delta, LB_particle_g
   /** see ahlrichs + duenweg page 8227 equ (10) and (11) */
   #pragma unroll
   for(int i=0; i<3; ++i){
-    float scaledpos = particle_data[part_index].p[i]/para.agrid;
-    my_left[i] = (int)(floorf(scaledpos - 0.5f));
+    float scaledpos = (particle_data[part_index].p[i]-0.5f)/para.agrid;
+    my_left[i] = (int)(floorf(scaledpos));
+    //temp_delta[3+i] = scaledpos - my_left[i];
     temp_delta[3+i] = scaledpos - my_left[i];
     temp_delta[i] = 1.f - temp_delta[3+i];
     /**further value used for interpolation of fluid velocity at part pos near boundaries */
@@ -1309,6 +1327,17 @@ if (_err!=cudaSuccess){ \
 */
 void lb_init_GPU(LB_parameters_gpu *lbpar_gpu){
 
+  if(initflag){
+    cudaFree(device_values);
+    cudaFree(nodes_a.vd);
+    cudaFree(nodes_b.vd);
+    cudaFree(nodes_a.seed);
+    cudaFree(nodes_b.seed);
+    cudaFree(nodes_a.boundary);
+    cudaFree(nodes_b.boundary);
+    cudaFree(node_f.force);
+    cudaFree(gpu_check);
+  }
   /** Allocate structs in device memory*/
   size_of_values = lbpar_gpu->number_of_nodes * sizeof(LB_values_gpu);
   size_of_forces = lbpar_gpu->number_of_particles * sizeof(LB_particle_force_gpu);
@@ -1337,6 +1366,7 @@ void lb_init_GPU(LB_parameters_gpu *lbpar_gpu){
   cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
   /**check flag if lb gpu init works*/
   cuda_safe_mem(cudaMalloc((void**)&gpu_check, sizeof(int)));
+  initflag = 1;
   h_gpu_check = (int*)malloc(sizeof(int));
 
   /** values for the kernel call */
@@ -1394,13 +1424,14 @@ void lb_reinit_GPU(LB_parameters_gpu *lbpar_gpu){
 */
 void lb_realloc_particle_GPU(LB_parameters_gpu *lbpar_gpu, LB_particle_gpu **host_data){
 
+  cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
   /** Allocate struct for particle positions */
   size_of_forces = lbpar_gpu->number_of_particles * sizeof(LB_particle_force_gpu);
   size_of_positions = lbpar_gpu->number_of_particles * sizeof(LB_particle_gpu);
   size_of_seed = lbpar_gpu->number_of_particles * sizeof(LB_particle_seed_gpu);
-
-  cudaFreeHost(*host_data);
-
+  if(partinitflag){
+     cudaFreeHost(*host_data);
+  }
 #if !defined __CUDA_ARCH__ || __CUDA_ARCH__ >= 200
   /**pinned memory mode - use special function to get OS-pinned memory*/
   cudaHostAlloc((void**)host_data, size_of_positions, cudaHostAllocWriteCombined);
@@ -1408,16 +1439,17 @@ void lb_realloc_particle_GPU(LB_parameters_gpu *lbpar_gpu, LB_particle_gpu **hos
   cudaMallocHost((void**)host_data, size_of_positions);
 #endif
 
-  cudaFree(particle_force);
-  cudaFree(particle_data);
-  cudaFree(part);
-
-  cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
+  if(partinitflag){
+    cudaFree(particle_force);
+    cudaFree(particle_data);
+    cudaFree(part);
+  }
+  //cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
 
   cuda_safe_mem(cudaMalloc((void**)&particle_force, size_of_forces));
   cuda_safe_mem(cudaMalloc((void**)&particle_data, size_of_positions));
   cuda_safe_mem(cudaMalloc((void**)&part, size_of_seed));
-
+  partinitflag  = 1;
   /** values for the particle kernel */
   int threads_per_block_particles = 64;
   int blocks_per_grid_particles_y = 4;
@@ -1432,6 +1464,10 @@ void lb_realloc_particle_GPU(LB_parameters_gpu *lbpar_gpu, LB_particle_gpu **hos
  * @param number_of_boundnodes	number of boundnodes
 */
 void lb_init_boundaries_GPU(int number_of_boundnodes, int *host_boundindex){
+
+  if (initflag!=0)
+    cudaFree(boundindex);
+
 
   size_of_boundindex = number_of_boundnodes*sizeof(int);
   cuda_safe_mem(cudaMalloc((void**)&boundindex, size_of_boundindex));
@@ -1491,7 +1527,7 @@ void lb_init_extern_nodeforces_GPU(int n_extern_nodeforces, LB_extern_nodeforce_
   cuda_safe_mem(cudaMalloc((void**)&extern_nodeforces, size_of_extern_nodeforces));
   cudaMemcpy(extern_nodeforces, host_extern_nodeforces, size_of_extern_nodeforces, cudaMemcpyHostToDevice);
 
-  if(para.external_force == 0)cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
+  if(lbpar_gpu->external_force == 0)cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu))); 
 
   int threads_per_block_exf = 64;
   int blocks_per_grid_exf_y = 4;
@@ -1756,14 +1792,14 @@ void lb_integrate_GPU(){
 /** free gpu memory kernel called from the host (not used anymore) */
 void lb_free_GPU(){
   // Free device memory
-  cudaFree(device_values);
-  cudaFree(&para);
+  //cudaFree(device_values);
+  //cudaFree(&para);
   cudaFree(&nodes_a);
   cudaFree(&nodes_b);
-  cudaFree(particle_force);
-  cudaFree(particle_data);
+  //cudaFree(particle_force);
+  //cudaFree(particle_data);
   cudaFree(&node_f);
-  cudaFree(part);
-  cudaStreamDestroy(stream[0]);
+  //cudaFree(part);
+  //cudaStreamDestroy(stream[0]);
 }
 #endif /* LB_GPU */

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2010,2011,2012 The ESPResSo project
+  Copyright (C) 2010,2011,2012,2013 The ESPResSo project
   Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010 
     Max-Planck-Institute for Polymer Research, Theory Group
   
@@ -34,7 +34,6 @@
 #include "forces.h"
 #include "rotation.h"
 #include "p3m.h"
-#include "ewald.h"
 #include "statistics.h"
 #include "energy.h"
 #include "pressure.h"
@@ -98,8 +97,9 @@ typedef void (SlaveCallback)(int node, int param);
   CB(mpi_bcast_constraint_slave) \
   CB(mpi_random_seed_slave) \
   CB(mpi_random_stat_slave) \
-  CB(mpi_lj_cap_forces_slave) \
-  CB(mpi_tab_cap_forces_slave) \
+  CB(mpi_cap_forces_slave) \
+/*  CB(mpi_lj_cap_forces_slave) */ \
+/*  CB(mpi_tab_cap_forces_slave) */ \
   CB(mpi_bit_random_seed_slave) \
   CB(mpi_bit_random_stat_slave) \
   CB(mpi_get_constraint_force_slave) \
@@ -113,17 +113,17 @@ typedef void (SlaveCallback)(int node, int param);
   CB(mpi_update_mol_ids_slave) \
   CB(mpi_sync_topo_part_info_slave) \
   CB(mpi_send_mass_slave) \
-  CB(mpi_buck_cap_forces_slave) \
+/*  CB(mpi_buck_cap_forces_slave) */\
   CB(mpi_gather_runtime_errors_slave) \
   CB(mpi_send_exclusion_slave) \
-  CB(mpi_morse_cap_forces_slave) \
+/*  CB(mpi_morse_cap_forces_slave) */ \
   CB(mpi_bcast_lb_params_slave) \
   CB(mpi_send_dip_slave) \
   CB(mpi_send_dipm_slave) \
   CB(mpi_send_fluid_slave) \
   CB(mpi_recv_fluid_slave) \
   CB(mpi_local_stress_tensor_slave) \
-  CB(mpi_ljangle_cap_forces_slave) \
+/*  CB(mpi_ljangle_cap_forces_slave)*/ \
   CB(mpi_send_virtual_slave) \
   CB(mpi_bcast_tf_params_slave) \
   CB(mpi_iccp3m_iteration_slave) \
@@ -139,7 +139,8 @@ typedef void (SlaveCallback)(int node, int param);
   CB(mpi_set_particle_temperature_slave) \
   CB(mpi_set_particle_gamma_slave) \
   CB(mpi_bcast_q6_params_slave) \
-  CB(mpi_q6_calculation_slave)
+  CB(mpi_q6_calculation_slave) \
+  CB(mpi_send_rotation_slave)
 
 // create the forward declarations
 #define CB(name) void name(int node, int param);
@@ -383,9 +384,6 @@ void mpi_bcast_event_slave(int node, int event)
     p3m_count_charged_particles();
     break;
 #endif
-  case EWALD_COUNT_CHARGES:
-    EWALD_count_charged_particles();
-    break; 
   case MAGGS_COUNT_CHARGES:
     maggs_count_charged_particles();
     break; 
@@ -967,6 +965,39 @@ void mpi_send_vs_relative_slave(int pnode, int part)
 #endif
 }
 
+// ********************************
+
+void mpi_send_rotation(int pnode, int part, int rot)
+{
+#ifdef ROTATION_PER_PARTICLE
+  mpi_call(mpi_send_rotation_slave, pnode, part);
+
+  if (pnode == this_node) {
+    Particle *p = local_particles[part];
+    p->p.rotation = rot;
+  }
+  else {
+    MPI_Send(&rot, 1, MPI_INT, pnode, SOME_TAG, MPI_COMM_WORLD);
+  }
+
+  on_particle_change();
+#endif
+}
+
+void mpi_send_rotation_slave(int pnode, int part)
+{
+#ifdef ROTATION_PER_PARTICLE
+  if (pnode == this_node) {
+    Particle *p = local_particles[part];
+    MPI_Status status;
+    MPI_Recv(&p->p.rotation, 1, MPI_INT, 0, SOME_TAG,
+	     MPI_COMM_WORLD, &status);
+  }
+
+  on_particle_change();
+#endif
+}
+
 /********************* REQ_SET_BOND ********/
 
 
@@ -1128,10 +1159,10 @@ void mpi_integrate_slave(int pnode, int task)
 /*************** REQ_BCAST_IA ************/
 void mpi_bcast_ia_params(int i, int j)
 {
-  int tablesize=0;
-
   mpi_call(mpi_bcast_ia_params_slave, i, j);
-  tablesize = tabulated_forces.max;
+#ifdef TABULATED
+  int tablesize = tabulated_forces.max;
+#endif
 #ifdef INTERFACE_CORRECTION
   int adress_tablesize = adress_tab_forces.max;
 #endif
@@ -1750,9 +1781,6 @@ void mpi_bcast_coulomb_params_slave(int node, int parm)
   case COULOMB_MAGGS:
     MPI_Bcast(&maggs, sizeof(MAGGS_struct), MPI_BYTE, 0, comm_cart); 
     break;
-  case COULOMB_EWALD:
-    MPI_Bcast(&ewald, sizeof(ewald_struct), MPI_BYTE, 0, comm_cart);
-    break;
   case COULOMB_RF:
   case COULOMB_INTER_RF:
     MPI_Bcast(&rf_params, sizeof(Reaction_field_params), MPI_BYTE, 0, comm_cart);
@@ -2007,102 +2035,51 @@ void mpi_random_stat_slave(int pnode, int cnt) {
 }
 
 /*************** REQ_BCAST_LJFORCECAP ************/
-void mpi_lj_cap_forces(double fc)
+/*************** REQ_BCAST_LJANGLEFORCECAP ************/
+/*************** REQ_BCAST_MORSEFORCECAP ************/
+/*************** REQ_BCAST_BUCKFORCECAP ************/
+/*************** REQ_BCAST_TABFORCECAP ************/
+void mpi_cap_forces(double fc)
 {
-#ifdef LENNARD_JONES
-  lj_force_cap = fc;
-  mpi_call(mpi_lj_cap_forces_slave, 1, 0);
-  mpi_lj_cap_forces_slave(1, 0);
-#endif
+  force_cap = fc;
+  mpi_call(mpi_cap_forces_slave, 1, 0);
+  mpi_cap_forces_slave(1, 0);
 }
 
-void mpi_lj_cap_forces_slave(int node, int parm)
+void mpi_cap_forces_slave(int node, int parm)
 {
 #ifdef LENNARD_JONES
-  MPI_Bcast(&lj_force_cap, 1, MPI_DOUBLE, 0, comm_cart);
-  calc_lj_cap_radii(lj_force_cap);
+  MPI_Bcast(&force_cap, 1, MPI_DOUBLE, 0, comm_cart);
+  calc_lj_cap_radii();
 #ifdef LENNARD_JONES_GENERIC
-  calc_ljgen_cap_radii(lj_force_cap);
+  calc_ljgen_cap_radii();
 #endif
 #ifdef LJCOS2
-  calc_ljcos2_cap_radii(lj_force_cap);
+  calc_ljcos2_cap_radii();
 #endif
   on_short_range_ia_change();
 #endif
-}
-
-/*************** REQ_BCAST_LJANGLEFORCECAP ************/
-void mpi_ljangle_cap_forces(double fc)
-{
 #ifdef LJ_ANGLE
-  ljangle_force_cap = fc;
-  mpi_call(mpi_ljangle_cap_forces_slave, 1, 0);
-  mpi_ljangle_cap_forces_slave(1, 0);
-#endif
-}
-
-void mpi_ljangle_cap_forces_slave(int node, int parm)
-{
-#ifdef LJ_ANGLE
-  MPI_Bcast(&ljangle_force_cap, 1, MPI_DOUBLE, 0, comm_cart);
-  calc_ljangle_cap_radii(ljangle_force_cap);
+  MPI_Bcast(&force_cap, 1, MPI_DOUBLE, 0, comm_cart);
+  calc_ljangle_cap_radii();
   on_short_range_ia_change();
 #endif
-}
-
-/*************** REQ_BCAST_MORSEFORCECAP ************/
-void mpi_morse_cap_forces(double fc)
-{
 #ifdef MORSE
-  morse_force_cap = fc;
-  mpi_call(mpi_morse_cap_forces_slave, 1, 0);
-  mpi_morse_cap_forces_slave(1, 0);
-#endif
-}
-
-void mpi_morse_cap_forces_slave(int node, int parm)
-{
-#ifdef MORSE
-  MPI_Bcast(&morse_force_cap, 1, MPI_DOUBLE, 0, comm_cart);
-  calc_morse_cap_radii(morse_force_cap);
+  MPI_Bcast(&force_cap, 1, MPI_DOUBLE, 0, comm_cart);
+  calc_morse_cap_radii();
   on_short_range_ia_change();
 #endif
-}
-
-/*************** REQ_BCAST_BUCKFORCECAP ************/
-void mpi_buck_cap_forces(double fc)
-{
 #ifdef BUCKINGHAM
-  buck_force_cap = fc;
-  mpi_call(mpi_buck_cap_forces_slave, 1, 0);
-  mpi_buck_cap_forces_slave(1, 0);
-#endif
-}
-
-void mpi_buck_cap_forces_slave(int node, int parm)
-{
-#ifdef BUCKINGHAM
-  MPI_Bcast(&buck_force_cap, 1, MPI_DOUBLE, 0, comm_cart);
-  calc_buck_cap_radii(buck_force_cap);
+  MPI_Bcast(&force_cap, 1, MPI_DOUBLE, 0, comm_cart);
+  calc_buck_cap_radii();
   on_short_range_ia_change();
 #endif
-}
-
-/*************** REQ_BCAST_TABFORCECAP ************/
-void mpi_tab_cap_forces(double fc)
-{
 #ifdef TABULATED
-  tab_force_cap = fc;
-  mpi_call(mpi_tab_cap_forces_slave, 1, 0);
-  mpi_tab_cap_forces_slave(1, 0);
-#endif
-}
-
-void mpi_tab_cap_forces_slave(int node, int parm)
-{
-#ifdef TABULATED
-  MPI_Bcast(&tab_force_cap, 1, MPI_DOUBLE, 0, comm_cart);
-  check_tab_forcecap(tab_force_cap);
+  MPI_Bcast(&force_cap, 1, MPI_DOUBLE, 0, comm_cart);
+/* to do: check if "check_tab_forcecap" is still useful since force capping
+   is defined globally now -- the cap for other forces would be removed too! 
+  check_tab_forcecap(force_cap);
+*/
   on_short_range_ia_change();
 #endif
 }

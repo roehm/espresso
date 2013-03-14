@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2010,2012 The ESPResSo project
+  Copyright (C) 2010,2012,2013 The ESPResSo project
   Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010 
     Max-Planck-Institute for Polymer Research, Theory Group
   
@@ -51,8 +51,8 @@
 
 /** Add a particle pair to a verlet pair list.
     Checks verlet pair list size and reallocates memory if necessary.
- *  \param p1 Pointer to paricle one.
- *  \param p2 Pointer to paricle two.
+ *  \param p1 Pointer to particle one.
+ *  \param p2 Pointer to particle two.
  *  \param pl Pointer to the verlet pair list.
  */
 MDINLINE void add_pair(PairList *pl, Particle *p1, Particle *p2)
@@ -350,10 +350,12 @@ void calculate_verlet_virials(int v_comp)
     for(i = 0; i < np; i++)  {
       add_kinetic_virials(&p1[i],v_comp);
       add_bonded_virials(&p1[i]);
+#ifdef BOND_ANGLE_OLD
+      add_three_body_bonded_stress(&p1[i]);
+#endif
 #ifdef BOND_ANGLE
       add_three_body_bonded_stress(&p1[i]);
 #endif
-
     }
 
     /* no interaction set */
