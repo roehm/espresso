@@ -29,7 +29,7 @@
  */
 
 #include <tcl.h>
-
+#ifdef Q6_PARA
 //struct for Q6 global vars
 typedef struct {
 
@@ -74,5 +74,5 @@ MDINLINE void add_q6(ParticleQ6 *q6_to, ParticleQ6 *q6_add)
     }    
       //fprintf(stderr, "ghostadd q6 %lf neb %i \n", q6_to->q6, q6_to->neb);
 }
-//#endif
+#endif
 #endif

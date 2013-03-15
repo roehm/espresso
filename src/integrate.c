@@ -58,12 +58,9 @@
 #include "virtual_sites.h"
 #include "adresso.h"
 #include "statistics_correlation.h"
-<<<<<<< HEAD
 #include "statistics_nucleation.h"
-=======
 #include "ghmc.h"
 
->>>>>>> master
 /************************************************
  * DEFINES
  ************************************************/

@@ -29,8 +29,10 @@
 #include "statistics_nucleation.h"
 
 /* Main, by-TCL-called function */
+//TODO remove KAIs stuff
 int tclcommand_analyze_bubble_volume(Tcl_Interp *interp, int argc, char **argv)
 {
+#ifdef Q6_PARA  
     char buffer[TCL_DOUBLE_SPACE];
     double bubble_cut; // e.g. 1.0
     double sigma; // e.g. 1.0
@@ -51,11 +53,15 @@ int tclcommand_analyze_bubble_volume(Tcl_Interp *interp, int argc, char **argv)
     Tcl_AppendResult(interp, buffer, (char *)NULL);
 
     return TCL_OK;
+#else
+  Tcl_AppendResult(interp, "Q6 is not compiled in!", NULL);
+  return TCL_ERROR;
+#endif
 }
 
 
 int tclcommand_analyze_q6(Tcl_Interp *interp, int argc, char **argv) {
-
+#ifdef Q6_PARA
     char buffer[TCL_DOUBLE_SPACE];
     double tcl_rc, tcl_q6q6_min;
     int tcl_min_solid_bonds;
@@ -77,10 +83,14 @@ int tclcommand_analyze_q6(Tcl_Interp *interp, int argc, char **argv) {
     Tcl_AppendResult(interp, buffer, (char *)NULL);
 
     return TCL_OK;
+#else
+  Tcl_AppendResult(interp, "Q6 is not compiled in!", NULL);
+  return TCL_ERROR;
+#endif
 }
 
 int tclcommand_analyze_q6_solid(Tcl_Interp *interp, int argc, char **argv) {
-
+#ifdef Q6_PARA
     char buffer[TCL_DOUBLE_SPACE];
     double tcl_rc, tcl_q6q6_min;
     int tcl_min_solid_bonds;
@@ -103,10 +113,14 @@ int tclcommand_analyze_q6_solid(Tcl_Interp *interp, int argc, char **argv) {
     Tcl_AppendResult(interp, buffer, (char *)NULL);
 
     return TCL_OK;
+#else
+  Tcl_AppendResult(interp, "Q6 is not compiled in!", NULL);
+  return TCL_ERROR;
+#endif
 }
 
 int tclcommand_analyze_q6_solid_cluster(Tcl_Interp *interp, int argc, char **argv) {
-
+#ifdef Q6_PARA
     char buffer[TCL_DOUBLE_SPACE];
     double tcl_rc, tcl_q6q6_min;
     int tcl_min_solid_bonds;
@@ -128,6 +142,10 @@ int tclcommand_analyze_q6_solid_cluster(Tcl_Interp *interp, int argc, char **arg
     Tcl_AppendResult(interp, buffer, (char *)NULL);
 
     return TCL_OK;
+#else
+  Tcl_AppendResult(interp, "Q6 is not compiled in!", NULL);
+  return TCL_ERROR;
+#endif
 }
 
 int tclcommand_q6(ClientData data, Tcl_Interp *interp, int argc, char **argv) {

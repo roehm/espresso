@@ -321,6 +321,7 @@ void add_forces_from_recv_buffer(GhostCommunication *gc)
   }
 #endif
 }
+#ifdef Q6_PARA
 void add_q6_from_recv_buffer(GhostCommunication *gc)
 {
   int pl, p, np;
@@ -345,6 +346,7 @@ void add_q6_from_recv_buffer(GhostCommunication *gc)
   }
 #endif
 }
+#endif
 void cell_cell_transfer(GhostCommunication *gc, int data_parts)
 {
   int pl, p, np, offset;
