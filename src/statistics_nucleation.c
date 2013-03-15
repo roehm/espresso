@@ -396,7 +396,7 @@ int q6_average(){
 	  return statusOK; 
 }
 
-int q6_assign_ave() {
+int q6q6_calculation() {
 
     int np;
     Particle *part1, *part2, **pairs;
@@ -479,6 +479,7 @@ int q6_assign_ave() {
     //}
   return statusOK;
 }
+
 /** initializes and communicates the tcl parameters for q6 usage
  
 */
@@ -511,9 +512,9 @@ void q6_average_update() {
 
 }
 
-void q6_assign_average() {
+void q6q6_update() {
 
-    mpi_q6_assign_average_calculation();
+    mpi_q6q6_calculation();
 
 }
 /**********************************************************************************/

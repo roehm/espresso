@@ -98,7 +98,7 @@ MDINLINE double pair_q6q6( Particle *p1, Particle *p2 ) {
     for (int m=1; m<=6; m++){
 	      q6q6 += p1->q.q6r[m] * p2->q.q6r[m] + p1->q.q6i[m] * p2->q.q6i[m];
     }
-    q6q6 /= ( p1->q.q6 * p2->q.q6 ); //why normalise by these factors? Tanja?
+    q6q6 /= ( p1->q.q6 * p2->q.q6 ); 
     q6q6 *= (4.0 * M_PI) / 13.0; //normalise by 4pi/13
 
     return( q6q6 );
