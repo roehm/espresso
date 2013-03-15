@@ -29,7 +29,7 @@
  */
 
 #include <tcl.h>
-#ifdef Q6_PARA
+
 //struct for Q6 global vars
 typedef struct {
 
@@ -41,38 +41,67 @@ typedef struct {
 
 extern Q6_Parameters q6para;
 
+int q6_ri_calculation();
+
 int q6_calculation();
+
+int q6_assign_ave();
 
 void q6_pre_init();
 
-double analyze_bubble_volume(Tcl_Interp *interp, double bubble_cut, double sigma);
+int q6_initialize(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
 
-double analyze_q6(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
+void q6_update();
 
-double analyze_q6_solid(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
+int q6_average();
 
-double analyze_q6_solid_cluster(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
+void q6_average_update();
 
-int initialize_q6(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
-
-double reduceQ6Q6();
-
-void update_q6();
+void q6_assign_average();
 
 void update_mean_part_pos();
 
 void reset_mean_part_pos();
 
 /** add q6 to another. This is used when collecting ghost q6. */
+#ifdef Q6_PARA
 MDINLINE void add_q6(ParticleQ6 *q6_to, ParticleQ6 *q6_add)
 {
-    q6_to->neb += q6_add->neb; 
+    int old_neb = q6_to->neb;
+    q6_to->neb += q6_add->neb;
+    for(int i=old_neb; i<q6_to->neb; i++){
+      q6_to->neighbors[i] = q6_add->neighbors[i-old_neb];
+    }
+    //q6_to->solid_bonds += q6_add->solid_bonds;
+    //fprintf(stderr, "ghostadd q6 solid bounds_to %i solid bounds_add %i \n", q6_to->solid_bonds, q6_add->solid_bonds);
     for (int m=0; m<=6; m++){
       //fprintf(stderr,"neb %i q6r=%f q6i=%f \n ",q6_add->neb,q6_add->q6r[m],q6_add->q6i[m]);
 	     q6_to->q6r[m] += q6_add->q6r[m];
 	     q6_to->q6i[m] += q6_add->q6i[m];
     }    
       //fprintf(stderr, "ghostadd q6 %lf neb %i \n", q6_to->q6, q6_to->neb);
+}
+
+MDINLINE void add_q6_solid_bonds(ParticleQ6 *q6_to, ParticleQ6 *q6_add)
+{
+    q6_to->solid_bonds += q6_add->solid_bonds;
+    //fprintf(stderr, "ghostadd q6 solid bounds_to %i solid bounds_add %i \n", q6_to->solid_bonds, q6_add->solid_bonds);
+}
+
+MDINLINE double pair_q6q6( Particle *p1, Particle *p2 ) {
+
+    double q6q6;
+
+    //fprintf(stderr,"Check %f %f\n",p1->q.q6,p2->q.q6);
+
+    q6q6  = 0.5 * ( p1->q.q6r[0] * p2->q.q6r[0] + p1->q.q6i[0] * p2->q.q6i[0] );
+    for (int m=1; m<=6; m++){
+	      q6q6 += p1->q.q6r[m] * p2->q.q6r[m] + p1->q.q6i[m] * p2->q.q6i[m];
+    }
+    q6q6 /= ( p1->q.q6 * p2->q.q6 ); //why normalise by these factors? Tanja?
+    q6q6 *= (4.0 * M_PI) / 13.0; //normalise by 4pi/13
+
+    return( q6q6 );
 }
 #endif
 #endif

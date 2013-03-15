@@ -28,126 +28,6 @@
 #include "parser.h"
 #include "statistics_nucleation.h"
 
-/* Main, by-TCL-called function */
-//TODO remove KAIs stuff
-int tclcommand_analyze_bubble_volume(Tcl_Interp *interp, int argc, char **argv)
-{
-#ifdef Q6_PARA  
-    char buffer[TCL_DOUBLE_SPACE];
-    double bubble_cut; // e.g. 1.0
-    double sigma; // e.g. 1.0
-
-    if (n_nodes > 1) {
-        Tcl_AppendResult(interp, "Error: Largest bubble volume can only be calculated on a single processor", (char *)NULL);
-        return TCL_ERROR;
-    }
-
-    /* check parameter types */
-    if( (! ARG_IS_D(0, bubble_cut)) ||
-        (! ARG_IS_D(1, sigma)) ) {
-        Tcl_AppendResult(interp, "Error: Usage: analyze bubble_volume bubble_cut.\n", (char *)NULL);
-        return TCL_ERROR;
-    }
-
-    Tcl_PrintDouble(interp, analyze_bubble_volume(interp,bubble_cut,sigma), buffer);
-    Tcl_AppendResult(interp, buffer, (char *)NULL);
-
-    return TCL_OK;
-#else
-  Tcl_AppendResult(interp, "Q6 is not compiled in!", NULL);
-  return TCL_ERROR;
-#endif
-}
-
-
-int tclcommand_analyze_q6(Tcl_Interp *interp, int argc, char **argv) {
-#ifdef Q6_PARA
-    char buffer[TCL_DOUBLE_SPACE];
-    double tcl_rc, tcl_q6q6_min;
-    int tcl_min_solid_bonds;
-
-    if (n_nodes > 1) {
-        Tcl_AppendResult(interp, "Error: Q6 can only be calculated on a single processor", (char *)NULL);
-        return TCL_ERROR;
-    }
-
-    /* check parameter types */
-    if( (! ARG_IS_D(0, tcl_rc)) ||
-        (! ARG_IS_D(1, tcl_q6q6_min))  ||
-        (! ARG_IS_I(2, tcl_min_solid_bonds)) ) {
-        Tcl_AppendResult(interp, "Error: Usage: analyze q6 rc_neighbor q6q6_min min_solid_bonds.\n", (char *)NULL);
-        return TCL_ERROR;
-    }
-
-    Tcl_PrintDouble(interp, analyze_q6(tcl_rc, tcl_q6q6_min, tcl_min_solid_bonds), buffer);
-    Tcl_AppendResult(interp, buffer, (char *)NULL);
-
-    return TCL_OK;
-#else
-  Tcl_AppendResult(interp, "Q6 is not compiled in!", NULL);
-  return TCL_ERROR;
-#endif
-}
-
-int tclcommand_analyze_q6_solid(Tcl_Interp *interp, int argc, char **argv) {
-#ifdef Q6_PARA
-    char buffer[TCL_DOUBLE_SPACE];
-    double tcl_rc, tcl_q6q6_min;
-    int tcl_min_solid_bonds;
-
-#if 0
-    if (n_nodes > 1) {
-        Tcl_AppendResult(interp, "Error: Q6 can only be calculated on a single processor", (char *)NULL);
-        return TCL_ERROR;
-    }
-#endif
-    /* check parameter types */
-    if( (! ARG_IS_D(0, tcl_rc)) ||
-        (! ARG_IS_D(1, tcl_q6q6_min))  ||
-        (! ARG_IS_I(2, tcl_min_solid_bonds)) ) {
-        Tcl_AppendResult(interp, "Error: Usage: analyze q6 rc_neighbor q6q6_min min_solid_bonds.\n", (char *)NULL);
-        return TCL_ERROR;
-    }
-
-    Tcl_PrintDouble(interp, analyze_q6_solid(tcl_rc, tcl_q6q6_min, tcl_min_solid_bonds), buffer);
-    Tcl_AppendResult(interp, buffer, (char *)NULL);
-
-    return TCL_OK;
-#else
-  Tcl_AppendResult(interp, "Q6 is not compiled in!", NULL);
-  return TCL_ERROR;
-#endif
-}
-
-int tclcommand_analyze_q6_solid_cluster(Tcl_Interp *interp, int argc, char **argv) {
-#ifdef Q6_PARA
-    char buffer[TCL_DOUBLE_SPACE];
-    double tcl_rc, tcl_q6q6_min;
-    int tcl_min_solid_bonds;
-#if 0
-    if (n_nodes > 1) {
-        Tcl_AppendResult(interp, "Error: Q6 can only be calculated on a single processor", (char *)NULL);
-        return TCL_ERROR;
-    }
-#endif
-    /* check parameter types */
-    if( (! ARG_IS_D(0, tcl_rc)) ||
-        (! ARG_IS_D(1, tcl_q6q6_min))  ||
-        (! ARG_IS_I(2, tcl_min_solid_bonds)) ) {
-        Tcl_AppendResult(interp, "Error: Usage: analyze q6 rc_neighbor q6q6_min min_solid_bonds.\n", (char *)NULL);
-        return TCL_ERROR;
-    }
-
-    Tcl_PrintDouble(interp, analyze_q6_solid_cluster(tcl_rc, tcl_q6q6_min, tcl_min_solid_bonds), buffer);
-    Tcl_AppendResult(interp, buffer, (char *)NULL);
-
-    return TCL_OK;
-#else
-  Tcl_AppendResult(interp, "Q6 is not compiled in!", NULL);
-  return TCL_ERROR;
-#endif
-}
-
 int tclcommand_q6(ClientData data, Tcl_Interp *interp, int argc, char **argv) {
 #ifdef Q6_PARA
   argc--; argv++;
@@ -171,13 +51,19 @@ int tclcommand_q6(ClientData data, Tcl_Interp *interp, int argc, char **argv) {
           Tcl_AppendResult(interp, "Error: Usage: q6 initialize rc_neighbor q6q6_min min_solid_bonds.\n", (char *)NULL);
           return TCL_ERROR;
       }
-      if ( !initialize_q6(doublearg[0], doublearg[1], intarg) == 0 ) {
+      if ( !q6_initialize(doublearg[0], doublearg[1], intarg) == 0 ) {
 	          Tcl_AppendResult(interp, "Unknown Error set q6 paramters", (char *)NULL);
             return TCL_ERROR;
       }
     }
     else if (ARG0_IS_S("update")) {
-        update_q6();
+        q6_update();
+    }
+    else if (ARG0_IS_S("average")) {
+        q6_average_update();
+    }
+    else if (ARG0_IS_S("assign_ave")) {
+        q6_assign_average();
     }
     return TCL_OK;
   }

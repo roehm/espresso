@@ -60,8 +60,8 @@
 #include "errorhandling.h"
 #include "molforces.h"
 #include "mdlc_correction.h"
-#include "statistics_nucleation.h"
 #include "reaction.h"
+#include "statistics_nucleation.h"
 
 int this_node = -1;
 int n_nodes = -1;
@@ -140,7 +140,9 @@ typedef void (SlaveCallback)(int node, int param);
   CB(mpi_set_particle_gamma_slave) \
   CB(mpi_bcast_q6_params_slave) \
   CB(mpi_q6_calculation_slave) \
-  CB(mpi_send_rotation_slave)
+  CB(mpi_q6_average_calculation_slave) \
+  CB(mpi_q6_assign_average_calculation_slave) \
+  CB(mpi_send_rotation_slave) 
 
 // create the forward declarations
 #define CB(name) void name(int node, int param);
@@ -2558,13 +2560,12 @@ void mpi_iccp3m_init_slave(int node, int dummy)
 }
 
 /********************* REQ_Q6_CALCULATION ********/
-int mpi_q6_calculation()
-{
+int mpi_q6_calculation() {
 #ifdef Q6_PARA
   mpi_call(mpi_q6_calculation_slave, -1, 0);
 
+  q6_ri_calculation();
   q6_calculation();
-  //reduceQ6Q6();
 
   COMM_TRACE(fprintf(stderr, "%d: q6 calculation task %d done.\n", this_node, dummy));
 
@@ -2575,19 +2576,72 @@ int mpi_q6_calculation()
 
 }
 
-void mpi_q6_calculation_slave(int dummy, int dummy2)
-{
+void mpi_q6_calculation_slave(int dummy, int dummy2) {
 #ifdef Q6_PARA
+  q6_ri_calculation();
   q6_calculation();
-  //reduceQ6Q6();
-  
   
   COMM_TRACE(fprintf(stderr, "%d: q6 calculation task %d done.\n", this_node, dummy2));
 
   check_runtime_errors();
 #endif
 }
+/********************* REQ_Q6_AVERAGE_CALCULATION ********/
+int mpi_q6_average_calculation() {
+#ifdef Q6_PARA
+  mpi_call(mpi_q6_average_calculation_slave, -1, 0);
 
+  q6_ri_calculation();
+  q6_average();
+
+  COMM_TRACE(fprintf(stderr, "%d: q6 average calculation task %d done.\n", this_node, dummy));
+
+  return check_runtime_errors();
+#else
+  return 0;
+#endif
+
+}
+
+void mpi_q6_average_calculation_slave(int dummy, int dummy2) {
+#ifdef Q6_PARA
+  q6_ri_calculation();
+  q6_average();
+  
+  COMM_TRACE(fprintf(stderr, "%d: q6 average calculation task %d done.\n", this_node, dummy2));
+
+  check_runtime_errors();
+#endif
+}
+/********************* REQ_Q6_ASSIGN_AVERAGE_CALCULATION ********/
+int mpi_q6_assign_average_calculation() {
+#ifdef Q6_PARA
+  mpi_call(mpi_q6_assign_average_calculation_slave, -1, 0);
+
+  q6_ri_calculation();
+  q6_calculation();
+  q6_assign_ave();
+
+  COMM_TRACE(fprintf(stderr, "%d: q6 assign average calculation task %d done.\n", this_node, dummy));
+
+  return check_runtime_errors();
+#else
+  return 0;
+#endif
+
+}
+
+void mpi_q6_assign_average_calculation_slave(int dummy, int dummy2) {
+#ifdef Q6_PARA
+  q6_ri_calculation();
+  q6_calculation();
+  q6_assign_ave();
+  
+  COMM_TRACE(fprintf(stderr, "%d: q6 assign average calculation task %d done.\n", this_node, dummy2));
+
+  check_runtime_errors();
+#endif
+}
 /********************* REQ_RECV_FLUID_POPULATIONS ********/
 void mpi_recv_fluid_populations(int node, int index, double *pop) {
 #ifdef LB

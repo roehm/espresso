@@ -1626,7 +1626,7 @@ int tclcommand_analyze_parse_structurefactor(Tcl_Interp *interp, int argc, char 
   qfak = 2.0*PI/box_l[0];
   for(i=0; i<order*order; i++) { 
     if (sf[2*i+1]> 0) { 
-      sprintf(buffer,"{%f %f} ",qfak*sqrt(i+1),sf[2*i]);
+      sprintf(buffer,"%f %f\n ",qfak*sqrt(i+1),sf[2*i]);
       Tcl_AppendResult(interp, buffer, (char *)NULL);
     }
   }
@@ -2419,6 +2419,14 @@ int tclcommand_analyze(ClientData data, Tcl_Interp *interp, int argc, char **arg
 
   /* for the elses below */
   if (0);
+  
+#ifdef MY_STAT  
+  REGISTER_ANALYSIS("wallstuff", parse_wallstuff);
+  //REGISTER_ANALYSIS("dipol", parse_dipol);
+  //REGISTER_ANALYSIS("current", parse_current);
+  //REGISTER_ANALYSIS("sqr", parse_sqr);
+#endif
+
   REGISTER_ANALYZE_OPTION("set", tclcommand_analyze_parse_set);
 #if defined(LB) || defined(LB_GPU)
   REGISTER_ANALYZE_OPTION("fluid", tclcommand_analyze_parse_fluid);
@@ -2486,10 +2494,7 @@ int tclcommand_analyze(ClientData data, Tcl_Interp *interp, int argc, char **arg
   REGISTER_ANALYSIS_W_ARG("<g3>", tclcommand_analyze_parse_g_av, 3);
   REGISTER_ANALYSIS_W_ARG("formfactor", tclcommand_analyze_parse_formfactor, 0);
   REGISTER_ANALYSIS_W_ARG("<formfactor>", tclcommand_analyze_parse_formfactor, 1);    
-  REGISTER_ANALYSIS("necklace", tclcommand_analyze_parse_necklace); 
-  REGISTER_ANALYSIS("q6", tclcommand_analyze_q6);
-  REGISTER_ANALYSIS("q6_solid", tclcommand_analyze_q6_solid);
-  REGISTER_ANALYSIS("q6_solid_cluster", tclcommand_analyze_q6_solid_cluster);
+  REGISTER_ANALYSIS("necklace", tclcommand_analyze_parse_necklace);
   REGISTER_ANALYSIS("holes", tclcommand_analyze_parse_holes);   
   REGISTER_ANALYSIS("distribution", tclcommand_analyze_parse_distribution);
   REGISTER_ANALYSIS("vel_distr", tclcommand_analyze_parse_vel_distr);

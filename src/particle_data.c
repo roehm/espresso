@@ -96,6 +96,8 @@ void auto_exclusion(int distance);
 void init_particle(Particle *part)
 {
 
+  int m;
+    
   /* ParticleProperties */
   part->p.identity = -1;
   part->p.type     = 0;
@@ -262,16 +264,16 @@ void init_particle(Particle *part)
 #ifdef Q6_PARA
   /* Q6 */
   part->q.neb = 0;
-  part->l.solid = 0;
-  part->l.solidBonds = 0;
+  part->q.solid_bonds = 0;
+  
   part->q.q6 = 0.0;
-  for(int m=0; m<=6; m++) {
+  for(m=0; m<=6; m++) {
     part->q.q6r[m]=0.0;
     part->q.q6i[m]=0.0;
   }
-  part->l.clabel = -1;
 #endif
 }
+
 void free_particle(Particle *part) {
   realloc_intlist(&(part->bl), 0);
 #ifdef EXCLUSIONS
@@ -355,7 +357,7 @@ void realloc_local_particles(int part)
     This procedure is only used on the master node in Tcl mode.
     \param part the highest existing particle
 */
-void realloc_particle_node(int part)
+static void realloc_particle_node(int part)
 {
   if (part >= max_particle_node) {
     /* round up part + 1 in granularity PART_INCREMENT */

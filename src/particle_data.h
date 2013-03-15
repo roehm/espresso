@@ -210,7 +210,8 @@ typedef struct {
   int ghost;
 #endif
 
-#ifdef Q6_PARA
+#if 0
+#ifdef Q6_PARA_LOCAL
   /* Q6 */
   //int neb;
   int solid;
@@ -221,9 +222,9 @@ typedef struct {
   double q6q6;
   int neighbors[127];
   int clabel;
-  double mean_pos[3];
+  //double mean_pos[3];
 #endif
-
+#endif
 #ifdef GHMC
   /** Data for the ghmc thermostat, last saved 
       position and monentum of particle */
@@ -236,9 +237,15 @@ typedef struct {
 typedef struct {
 
   int neb;
+  int solid_state;
+  int solid_bonds;
   double q6;
-  double q6r[14];
-  double q6i[14];
+  double q6r[7];
+  double q6i[7];
+  int neighbors[27];
+  double q6_mean;
+  double q6_ave;
+  double q6q6;
   
 } ParticleQ6;
 #endif
