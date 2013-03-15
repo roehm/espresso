@@ -489,7 +489,6 @@ int q6_initialize(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds) {
     q6para.q6q6_min = tcl_q6q6_min;
     q6para.min_solid_bonds = tcl_min_solid_bonds;
     mpi_bcast_q6_params();
-    reset_mean_part_pos();
     //printf("bcast q6 params ok\n");
     statusOK=0;
     return statusOK;
@@ -518,73 +517,5 @@ void q6_assign_average() {
 
 }
 /**********************************************************************************/
-/** pre_init (for later use or can be removed)
- * 
-*/
-void q6_pre_init() {
-    
-    reset_mean_part_pos();
-    
-}
 
-//only 4 my personal use
-
-
-/** updates the mean calc of q6 per particle
- * 
-*/
-
-void update_mean_q6_calculation(){
-
-
-}
-
-void update_mean_part_pos(){
-    
-    int np;
-    Cell *cell;
-    int c, i;
-    Particle *part;
-    
-    /* Loop local cells */
-    for (c = 0; c < local_cells.n; c++) {
-      cell = local_cells.cell[c];
-      part = cell->part;
-      np  = cell->n;
-#if 0      
-      for (i=0;i<np;i++) {
-	       part[i].l.mean_pos[0] = (part[i].r.p[0]+part[i].l.mean_pos[0])/2;
-	       part[i].l.mean_pos[1] = (part[i].r.p[1]+part[i].l.mean_pos[1])/2;
-	       part[i].l.mean_pos[2] = (part[i].r.p[2]+part[i].l.mean_pos[2])/2;
-	     }
-#endif	     
-	   }
-//printf("udate mean pos finished\n");
-}
-
-void reset_mean_part_pos(){
-
-    int np;
-    Cell *cell;
-    int c, i;
-    Particle *part;
-
-    /* Loop local cells */
-    for (c = 0; c < local_cells.n; c++) {
-      cell = local_cells.cell[c];
-      part = cell->part;
-      np  = cell->n;
-    
-      for (i=0;i<np;i++) {
-        part[i].q.q6_mean = 0.0;
-#if 0
-	       part[i].l.mean_pos[0] = part[i].r.p[0];
-	       part[i].l.mean_pos[1] = part[i].r.p[1];
-	       part[i].l.mean_pos[2] = part[i].r.p[2];
-#endif
-	     }	    
-
-	   }
-
-}
 #endif

@@ -396,11 +396,6 @@ void integrate_vv(int n_steps)
     if((this_node==0) && (integ_switch == INTEG_METHOD_NPT_ISO))
       nptiso.p_inst_av += nptiso.p_inst;
 #endif
-#ifdef Q6_PARA
-  //TODO check if this is needed
-  if(i == 0) reset_mean_part_pos();
-  if(i >= (n_steps-20)) update_mean_part_pos();
-#endif
 
 #ifdef GHMC
     if(thermo_switch & THERMO_GHMC) {
