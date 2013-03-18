@@ -247,6 +247,7 @@ if(this_node == 0){
       errtext = runtime_error(128);
       ERROR_SPRINTF(errtext,"{099 Lattice Boltzmann time step not set} ");
     }
+#ifndef SHANCHEN
     if (lbpar_gpu.rho < 0.0) {
       errtext = runtime_error(128);
       ERROR_SPRINTF(errtext,"{100 Lattice Boltzmann fluid density not set} ");
@@ -255,6 +256,18 @@ if(this_node == 0){
       errtext = runtime_error(128);
       ERROR_SPRINTF(errtext,"{101 Lattice Boltzmann fluid viscosity not set} ");
     }
+#else //SHANCHEN  TODO: implement correctly
+    if (lbpar_gpu.rho[0] < 0.0) {
+      errtext = runtime_error(128);
+      ERROR_SPRINTF(errtext,"{100 Lattice Boltzmann fluid density not set} ");
+    }
+    if (lbpar_gpu.viscosity[0] < 0.0) {
+      errtext = runtime_error(128);
+      ERROR_SPRINTF(errtext,"{101 Lattice Boltzmann fluid viscosity not set} ");
+    }
+
+#endif //SHANCHEN
+
     if (lb_reinit_particles_gpu) {
 	lb_realloc_particles_gpu();
 	lb_reinit_particles_gpu = 0;
@@ -689,7 +702,6 @@ void on_lb_params_change(int field) {
   if (field == LBPAR_DENSITY) {
     lb_reinit_fluid();
   }
-
   lb_reinit_parameters();
 
 }

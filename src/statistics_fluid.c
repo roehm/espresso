@@ -29,6 +29,7 @@
 #include "utils.h"
 #include "communication.h"
 #include "lb.h"
+#include "lbgpu.h"
 #include "lb-boundaries.h"
 #include "statistics_fluid.h"
 

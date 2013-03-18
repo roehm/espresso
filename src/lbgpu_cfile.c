@@ -40,6 +40,20 @@
 #include "global.h"
 #include "lb-boundaries.h"
 #ifdef LB_GPU
+#ifdef SHANCHEN
+#if (SHANCHEN == 1 ) 
+#    define  SC0 {0.0}
+#    define  SC20 {0.0, 0.0}
+#    define  SC1 {1.0}
+#    define  SCM1 {-1.0}
+#endif 
+#if (SHANCHEN == 2 ) 
+#    define  SC0 { 0.0 , 0.0 } 
+#    define  SC20 {0.0, 0.0, 0.0, 0.0}
+#    define  SC1 { 1.0 , 1.0 } 
+#    define  SCM1 { -1.0, -1.0 } 
+#endif 
+#endif //SHANCHEN
 
 /** Action number for \ref mpi_get_particles. */
 #define REQ_GETPARTS  16
@@ -48,7 +62,19 @@
 #endif
 
 /** Struct holding the Lattice Boltzmann parameters */
-LB_parameters_gpu lbpar_gpu = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0 ,0.0, -1.0, 0, 0, 0, 0, 0, 0, 1, 0, {0.0, 0.0, 0.0}, 12345, 0};
+#ifndef SHANCHEN
+LB_parameters_gpu lbpar_gpu = { .rho=0.0, .mu=0.0, .viscosity=0.0, .gamma_shear=0.0, .gamma_bulk=0.0, .gamma_odd=0.0, 
+                                .gamma_even=0.0, .agrid=0.0, .tau=-1.0, .friction=0.0, .time_step=0.0, .lb_coupl_pref=1.0 ,
+                                .lb_coupl_pref2=0.0, .bulk_viscosity=-1.0, .dim_x=0, .dim_y=0, .dim_z=0, .number_of_nodes=0, 
+                                .number_of_particles=0, .fluct=0, .calc_val=1, .external_force=0, .ext_force={0.0, 0.0, 0.0}, 
+                                .your_seed=12345, .reinit=0};
+#else //SHANCHEN
+LB_parameters_gpu lbpar_gpu = { .rho=SC0, .mu=SC0, .viscosity=SC0, .gamma_shear=SC0, .gamma_bulk=SC0, .gamma_mobility=SC0, 
+                                .gamma_odd=SC0,.gamma_even=SC0, .agrid=0.0, .tau=-1.0, .friction=SC0, .time_step=0.0, .lb_coupl_pref=SC1 ,
+                                .lb_coupl_pref2=SC0, .bulk_viscosity=SCM1, .dim_x=0, .dim_y=0, .dim_z=0, .number_of_nodes=0, 
+                                .number_of_particles=0, .fluct=0, .calc_val=1, .external_force=0, .ext_force={0.0, 0.0, 0.0}, 
+                                .your_seed=12345, .reinit=0, .coupling=SC20};
+#endif
 LB_values_gpu *host_values = NULL;
 LB_nodes_gpu *host_nodes = NULL;
 LB_particle_force_gpu *host_forces = NULL;
@@ -81,16 +107,35 @@ LB_extern_nodeforce_gpu *host_extern_nodeforces = NULL;
 /*-----------------------------------------------------------*/
 /** main of lb_gpu_programm */
 /*-----------------------------------------------------------*/
+#ifdef SHANCHEN
+/* called from forces.c. This is at the beginning of the force
+   calculation loop, so we increment the fluidstep counter here,
+   and we reset it only when the last call to a LB function
+   [lattice_boltzmann_update_gpu()] is performed within integrate_vv()
+ */
+void lattice_boltzmann_calc_shanchen_gpu(void){
+
+  int factor = (int)round(lbpar_gpu.tau/time_step);
+
+  fluidstep+=1;
+  if (fluidstep>=factor) { 
+     lb_calc_shanchen_GPU();
+  }
+
+}
+#endif //SHANCHEN
+
 /** lattice boltzmann update gpu called from integrate.c
 */
+
 void lattice_boltzmann_update_gpu() {
 
   int factor = (int)round(lbpar_gpu.tau/time_step);
 
-  fluidstep += 1;
+//  fluidstep += 1; old code. fluidstep is now incremented before, when the LB forces are evaluated 
 
   if (fluidstep>=factor) {
-    fluidstep=0;
+    fluidstep=0; 
 
     lb_integrate_GPU();
 
@@ -99,27 +144,24 @@ void lattice_boltzmann_update_gpu() {
   }
 }
 
+
+
 /** Calculate particle lattice interactions called from forces.c
 */
 void lb_calc_particle_lattice_ia_gpu() {
 
-  if (transfer_momentum_gpu) {
-    mpi_get_particles_lb(host_data);
-
-    if(this_node == 0){
-#if 0
-      for (i=0;i<n_total_particles;i++) {
-        fprintf(stderr, "%i particle posi: , %f %f %f\n", i, host_data[i].p[0], host_data[i].p[1], host_data[i].p[2]);
-      }
-#endif
-
-    if(lbpar_gpu.number_of_particles) lb_particle_GPU(host_data);
-
-    LB_TRACE (fprintf(stderr,"lb_calc_particle_lattice_ia_gpu \n"));
-
-    }
-  }
+     if (transfer_momentum_gpu) {
+       mpi_get_particles_lb(host_data);
+   
+       if(this_node == 0){
+         if(lbpar_gpu.number_of_particles) lb_particle_GPU(host_data);
+   
+       LB_TRACE (fprintf(stderr,"lb_calc_particle_lattice_ia_gpu \n"));
+   
+       }
+     }
 }
+
 
 /**copy forces from gpu to cpu and call mpi routines to add forces to particles
 */
@@ -181,12 +223,14 @@ void lb_release_gpu(){
   free(host_data);
 }
 /** (Re-)initializes the fluid. */
+#ifndef SHANCHEN
 void lb_reinit_parameters_gpu() {
 
   lbpar_gpu.mu = 0.0;
   lbpar_gpu.time_step = (float)time_step;
 
   if (lbpar_gpu.viscosity > 0.0) {
+    /* NOTE: here and below cs^2 = 3 */
     /* Eq. (80) Duenweg, Schiller, Ladd, PRE 76(3):036704 (2007). */
     lbpar_gpu.gamma_shear = 1. - 2./(6.*lbpar_gpu.viscosity*lbpar_gpu.tau/(lbpar_gpu.agrid*lbpar_gpu.agrid) + 1.);   
   }
@@ -204,7 +248,6 @@ void lb_reinit_parameters_gpu() {
     /* Note that the modes are not normalized as in the paper here! */
 
     lbpar_gpu.mu = (float)temperature/c_sound_sq*lbpar_gpu.tau*lbpar_gpu.tau/(lbpar_gpu.agrid*lbpar_gpu.agrid);
-    //lbpar_gpu->mu *= agrid*agrid*agrid;  // Marcello's conjecture
 
     /* lb_coupl_pref is stored in MD units (force)
      * Eq. (16) Ahlrichs and Duenweg, JCP 111(17):8225 (1999).
@@ -226,18 +269,69 @@ void lb_reinit_parameters_gpu() {
 
   reinit_parameters_GPU(&lbpar_gpu);
 }
+#else //SHANCHEN
+void lb_reinit_parameters_gpu() {
+int ii;
+for(ii=0;ii<SHANCHEN;++ii){
+  lbpar_gpu.mu[ii] = 0.0;
+  lbpar_gpu.time_step = (float)time_step;
+
+  if (lbpar_gpu.viscosity[ii] > 0.0) {
+    /* Eq. (80) Duenweg, Schiller, Ladd, PRE 76(3):036704 (2007). */
+    lbpar_gpu.gamma_shear[ii] = 1. - 2./(6.*lbpar_gpu.viscosity[ii]*lbpar_gpu.tau/(lbpar_gpu.agrid*lbpar_gpu.agrid) + 1.);   
+  }
+
+  if (lbpar_gpu.bulk_viscosity[ii] > 0.0) {
+    /* Eq. (81) Duenweg, Schiller, Ladd, PRE 76(3):036704 (2007). */
+    lbpar_gpu.gamma_bulk[ii] = 1. - 2./(9.*lbpar_gpu.bulk_viscosity[ii]*lbpar_gpu.tau/(lbpar_gpu.agrid*lbpar_gpu.agrid) + 1.);
+  }
+
+  if (lbpar_gpu.mobility[0] > 0.0) {
+ // SAW TODO: fix units ! TODO: this works only for SHANCHEN==2 !
+    lbpar_gpu.gamma_mobility[0] = 1. - 2./(6.*lbpar_gpu.mobility[0]*lbpar_gpu.tau/(lbpar_gpu.agrid*lbpar_gpu.agrid) + 1.);
+  }
+
+  if (temperature > 0.0) {  /* fluctuating hydrodynamics ? */
+
+    lbpar_gpu.fluct = 1;
+	LB_TRACE (fprintf(stderr, "fluct on \n"));
+    /* Eq. (51) Duenweg, Schiller, Ladd, PRE 76(3):036704 (2007).*/
+    /* Note that the modes are not normalized as in the paper here! */
+
+    lbpar_gpu.mu[ii] = (float)temperature/c_sound_sq*lbpar_gpu.tau*lbpar_gpu.tau/(lbpar_gpu.agrid*lbpar_gpu.agrid); // TODO: check how to change mu
+
+    /* lb_coupl_pref is stored in MD units (force)
+     * Eq. (16) Ahlrichs and Duenweg, JCP 111(17):8225 (1999).
+     * The factor 12 comes from the fact that we use random numbers
+     * from -0.5 to 0.5 (equally distributed) which have variance 1/12.
+     * time_step comes from the discretization.
+     */
+
+    lbpar_gpu.lb_coupl_pref[ii] = sqrt(12.f*2.f*lbpar_gpu.friction[ii]*(float)temperature/lbpar_gpu.time_step);
+    lbpar_gpu.lb_coupl_pref2[ii] = sqrt(2.f*lbpar_gpu.friction[ii]*(float)temperature/lbpar_gpu.time_step);
+
+  } else {
+    /* no fluctuations at zero temperature */
+    lbpar_gpu.fluct = 0;
+    lbpar_gpu.lb_coupl_pref[ii] = 0.0;
+    lbpar_gpu.lb_coupl_pref2[ii] = 0.0;
+  }
+	LB_TRACE (fprintf(stderr,"lb_reinit_prarameters_gpu \n"));
+
+  reinit_parameters_GPU(&lbpar_gpu);
+}
+}
+#endif
 
 /** Performs a full initialization of
  *  the Lattice Boltzmann system. All derived parameters
  *  and the fluid are reset to their default values. */
 void lb_init_gpu() {
-
   LB_TRACE(printf("Begin initialzing fluid on GPU\n"));
   /** set parameters for transfer to gpu */
   lb_reinit_parameters_gpu();
 
   lb_realloc_particles_gpu();
-	
   lb_init_GPU(&lbpar_gpu);
 
   LB_TRACE(printf("Initialzing fluid on GPU successful\n"));
@@ -296,6 +390,13 @@ static void mpi_get_particles_lb(LB_particle_gpu *host_data)
               host_data[i+g].v[0] = (float)part[i].m.v[0];
               host_data[i+g].v[1] = (float)part[i].m.v[1];
               host_data[i+g].v[2] = (float)part[i].m.v[2];
+#ifdef SHANCHEN
+              // SAW TODO: does this really need to be copied every time?
+              int ii;
+              for(ii=0;ii<2*SHANCHEN;ii++){
+                 host_data[i+g].solvation[ii] = (float)part[i].p.solvation[ii];
+              }
+#endif
 #ifdef LB_ELECTROHYDRODYNAMICS
               host_data[i+g].mu_E[0] = (float)part[i].p.mu_E[0];
               host_data[i+g].mu_E[1] = (float)part[i].p.mu_E[1];
@@ -355,6 +456,14 @@ static void mpi_get_particles_slave_lb(){
         host_data_sl[i+g].v[0] = (float)part[i].m.v[0];
         host_data_sl[i+g].v[1] = (float)part[i].m.v[1];
         host_data_sl[i+g].v[2] = (float)part[i].m.v[2];
+#ifdef SHANCHEN
+        // SAW TODO: does this really need to be copied every time?
+        int ii;
+        for(ii=0;ii<2*SHANCHEN;ii++){
+           host_data_sl[i+g].solvation[ii] = (float)part[i].p.solvation[ii];
+        }
+#endif
+
 #ifdef LB_ELECTROHYDRODYNAMICS
         host_data_sl[i+g].mu_E[0] = (float)part[i].p.mu_E[0];
         host_data_sl[i+g].mu_E[1] = (float)part[i].p.mu_E[1];
