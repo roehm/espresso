@@ -1387,9 +1387,9 @@ __device__ void relax_modes(float *mode, unsigned int index, LB_node_force_gpu n
       u_tot[2] += 0.5f*node_f.force[(2+ii*3)*para.number_of_nodes + index];
 
     }
-  d_v[index].v[0]=u_tot[0]; 
-  d_v[index].v[1]=u_tot[1]; 
-  d_v[index].v[2]=u_tot[2]; 
+  d_v[index].v[0]=u_tot[0]/Rho_tot; 
+  d_v[index].v[1]=u_tot[1]/Rho_tot; 
+  d_v[index].v[2]=u_tot[2]/Rho_tot; 
 
   #pragma unroll
   for(int ii=0;ii<SHANCHEN;++ii) { 

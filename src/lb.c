@@ -704,8 +704,8 @@ for(ii=0;ii<SHANCHEN;++ii){
 
 
 // SAW TODO: check all functions wich are getting/setting single node values
-#ifdef LB_GPU
 int lb_lbfluid_print_vtk_velocity(char* filename) {
+#ifdef LB_GPU
   if (lattice_switch & LATTICE_LB_GPU) {
      FILE* fp = fopen(filename, "w");
      size_t size_of_values = lbpar_gpu.number_of_nodes * sizeof(LB_values_gpu);
@@ -724,13 +724,10 @@ int lb_lbfluid_print_vtk_velocity(char* filename) {
      }
      free(host_values);
      fclose(fp);
-     return 0;
   }
-}
 #endif // LB_GPU
 
 #ifdef LB
-int lb_lbfluid_print_vtk_velocity(char* filename) {
     FILE* fp = fopen(filename, "w");
     if(fp == NULL)  
         return 1;
@@ -757,9 +754,9 @@ int lb_lbfluid_print_vtk_velocity(char* filename) {
      }
     }
     fclose(fp);	
+#endif // LB 
     return 0;
 }
-#endif // LB 
 
 int lb_lbfluid_print_boundary(char* filename) {
 	  FILE* fp = fopen(filename, "w");
@@ -1112,7 +1109,7 @@ exit(printf("TODO:adapt for SHANCHEN (%s:%d)\n",__FILE__,__LINE__));
 
 
 int lb_lbnode_get_pi(int* ind, double* p_pi) {
-   
+#ifdef LB   
     lb_lbnode_get_pi_neq(ind, p_pi);
   
     double p0 = lbpar.rho*lbpar.agrid*lbpar.agrid/lbpar.tau/lbpar.tau/3.;
@@ -1120,6 +1117,9 @@ int lb_lbnode_get_pi(int* ind, double* p_pi) {
     p_pi[2] += p0;
     p_pi[5] += p0;
   return 0;
+#else
+  return 1;
+#endif
 }
 
 int lb_lbnode_get_pi_neq(int* ind, double* p_pi) {
@@ -1135,7 +1135,7 @@ int lb_lbnode_get_pi_neq(int* ind, double* p_pi) {
       p_pi[i]=host_print_values->pi[i];
     }
 		free (host_print_values);
-#endif
+#else
   } else {  
   
     index_t index;
@@ -1155,8 +1155,9 @@ int lb_lbnode_get_pi_neq(int* ind, double* p_pi) {
     p_pi[4] = pi[4]/tau/tau/lbpar.agrid/lbpar.agrid/lbpar.agrid;
     p_pi[5] = pi[5]/tau/tau/lbpar.agrid/lbpar.agrid/lbpar.agrid;
 
-    return 0;
+#endif
   }
+  return 0;
 }
 
 int lb_lbnode_get_boundary(int* ind, int* p_boundary) {

@@ -91,7 +91,7 @@ void lb_init_boundaries() {
     int *host_boundary_node_list= (int*)malloc(sizeof(int));
     int *host_boundary_index_list= (int*)malloc(sizeof(int));
     size_t size_of_index;
-    int boundary_number; // the number the boundary will actually belong to.
+    int boundary_number = 0; // the number the boundary will actually belong to.
 
     for(z=0; z<lbpar_gpu.dim_z; z++) {
       for(y=0; y<lbpar_gpu.dim_y; y++) {
