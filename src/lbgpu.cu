@@ -855,6 +855,7 @@ __global__ void temperature(LB_nodes_gpu n_a, float *cpu_jsquared) {
  * @param *rn_part		Pointer to randomnumber array of the particle
  * @param node_index		node index around (8) particle (Output)
 */
+#ifndef SHANCHEN
 __device__ void calc_viscous_force(LB_nodes_gpu n_a, float *delta, LB_particle_gpu *particle_data, LB_particle_force_gpu *particle_force, unsigned int part_index, LB_randomnr_gpu *rn_part, float *delta_j, unsigned int *node_index){
 
   float mode[4];
@@ -943,7 +944,7 @@ __device__ void calc_viscous_force(LB_nodes_gpu n_a, float *delta, LB_particle_g
   delta_j[2] = - particle_force[part_index].f[2]*para.time_step*para.tau/para.agrid;  	
 
 }
-
+#endif
 /**calcutlation of the node force caused by the particles, with atomicadd due to avoiding race conditions
 	(Eq. (14) Ahlrichs and Duenweg, JCP 111(17):8225 (1999))
  * @param *delta		Pointer for the weighting of particle position (Input)
@@ -1267,7 +1268,6 @@ __global__ void init_extern_nodeforces(int n_extern_nodeforces, LB_extern_nodefo
  * @param mode		Pointer to the local register values mode (Output)
 */
 __device__ void calc_m_from_n(LB_nodes_gpu n_a, unsigned int index, float *mode){
-  size_t index = blockIdx.y * gridDim.x * blockDim.x + blockDim.x * blockIdx.x + threadIdx.x;
   #pragma unroll
   for(int ii=0;ii<SHANCHEN;++ii) { 
   /* mass mode */
@@ -2022,6 +2022,7 @@ __global__ void temperature(LB_nodes_gpu n_a, float *cpu_jsquared) {
  * @param *rn_part		Pointer to randomnumber array of the particle
  * @param node_index		node index around (8) particle (Output)
 */
+#ifdef SHANCHEN
 __device__ void calc_viscous_force(LB_nodes_gpu n_a, float *delta, float * partgrad1, float * partgrad2, float * partgrad3, LB_particle_gpu *particle_data, LB_particle_force_gpu *particle_force, unsigned int part_index, LB_randomnr_gpu *rn_part, float *delta_j, unsigned int *node_index,LB_values_gpu *d_v){
 	
  float mode[4];
@@ -2237,7 +2238,7 @@ __device__ void calc_viscous_force(LB_nodes_gpu n_a, float *delta, float * partg
   random_01(rn_part);
   viscforce[0+ii*3] += para.lb_coupl_pref[ii]*(rn_part->randomnr[0]-0.5f);
   viscforce[1+ii*3] += para.lb_coupl_pref[ii]*(rn_part->randomnr[1]-0.5f);
-  random_01(+ii*3rn_part);
+  random_01(rn_part);
   viscforce[2+ii*3] += para.lb_coupl_pref[ii]*(rn_part->randomnr[0]-0.5f);
 #endif	  
   /** delta_j for transform momentum transfer to lattice units which is done in calc_node_force
@@ -2253,7 +2254,7 @@ __device__ void calc_viscous_force(LB_nodes_gpu n_a, float *delta, float * partg
   delta_j[2+3*ii] -=  viscforce[2+ii*3]*para.time_step*para.tau/para.agrid;  	
  }
 }
-
+#endif
 
 /**calcutlation of the node force caused by the particles, with atomicadd due to avoiding race conditions 
 	(Eq. (14) Ahlrichs and Duenweg, JCP 111(17):8225 (1999))
@@ -2656,23 +2657,6 @@ __global__ void reset_particle_force(LB_particle_force_gpu *particle_force){
     particle_force[part_index].f[1] = 0.0f;
     particle_force[part_index].f[2] = 0.0f;
   }			
-}
-
-
-
-/**set the boundary flag for all boundary nodes
- * @param *boundindex	     	Pointer to the 1d index of the boundnode (Input)
- * @param number_of_boundnodes	The number of boundary nodes
- * @param n_a			Pointer to local node residing in array a (Input)
- * @param n_b			Pointer to local node residing in array b (Input)
-*/
-__global__ void init_boundaries(int *boundindex, int number_of_boundnodes, LB_nodes_gpu n_a, LB_nodes_gpu n_b){
-
-  unsigned int index = blockIdx.y * gridDim.x * blockDim.x + blockDim.x * blockIdx.x + threadIdx.x;
-
-  if(index<number_of_boundnodes){
-    n_a.boundary[boundindex[index]] = n_b.boundary[boundindex[index]] = 1;
-  }	
 }
 
 /**reset the boundary flag of every node
