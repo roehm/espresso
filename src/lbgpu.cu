@@ -100,7 +100,7 @@ int partinitflag = 0;
  * @param *file .cu file were the error took place
  * @param line line of the file were the error took place
 */
-void _cuda_safe_mem(cudaError_t err, char *file, unsigned int line){
+void _cuda_check_errors(cudaError_t err, char *file, unsigned int line){
     if( cudaSuccess != err) {                                             
       fprintf(stderr, "Cuda Error at %s:%u.\n", file, line);
       printf("CUDA error: %s\n", cudaGetErrorString(err));
@@ -114,7 +114,7 @@ void _cuda_safe_mem(cudaError_t err, char *file, unsigned int line){
       }
     }
 }
-#define cuda_safe_mem(a) _cuda_safe_mem((a), __FILE__, __LINE__)
+#define cuda_check_errors(a) _cuda_check_errors((a), __FILE__, __LINE__)
 #define KERNELCALL(_f, _a, _b, _params) \
 _f<<<_a, _b, 0, stream[0]>>>_params; \
 _err=cudaGetLastError(); \
@@ -1192,7 +1192,7 @@ __global__ void calc_mass(LB_nodes_gpu n_a, float *sum) {
 void lb_calc_fluid_temperature_GPU(double* host_temp){
   float host_jsquared = 0.f;
   float* device_jsquared;
-  cuda_safe_mem(cudaMalloc((void**)&device_jsquared, sizeof(float)));
+  cuda_check_errors(cudaMalloc((void**)&device_jsquared, sizeof(float)));
   cudaMemcpy(device_jsquared, &host_jsquared, sizeof(float), cudaMemcpyHostToDevice);
 
   /** values for the kernel call */
@@ -2556,7 +2556,7 @@ void lb_calc_fluid_temperature_GPU(double* host_temp){
 
   float host_jsquared = 0.f;
   float* device_jsquared;
-  cuda_safe_mem(cudaMalloc((void**)&device_jsquared, sizeof(float)));
+  cuda_check_errors(cudaMalloc((void**)&device_jsquared, sizeof(float)));
   cudaMemcpy(device_jsquared, &host_jsquared, sizeof(float), cudaMemcpyHostToDevice);
 
   /** values for the kernel call */
@@ -2972,32 +2972,32 @@ void lb_init_GPU(LB_parameters_gpu *lbpar_gpu){
   size_of_seed = lbpar_gpu->number_of_particles * sizeof(LB_particle_seed_gpu);
   size_of_nodes_gpu = lbpar_gpu->number_of_nodes * 19 * sizeof(float);
 
-  cuda_safe_mem(cudaMalloc((void**)&device_values, size_of_values));
+  cuda_check_errors(cudaMalloc((void**)&device_values, size_of_values));
 
 
 #ifndef SHANCHEN
-  cuda_safe_mem(cudaMalloc((void**)&nodes_a.vd, lbpar_gpu->number_of_nodes * 19 * sizeof(float)));
-  cuda_safe_mem(cudaMalloc((void**)&nodes_b.vd, lbpar_gpu->number_of_nodes * 19 * sizeof(float)));
+  cuda_check_errors(cudaMalloc((void**)&nodes_a.vd, lbpar_gpu->number_of_nodes * 19 * sizeof(float)));
+  cuda_check_errors(cudaMalloc((void**)&nodes_b.vd, lbpar_gpu->number_of_nodes * 19 * sizeof(float)));
 #else // SHANCHEN
-  cuda_safe_mem(cudaMalloc((void**)&nodes_a.vd, lbpar_gpu->number_of_nodes * 19 * SHANCHEN * sizeof(float)));
-  cuda_safe_mem(cudaMalloc((void**)&nodes_b.vd, lbpar_gpu->number_of_nodes * 19 * SHANCHEN * sizeof(float)));   
+  cuda_check_errors(cudaMalloc((void**)&nodes_a.vd, lbpar_gpu->number_of_nodes * 19 * SHANCHEN * sizeof(float)));
+  cuda_check_errors(cudaMalloc((void**)&nodes_b.vd, lbpar_gpu->number_of_nodes * 19 * SHANCHEN * sizeof(float)));   
 #endif // SHANCHEN
-  cuda_safe_mem(cudaMalloc((void**)&nodes_a.seed, lbpar_gpu->number_of_nodes * sizeof(unsigned int)));
-  cuda_safe_mem(cudaMalloc((void**)&nodes_a.boundary, lbpar_gpu->number_of_nodes * sizeof(unsigned int)));
-  cuda_safe_mem(cudaMalloc((void**)&nodes_b.seed, lbpar_gpu->number_of_nodes * sizeof(unsigned int)));
-  cuda_safe_mem(cudaMalloc((void**)&nodes_b.boundary, lbpar_gpu->number_of_nodes * sizeof(unsigned int)));
+  cuda_check_errors(cudaMalloc((void**)&nodes_a.seed, lbpar_gpu->number_of_nodes * sizeof(unsigned int)));
+  cuda_check_errors(cudaMalloc((void**)&nodes_a.boundary, lbpar_gpu->number_of_nodes * sizeof(unsigned int)));
+  cuda_check_errors(cudaMalloc((void**)&nodes_b.seed, lbpar_gpu->number_of_nodes * sizeof(unsigned int)));
+  cuda_check_errors(cudaMalloc((void**)&nodes_b.boundary, lbpar_gpu->number_of_nodes * sizeof(unsigned int)));
 
-  cuda_safe_mem(cudaMalloc((void**)&node_f.force, lbpar_gpu->number_of_nodes * 3 * sizeof(float)));
-  cuda_safe_mem(cudaMalloc((void**)&particle_force, size_of_forces));
-  cuda_safe_mem(cudaMalloc((void**)&particle_data, size_of_positions));
+  cuda_check_errors(cudaMalloc((void**)&node_f.force, lbpar_gpu->number_of_nodes * 3 * sizeof(float)));
+  cuda_check_errors(cudaMalloc((void**)&particle_force, size_of_forces));
+  cuda_check_errors(cudaMalloc((void**)&particle_data, size_of_positions));
 
-  cuda_safe_mem(cudaMalloc((void**)&part, size_of_seed));
+  cuda_check_errors(cudaMalloc((void**)&part, size_of_seed));
 
   /**write parameters in const memory*/
-  cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
+  cuda_check_errors(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
 
   /**check flag if lb gpu init works*/
-  cuda_safe_mem(cudaMalloc((void**)&gpu_check, sizeof(int)));
+  cuda_check_errors(cudaMalloc((void**)&gpu_check, sizeof(int)));
   initflag = 1;
   h_gpu_check = (int*)malloc(sizeof(int));
 
@@ -3028,7 +3028,7 @@ void lb_init_GPU(LB_parameters_gpu *lbpar_gpu){
   intflag = 1;
   current_nodes = &nodes_a;
   h_gpu_check[0] = 0;
-  cuda_safe_mem(cudaMemcpy(h_gpu_check, gpu_check, sizeof(int), cudaMemcpyDeviceToHost));
+  cuda_check_errors(cudaMemcpy(h_gpu_check, gpu_check, sizeof(int), cudaMemcpyDeviceToHost));
   cudaThreadSynchronize();
   if(!h_gpu_check[0]){
     fprintf(stderr, "initialization of lb gpu code failed! \n");
@@ -3041,7 +3041,7 @@ void lb_init_GPU(LB_parameters_gpu *lbpar_gpu){
 void lb_reinit_GPU(LB_parameters_gpu *lbpar_gpu){
 
   /**write parameters in const memory*/
-  cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
+  cuda_check_errors(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
 
   /** values for the kernel call */
   int threads_per_block = 64;
@@ -3059,7 +3059,7 @@ void lb_reinit_GPU(LB_parameters_gpu *lbpar_gpu){
 */
 void lb_realloc_particle_GPU(LB_parameters_gpu *lbpar_gpu, LB_particle_gpu **host_data){
 
-  cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
+  cuda_check_errors(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
   /** Allocate struct for particle positions */
   size_of_forces = lbpar_gpu->number_of_particles * sizeof(LB_particle_force_gpu);
   size_of_positions = lbpar_gpu->number_of_particles * sizeof(LB_particle_gpu);
@@ -3079,11 +3079,11 @@ void lb_realloc_particle_GPU(LB_parameters_gpu *lbpar_gpu, LB_particle_gpu **hos
     cudaFree(particle_data);
     cudaFree(part);
   }
-  //cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
+  //cuda_check_errors(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
 
-  cuda_safe_mem(cudaMalloc((void**)&particle_force, size_of_forces));
-  cuda_safe_mem(cudaMalloc((void**)&particle_data, size_of_positions));
-  cuda_safe_mem(cudaMalloc((void**)&part, size_of_seed));
+  cuda_check_errors(cudaMalloc((void**)&particle_force, size_of_forces));
+  cuda_check_errors(cudaMalloc((void**)&particle_data, size_of_positions));
+  cuda_check_errors(cudaMalloc((void**)&part, size_of_seed));
   partinitflag  = 1;
   /** values for the particle kernel */
   int threads_per_block_particles = 64;
@@ -3102,15 +3102,15 @@ void lb_init_boundaries_GPU(int host_n_lb_boundaries, int number_of_boundnodes, 
   int temp = host_n_lb_boundaries;
 
   size_of_boundindex = number_of_boundnodes*sizeof(int);
-  cuda_safe_mem(cudaMalloc((void**)&boundary_node_list, size_of_boundindex));
-  cuda_safe_mem(cudaMalloc((void**)&boundary_index_list, size_of_boundindex));
-  cuda_safe_mem(cudaMemcpy(boundary_index_list, host_boundary_index_list, size_of_boundindex, cudaMemcpyHostToDevice));
-  cuda_safe_mem(cudaMemcpy(boundary_node_list, host_boundary_node_list, size_of_boundindex, cudaMemcpyHostToDevice));
+  cuda_check_errors(cudaMalloc((void**)&boundary_node_list, size_of_boundindex));
+  cuda_check_errors(cudaMalloc((void**)&boundary_index_list, size_of_boundindex));
+  cuda_check_errors(cudaMemcpy(boundary_index_list, host_boundary_index_list, size_of_boundindex, cudaMemcpyHostToDevice));
+  cuda_check_errors(cudaMemcpy(boundary_node_list, host_boundary_node_list, size_of_boundindex, cudaMemcpyHostToDevice));
 
-  cuda_safe_mem(cudaMalloc((void**)&LB_boundary_force   , 3*host_n_lb_boundaries*sizeof(float)));
-  cuda_safe_mem(cudaMalloc((void**)&LB_boundary_velocity, 3*host_n_lb_boundaries*sizeof(float)));
-  cuda_safe_mem(cudaMemcpy(LB_boundary_velocity, host_LB_Boundary_velocity, 3*n_lb_boundaries*sizeof(float), cudaMemcpyHostToDevice));
-  cuda_safe_mem(cudaMemcpyToSymbol(n_lb_boundaries_gpu, &temp, sizeof(int)));
+  cuda_check_errors(cudaMalloc((void**)&LB_boundary_force   , 3*host_n_lb_boundaries*sizeof(float)));
+  cuda_check_errors(cudaMalloc((void**)&LB_boundary_velocity, 3*host_n_lb_boundaries*sizeof(float)));
+  cuda_check_errors(cudaMemcpy(LB_boundary_velocity, host_LB_Boundary_velocity, 3*n_lb_boundaries*sizeof(float), cudaMemcpyHostToDevice));
+  cuda_check_errors(cudaMemcpyToSymbol(n_lb_boundaries_gpu, &temp, sizeof(int)));
 
   /** values for the kernel call */
   int threads_per_block = 64;
@@ -3143,7 +3143,7 @@ void lb_init_boundaries_GPU(int host_n_lb_boundaries, int number_of_boundnodes, 
 */
 void lb_reinit_extern_nodeforce_GPU(LB_parameters_gpu *lbpar_gpu){
 
-  cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
+  cuda_check_errors(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
 
   /** values for the kernel call */
   int threads_per_block = 64;
@@ -3162,10 +3162,10 @@ void lb_reinit_extern_nodeforce_GPU(LB_parameters_gpu *lbpar_gpu){
 void lb_init_extern_nodeforces_GPU(int n_extern_nodeforces, LB_extern_nodeforce_gpu *host_extern_nodeforces, LB_parameters_gpu *lbpar_gpu){
 
   size_of_extern_nodeforces = n_extern_nodeforces*sizeof(LB_extern_nodeforce_gpu);
-  cuda_safe_mem(cudaMalloc((void**)&extern_nodeforces, size_of_extern_nodeforces));
+  cuda_check_errors(cudaMalloc((void**)&extern_nodeforces, size_of_extern_nodeforces));
   cudaMemcpy(extern_nodeforces, host_extern_nodeforces, size_of_extern_nodeforces, cudaMemcpyHostToDevice);
 
-  if(lbpar_gpu->external_force == 0)cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu))); 
+  if(lbpar_gpu->external_force == 0)cuda_check_errors(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu))); 
 
   int threads_per_block_exf = 64;
   int blocks_per_grid_exf_y = 4;
@@ -3253,7 +3253,7 @@ void lb_print_checkpoint_GPU(float *host_checkpoint_vd, unsigned int *host_check
 void lb_get_boundary_flags_GPU(unsigned int* host_bound_array){
 
   unsigned int* device_bound_array;
-  cuda_safe_mem(cudaMalloc((void**)&device_bound_array, lbpar_gpu.number_of_nodes*sizeof(unsigned int)));
+  cuda_check_errors(cudaMalloc((void**)&device_bound_array, lbpar_gpu.number_of_nodes*sizeof(unsigned int)));
   /** values for the kernel call */
   int threads_per_block = 64;
   int blocks_per_grid_y = 4;
@@ -3272,7 +3272,7 @@ void lb_get_boundary_flags_GPU(unsigned int* host_bound_array){
 void lb_print_node_GPU(int single_nodeindex, LB_values_gpu *host_print_values){
 
   LB_values_gpu *device_print_values;
-  cuda_safe_mem(cudaMalloc((void**)&device_print_values, sizeof(LB_values_gpu)));
+  cuda_check_errors(cudaMalloc((void**)&device_print_values, sizeof(LB_values_gpu)));
   int threads_per_block_print = 1;
   int blocks_per_grid_print_y = 1;
   int blocks_per_grid_print_x = 1;
@@ -3296,7 +3296,7 @@ void lb_calc_fluid_mass_GPU(double* mass){
 
   float* tot_mass;
   float cpu_mass =  0.f ;
-  cuda_safe_mem(cudaMalloc((void**)&tot_mass, sizeof(float)));
+  cuda_check_errors(cudaMalloc((void**)&tot_mass, sizeof(float)));
   cudaMemcpy(tot_mass, &cpu_mass, sizeof(float), cudaMemcpyHostToDevice);
 
   /** values for the kernel call */
@@ -3320,7 +3320,7 @@ void lb_calc_fluid_momentum_GPU(double* host_mom){
 
   float* tot_momentum;
   float host_momentum[3] = { 0.f, 0.f, 0.f};
-  cuda_safe_mem(cudaMalloc((void**)&tot_momentum, 3*sizeof(float)));
+  cuda_check_errors(cudaMalloc((void**)&tot_momentum, 3*sizeof(float)));
   cudaMemcpy(tot_momentum, host_momentum, 3*sizeof(float), cudaMemcpyHostToDevice);
 
   /** values for the kernel call */
@@ -3345,7 +3345,7 @@ void lb_calc_fluid_momentum_GPU(double* host_mom){
 void lb_get_boundary_flag_GPU(int single_nodeindex, unsigned int* host_flag){
 
   unsigned int* device_flag;
-  cuda_safe_mem(cudaMalloc((void**)&device_flag, sizeof(unsigned int)));
+  cuda_check_errors(cudaMalloc((void**)&device_flag, sizeof(unsigned int)));
   int threads_per_block_flag = 1;
   int blocks_per_grid_flag_y = 1;
   int blocks_per_grid_flag_x = 1;
@@ -3368,7 +3368,7 @@ void lb_get_boundary_flag_GPU(int single_nodeindex, unsigned int* host_flag){
 void lb_set_node_rho_GPU(int single_nodeindex, float* host_rho){
    
   float* device_rho;
-  cuda_safe_mem(cudaMalloc((void**)&device_rho, SHANCHEN*sizeof(float)));	
+  cuda_check_errors(cudaMalloc((void**)&device_rho, SHANCHEN*sizeof(float)));	
   cudaMemcpy(device_rho, host_rho, SHANCHEN*sizeof(float), cudaMemcpyHostToDevice);
   int threads_per_block_flag = 1;
   int blocks_per_grid_flag_y = 1;
@@ -3386,7 +3386,7 @@ void lb_set_node_rho_GPU(int single_nodeindex, float* host_rho){
 void lb_set_node_velocity_GPU(int single_nodeindex, float* host_velocity){
 
   float* device_velocity;
-  cuda_safe_mem(cudaMalloc((void**)&device_velocity, 3*sizeof(float)));
+  cuda_check_errors(cudaMalloc((void**)&device_velocity, 3*sizeof(float)));
   cudaMemcpy(device_velocity, host_velocity, 3*sizeof(float), cudaMemcpyHostToDevice);
   int threads_per_block_flag = 1;
   int blocks_per_grid_flag_y = 1;
@@ -3403,14 +3403,14 @@ void lb_set_node_velocity_GPU(int single_nodeindex, float* host_velocity){
 void reinit_parameters_GPU(LB_parameters_gpu *lbpar_gpu){
 
   /**write parameters in const memory*/
-  cuda_safe_mem(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
+  cuda_check_errors(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
 
 }
 /**integration kernel for the lb gpu fluid update called from host */
 void lb_integrate_GPU(){
   
   if (n_lb_boundaries>0)
-    cuda_safe_mem(cudaMemset	(	LB_boundary_force, 0, 3*n_lb_boundaries*sizeof(float)));	
+    cuda_check_errors(cudaMemset	(	LB_boundary_force, 0, 3*n_lb_boundaries*sizeof(float)));	
 
   /** values for the kernel call */
   int threads_per_block = 64;
@@ -3445,7 +3445,7 @@ void lb_integrate_GPU(){
 
 void lb_gpu_get_boundary_forces(double* forces) {
   float* temp = (float*) malloc(3*n_lb_boundaries*sizeof(float));
-  cuda_safe_mem(cudaMemcpy(temp, LB_boundary_force, 3*n_lb_boundaries*sizeof(float), cudaMemcpyDeviceToHost));
+  cuda_check_errors(cudaMemcpy(temp, LB_boundary_force, 3*n_lb_boundaries*sizeof(float), cudaMemcpyDeviceToHost));
   for (int i =0; i<3*n_lb_boundaries; i++) {
     forces[i]=(double)temp[i];
   }
