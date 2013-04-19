@@ -100,7 +100,7 @@ void on_program_start()
   init_random();
   init_bit_random();
 
-  setup_node_grid();
+  init_node_grid();
   /* calculate initial minimimal number of cells (see tclcallback_min_num_cells) */
   min_num_cells = calc_processor_min_num_cells();
 
@@ -455,6 +455,7 @@ void on_lbboundary_change()
     lb_init_boundaries();
   }
 #endif
+
 #ifdef LB_BOUNDARIES_GPU
   if(this_node == 0){
     if(lattice_switch & LATTICE_LB_GPU) {
@@ -659,8 +660,16 @@ void on_parameter_change(int field)
     }
 #endif
   case FIELD_LANGEVIN_GAMMA:
-  case FIELD_DPD_TGAMMA:
   case FIELD_DPD_GAMMA:
+  case FIELD_DPD_TGAMMA:
+    reinit_thermo = 1;
+    break;
+  case FIELD_DPD_RCUT:
+  case FIELD_DPD_TRCUT:
+    recalc_maximal_cutoff();
+    cells_on_geometry_change(0);
+    reinit_thermo = 1;
+    break;
   case FIELD_NPTISO_G0:
   case FIELD_NPTISO_GV:
   case FIELD_NPTISO_PISTON:

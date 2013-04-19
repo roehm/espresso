@@ -1520,6 +1520,10 @@ int part_parse_gamma(Tcl_Interp *interp, int argc, char **argv,
 
 #ifdef GRANDCANONICAL
 int part_parse_gc(Tcl_Interp *interp, int argc, char **argv){
+
+  char buffer[100 + TCL_DOUBLE_SPACE + 3*TCL_INTEGER_SPACE];
+  int type;
+
 	if (argc < 1) {
 	  Tcl_AppendResult(interp, "gc requires at least particle type as argument\nUsage: part gc {<part_type> | {find | delete} <part_type> }\nThe call with only a part_type will init the array lists for the given type\nfind will return a randomly chosen particle id that has the given type\ndelete consequently removes a random particle of given type", (char *) NULL);
 	  return TCL_ERROR;
@@ -1531,7 +1535,14 @@ int part_parse_gc(Tcl_Interp *interp, int argc, char **argv){
 		  Tcl_AppendResult(interp, "gc delete needs particle type as argument", (char *) NULL);
 		  return TCL_ERROR;
 		}
-		int type = atoi (argv[0]);
+
+    if( !ARG_IS_I(0,type) )
+    { 
+      sprintf(buffer, "\nWrong type for the <type> parameter");
+      Tcl_AppendResult(interp, buffer, (char *)NULL);  
+      return (TCL_ERROR); 
+    }
+
 		if (type < 0 ) {
 		  Tcl_AppendResult(interp, "no negative types", (char *) NULL);
 		  return TCL_ERROR;
@@ -1552,7 +1563,14 @@ int part_parse_gc(Tcl_Interp *interp, int argc, char **argv){
 		  Tcl_AppendResult(interp, "gc find needs a particle type as argument", (char *) NULL);
 		  return TCL_ERROR;
 		}
-		int type = atoi (argv[0]);
+
+    if( !ARG_IS_I(0,type) )
+    { 
+      sprintf(buffer, "\nWrong type for the <type> parameter");
+      Tcl_AppendResult(interp, buffer, (char *)NULL);  
+      return (TCL_ERROR); 
+    }
+
 		if (type < 0 ) {
 		  Tcl_AppendResult(interp, "no negative types", (char *) NULL);
 		  return TCL_ERROR;
@@ -1575,7 +1593,14 @@ int part_parse_gc(Tcl_Interp *interp, int argc, char **argv){
 			Tcl_AppendResult(interp, "gc status need type as argument", (char *) NULL);
 			return TCL_ERROR;
 		}
-		int type = atoi( argv[0] );
+
+    if( !ARG_IS_I(0,type) )
+    { 
+      sprintf(buffer, "\nWrong type for the <type> parameter");
+      Tcl_AppendResult(interp, buffer, (char *)NULL);  
+      return (TCL_ERROR); 
+    }
+
 		if ( type < 0 ) {
 		  Tcl_AppendResult(interp, "no negative types", (char *) NULL);
 		  return TCL_ERROR;
@@ -1612,7 +1637,14 @@ int part_parse_gc(Tcl_Interp *interp, int argc, char **argv){
 			Tcl_AppendResult(interp, "number expects type as argument", (char *) NULL);
 			return TCL_ERROR;
 		}
-		int type = atoi( argv[0] );
+
+    if( !ARG_IS_I(0,type) )
+    { 
+      sprintf(buffer, "\nWrong type for the <type> parameter");
+      Tcl_AppendResult(interp, buffer, (char *)NULL);  
+      return (TCL_ERROR); 
+    }
+
 		int number;
 		if ( type < 0 ) {
 		  Tcl_AppendResult(interp, "no negative types", (char *) NULL);
@@ -1628,7 +1660,14 @@ int part_parse_gc(Tcl_Interp *interp, int argc, char **argv){
 		return TCL_OK;
 	} else if ( argc == 1 ) {
 		// initialize particle array for given type
-		int type = atoi(argv[0]);
+
+    if( !ARG_IS_I(0,type) )
+    { 
+      sprintf(buffer, "\nWrong type for the <type> parameter");
+      Tcl_AppendResult(interp, buffer, (char *)NULL);  
+      return (TCL_ERROR); 
+    }
+
 		if (type < 0 ) {
 		  Tcl_AppendResult(interp, "no negative types", (char *) NULL);
 		  return TCL_ERROR;
