@@ -843,7 +843,7 @@ int lb_lbnode_get_pi_neq(int* ind, double* p_pi) {
   if (lattice_switch & LATTICE_LB_GPU) {
 #ifdef LB_GPU
     LB_values_gpu *host_print_values;
-    host_print_values = malloc(sizeof(LB_values_gpu));	
+    host_print_values = (LB_values_gpu*)malloc(sizeof(LB_values_gpu));	
     
     int single_nodeindex = ind[0] + ind[1]*lbpar_gpu.dim_x + ind[2]*lbpar_gpu.dim_x*lbpar_gpu.dim_y;
     lb_print_node_GPU(single_nodeindex, host_print_values);

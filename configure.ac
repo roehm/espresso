@@ -490,7 +490,7 @@ AS_IF([test x$with_cuda != xno],[
     CXX=$NVCC
     CXXFLAGS="$NVCCFLAGS"
     
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <cuda.h>],[cudaGetDevice(0);])], [
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])], [
         AC_MSG_RESULT(yes)
     ],[
         cuda_ok=no
@@ -505,7 +505,7 @@ AS_IF([test x$with_cuda != xno],[
     # NVCC compile check
     AC_MSG_CHECKING([whether CUDA runs])
     
-    AC_RUN_IFELSE([AC_LANG_PROGRAM([#include <cuda.h>],[int no; cudaGetDeviceCount(&no);])], [
+    AC_RUN_IFELSE([AC_LANG_PROGRAM([])], [
         AC_MSG_RESULT(yes)
     ],[
         cuda_ok=no
