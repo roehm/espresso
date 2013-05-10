@@ -48,7 +48,8 @@
 #endif
 
 /** Struct holding the Lattice Boltzmann parameters */
-LB_parameters_gpu lbpar_gpu = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0 ,0.0, -1.0, 0, 0, 0, 0, 0, 0, 1, 0, {0.0, 0.0, 0.0}, 12345, 0};
+LB_parameters_gpu lbpar_gpu;
+//= { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0 ,0.0, -1.0, 0, 0, 0, 0, 0, 0, 1, 0, {0.0, 0.0, 0.0}, 12345, 0};
 LB_values_gpu *host_values = NULL;
 LB_nodes_gpu *host_nodes = NULL;
 LB_particle_force_gpu *host_forces = NULL;
@@ -83,7 +84,7 @@ LB_extern_nodeforce_gpu *host_extern_nodeforces = NULL;
 /*-----------------------------------------------------------*/
 /** lattice boltzmann update gpu called from integrate.c
 */
-void lattice_boltzmann_update_gpu() {
+void lbgpu::lattice_boltzmann_update() {
 
   int factor = (int)round(lbpar_gpu.tau/time_step);
 
@@ -92,7 +93,7 @@ void lattice_boltzmann_update_gpu() {
   if (fluidstep>=factor) {
     fluidstep=0;
 
-    lb_integrate_GPU();
+    lbgpu::integrate_GPU();
 
     LB_TRACE (fprintf(stderr,"lb_integrate_GPU \n"));
 
@@ -101,7 +102,7 @@ void lattice_boltzmann_update_gpu() {
 
 /** Calculate particle lattice interactions called from forces.c
 */
-void lb_calc_particle_lattice_ia_gpu() {
+void lbgpu::calc_particle_lattice_ia() {
 
   if (transfer_momentum_gpu) {
     mpi_get_particles_lb(host_data);
@@ -113,7 +114,7 @@ void lb_calc_particle_lattice_ia_gpu() {
       }
 #endif
 
-    if(lbpar_gpu.number_of_particles) lb_particle_GPU(host_data);
+    if(lbpar_gpu.number_of_particles) lbgpu::particle_GPU(host_data);
 
     LB_TRACE (fprintf(stderr,"lb_calc_particle_lattice_ia_gpu \n"));
 
@@ -123,13 +124,13 @@ void lb_calc_particle_lattice_ia_gpu() {
 
 /**copy forces from gpu to cpu and call mpi routines to add forces to particles
 */
-void lb_send_forces_gpu(){
+void lbgpu::send_forces(){
 
   if (transfer_momentum_gpu) {
     if(this_node == 0){
-      if (lbpar_gpu.number_of_particles) lb_copy_forces_GPU(host_forces);
+      if (lbpar_gpu.number_of_particles) lbgpu::copy_forces_GPU(host_forces);
 
-      LB_TRACE (fprintf(stderr,"lb_send_forces_gpu \n"));
+      LB_TRACE (fprintf(stderr,"send_forces \n"));
 #if 0
         for (i=0;i<n_total_particles;i++) {
           fprintf(stderr, "%i particle forces , %f %f %f \n", i, host_forces[i].f[0], host_forces[i].f[1], host_forces[i].f[2]);
@@ -141,7 +142,7 @@ void lb_send_forces_gpu(){
 }
 
 /** (re-) allocation of the memory need for the particles (cpu part)*/
-void lb_realloc_particles_gpu(){
+void lbgpu::realloc_particles(){
 
   lbpar_gpu.number_of_particles = n_total_particles;
   LB_TRACE (printf("#particles realloc\t %u \n", lbpar_gpu.number_of_particles));
@@ -156,15 +157,15 @@ void lb_realloc_particles_gpu(){
   lbpar_gpu.your_seed = (unsigned int)i_random(max_ran);
 
   LB_TRACE (fprintf(stderr,"test your_seed %u \n", lbpar_gpu.your_seed));
-  lb_realloc_particle_GPU(&lbpar_gpu, &host_data);
+  lbgpu::realloc_particle_GPU(&lbpar_gpu, &host_data);
 }
 /** (Re-)initializes the fluid according to the given value of rho. */
-void lb_reinit_fluid_gpu() {
+void lbgpu::reinit_fluid() {
 
   //lbpar_gpu.your_seed = (unsigned int)i_random(max_ran);
-  lb_reinit_parameters_gpu();
+  lbgpu::reinit_parameters();
   if(lbpar_gpu.number_of_nodes != 0){
-    lb_reinit_GPU(&lbpar_gpu);
+    lbgpu::reinit_GPU(&lbpar_gpu);
     lbpar_gpu.reinit = 1;
   }
 
@@ -173,15 +174,51 @@ void lb_reinit_fluid_gpu() {
 
 /** Release the fluid. */
 /*not needed in Espresso but still not deleted*/
-void lb_release_gpu(){
+void lbgpu::release(){
 
   free(host_nodes);
   free(host_values);
   free(host_forces);
   free(host_data);
 }
+
+/** inint parameter strcut with default values */
+/**/
+void lbgpu::init_struct(){
+
+ lbpar_gpu.rho=1.0;
+ lbpar_gpu.mu=1.0;
+ lbpar_gpu.viscosity=1.0;
+ lbpar_gpu.gamma_shear=0.0;
+ lbpar_gpu.gamma_bulk=0.0;
+ lbpar_gpu.gamma_odd=0.0;
+ lbpar_gpu.gamma_even=0.0;
+ lbpar_gpu.agrid=1.0;
+ lbpar_gpu.tau=0.01;
+ lbpar_gpu.friction=5.0;
+ lbpar_gpu.time_step=0.01;
+ lbpar_gpu.lb_coupl_pref=0.0;
+ lbpar_gpu.lb_coupl_pref2=0.0;
+ lbpar_gpu.bulk_viscosity=0.0;
+ lbpar_gpu.dim_x=0;
+ lbpar_gpu.dim_y=0;
+ lbpar_gpu.dim_z=0;
+ //for(int i=0;i<3;++i)
+ //  lbpar_gpu.local_box_l[i]=0.0;
+ lbpar_gpu.gpu_number=-1;
+ lbpar_gpu.number_of_gpus=-1;
+ lbpar_gpu.cpus_per_gpu=-1;
+ lbpar_gpu.gpus_per_cpu=-1;
+ lbpar_gpu.number_of_nodes=0;
+ lbpar_gpu.number_of_particles=0;
+ lbpar_gpu.fluct=0;
+ lbpar_gpu.calc_val=1;
+ lbpar_gpu.external_force=0;
+ for(int i=0;i<3;++i) *(lbpar_gpu.ext_force+i) = 0;
+}
+
 /** (Re-)initializes the fluid. */
-void lb_reinit_parameters_gpu() {
+void lbgpu::reinit_parameters() {
 
   lbpar_gpu.mu = 0.0;
   lbpar_gpu.time_step = (float)time_step;
@@ -224,21 +261,21 @@ void lb_reinit_parameters_gpu() {
   }
 	LB_TRACE (fprintf(stderr,"lb_reinit_prarameters_gpu \n"));
 
-  reinit_parameters_GPU(&lbpar_gpu);
+  lbgpu::reinit_parameters_GPU(&lbpar_gpu);
 }
 
 /** Performs a full initialization of
  *  the Lattice Boltzmann system. All derived parameters
  *  and the fluid are reset to their default values. */
-void lb_init_gpu() {
+void lbgpu::init() {
 
   LB_TRACE(printf("Begin initialzing fluid on GPU\n"));
   /** set parameters for transfer to gpu */
-  lb_reinit_parameters_gpu();
+  lbgpu::reinit_parameters();
 
-  lb_realloc_particles_gpu();
+  lbgpu::realloc_particles();
 	
-  lb_init_GPU(&lbpar_gpu);
+  lbgpu::init_GPU(&lbpar_gpu);
 
   LB_TRACE(printf("Initialzing fluid on GPU successful\n"));
 }
@@ -250,6 +287,10 @@ void lb_init_gpu() {
 /***********************************************************************/
 
 /*************** REQ_GETPARTS ************/
+/**
+ * @params host_data struct storing all needed particle data (Output)
+ *
+ * */
 static void mpi_get_particles_lb(LB_particle_gpu *host_data)
 {
   int n_part;
@@ -453,7 +494,7 @@ static void mpi_send_forces_slave_lb(){
 }
 /*@}*/
 
-int lb_lbnode_set_extforce_GPU(int ind[3], double f[3])
+int lbgpu::lbnode_set_extforce_GPU(int ind[3], double f[3])
 {
   if ( ind[0] < 0 || ind[0] >=  lbpar_gpu.dim_x ||
        ind[1] < 0 || ind[1] >= lbpar_gpu.dim_y ||
@@ -475,7 +516,7 @@ int lb_lbnode_set_extforce_GPU(int ind[3], double f[3])
   
   if(lbpar_gpu.external_force == 0)lbpar_gpu.external_force = 1;
 
-  lb_init_extern_nodeforces_GPU(n_extern_nodeforces, host_extern_nodeforces, &lbpar_gpu);
+  lbgpu::init_extern_nodeforces_GPU(n_extern_nodeforces, host_extern_nodeforces, &lbpar_gpu);
 
   return ES_OK;
 }

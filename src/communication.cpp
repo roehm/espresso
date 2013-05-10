@@ -40,6 +40,7 @@
 #include "random.hpp"
 #include "lj.hpp"
 #include "lb.hpp"
+#include "lbgpu.hpp"
 #include "lb-boundaries.hpp"
 #include "morse.hpp"
 #include "buckingham.hpp"
@@ -119,6 +120,7 @@ typedef void (SlaveCallback)(int node, int param);
   CB(mpi_send_exclusion_slave) \
 /*  CB(mpi_morse_cap_forces_slave) */ \
   CB(mpi_bcast_lb_params_slave) \
+  CB(mpi_bcast_lbgpu_params_slave) \
   CB(mpi_send_dip_slave) \
   CB(mpi_send_dipm_slave) \
   CB(mpi_send_fluid_slave) \
@@ -2368,7 +2370,6 @@ void mpi_sync_topo_part_info_slave(int node,int parm ) {
 void mpi_bcast_lb_params(int field) {
 #ifdef LB
   mpi_call(mpi_bcast_lb_params_slave, -1, field);
-  mpi_bcast_lb_params_slave(-1, field);
 #endif
 }
 
@@ -2376,6 +2377,38 @@ void mpi_bcast_lb_params_slave(int node, int field) {
 #ifdef LB
   MPI_Bcast(&lbpar, sizeof(LB_Parameters), MPI_BYTE, 0, comm_cart);
   on_lb_params_change(field);
+#endif
+}
+
+/******************* REQ_BCAST_LBGPU_PAR ********************/
+
+void mpi_bcast_lbgpu_params(int field) {
+#ifdef LB_GPU
+  mpi_call(mpi_bcast_lbgpu_params_slave, -1, field);
+#endif
+}
+
+void mpi_bcast_lbgpu_params_slave(int node, int field) {
+#ifdef LB_GPU
+  MPI_Bcast(&lbpar_gpu, sizeof(LB_parameters_gpu), MPI_BYTE, 0, comm_cart);
+  lbgpu::params_change(field);
+#endif
+}
+
+/******************* REQ_BCAST_LBGPU_PAR ********************/
+
+void mpi_bcast_lbgpu_devices_slave(int* dev, int count) {
+#ifdef LB_GPU
+  MPI_Bcast(&count, 1, MPI_INT, 0, comm_cart);
+  MPI_Bcast(dev, count*sizeof(int), MPI_BYTE, 0, comm_cart);
+#endif
+}
+
+void mpi_bcast_lbgpu_devices(int* dev, int count) {
+#ifdef LB_GPU
+  mpi_bcast_lbgpu_devices_slave(dev, count);
+  printf("masternode %i\n", this_node);
+  lbgpu::reinit_plan(dev, count);
 #endif
 }
 

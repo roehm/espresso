@@ -28,6 +28,7 @@
 #include "constraint.hpp"
 #include "lb-boundaries.hpp"
 #include "lb.hpp"
+#include "lbgpu.hpp"
 #include "interaction_data.hpp"
 #include "communication.hpp"
 
@@ -156,7 +157,7 @@ void lb_init_boundaries() {
       boundary_velocity[3*n+2]=lb_boundaries[n].velocity[2];
     }
     if (n_lb_boundaries)
-      lb_init_boundaries_GPU(n_lb_boundaries, number_of_boundnodes, host_boundary_node_list, host_boundary_index_list, boundary_velocity);
+      lbgpu::init_boundaries_GPU(n_lb_boundaries, number_of_boundnodes, host_boundary_node_list, host_boundary_index_list, boundary_velocity);
     free(boundary_velocity);
     free(host_boundary_node_list);
     free(host_boundary_index_list);
@@ -235,19 +236,19 @@ void lb_init_boundaries() {
 }
 
 int lbboundary_get_force(int no, double* f) {
-#ifdef LB_BOUNDARIES
-  double* forces = (double*) malloc(3*n_lb_boundaries*sizeof(double));
-  
+    double* forces = (double*) malloc(3*n_lb_boundaries*sizeof(double));
   if (lattice_switch & LATTICE_LB_GPU) {
 #ifdef LB_BOUNDARIES_GPU
-    lb_gpu_get_boundary_forces(forces);
+    lbgpu::get_boundary_forces_GPU(forces);
 #else 
     return ES_ERROR;
 #endif
   } else { 
+#ifdef LB_BOUNDARIES
     mpi_gather_stats(8, forces, NULL, NULL, NULL);
   }
-  
+#endif
+#if defined (LB_BOUNDARIES) || defined (LB_BOUNDARIES_GPU)
   f[0]=forces[3*no+0]/lbpar.tau/lbpar.tau*lbpar.agrid;
   f[1]=forces[3*no+1]/lbpar.tau/lbpar.tau*lbpar.agrid;
   f[2]=forces[3*no+2]/lbpar.tau/lbpar.tau*lbpar.agrid;

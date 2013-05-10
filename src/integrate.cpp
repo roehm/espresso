@@ -362,7 +362,7 @@ void integrate_vv(int n_steps)
 
 #ifdef LB_GPU
     if(this_node == 0){
-      if (lattice_switch & LATTICE_LB_GPU) lattice_boltzmann_update_gpu();
+      if (lattice_switch & LATTICE_LB_GPU) lbgpu::lattice_boltzmann_update();
     }
 #endif
 

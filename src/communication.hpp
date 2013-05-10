@@ -471,6 +471,17 @@ int mpi_sync_topo_part_info(void);
  */
 void mpi_bcast_lb_params(int field);
 
+/** Issue REQ_BCAST_LBGPU_PAR: Broadcast a parameter for Lattice Boltzmann GPU.
+ * @param field References the parameter field to be broadcasted. The references are defined in \ref lb.h "lb.h"
+ */
+void mpi_bcast_lb_params(int field);
+
+/** Issue REQ_BCAST_LBPAR: Broadcast a parameter for Lattice Boltzmann.
+ * @param dev pointer to device list
+ * @param count number of GPU devices
+ */
+void mpi_bcast_lbgpu_devices(int* dev, int count);
+
 /** Issue REQ_SEND_FLUID: Send a single lattice site to a processor.
  * @param node  processor to send to
  * @param index index of the lattice site

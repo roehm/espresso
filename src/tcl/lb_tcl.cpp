@@ -31,6 +31,7 @@
 #include "parser.hpp"
 
 #ifdef LB_GPU
+//TODO make this function consistent to other lb parser stuff or remove it
 static int lbnode_parse_set(Tcl_Interp *interp, int argc, char **argv, int *ind) {
   double f[3];
   
@@ -58,7 +59,7 @@ static int lbnode_parse_set(Tcl_Interp *interp, int argc, char **argv, int *ind)
     }
   }
 
-  if (lb_lbnode_set_extforce_GPU(ind, f) == ES_ERROR) {
+  if (lbgpu::lbnode_set_extforce_GPU(ind, f) == ES_ERROR) {
     Tcl_AppendResult(interp, "position is not in the LB lattice", (char *)NULL);
     return TCL_ERROR;
   }
@@ -617,6 +618,65 @@ int tclcommand_lbfluid_print_interpolated_velocity(Tcl_Interp *interp, int argc,
     Tcl_AppendResult(interp, buffer, " ", (char *)NULL);
   }
   return TCL_OK;
+#else
+  Tcl_AppendResult(interp, "LB is not compiled in!", NULL);
+  return TCL_ERROR;
+#endif
+}
+
+int tclcommand_lbdevice(ClientData data, Tcl_Interp *interp, int argc, char **argv) {
+#ifdef LB_GPU
+  argc--; argv++;
+  if (lattice_switch & LATTICE_LB_GPU) {
+    int* devices;
+    devices = (int*)malloc(sizeof(int));
+    int dev = 0;
+    int count = 0;
+    int setflag = 0;
+    if (argc<1) {
+      printf("usage: lbdevice set $device1 $device2 ...\n");
+      printf("usage: lbdevice get\n");
+      return TCL_ERROR;
+    }
+    else if (ARG0_IS_S("set")) {
+        argc--; argv++;
+      setflag = 1;
+      //printf("lbdevice set\n");
+  	  while (argc > 0) {
+        if(!ARG_IS_I(0, dev)){
+          printf("usage: lbdevice set $device1 $device2 ...\n");
+          return TCL_ERROR;
+        }
+        devices[count] = dev;
+      printf("count %i, dev %i\n", count, devices[count]);
+        count++;
+        devices = (int*)realloc(devices, (count+1)*sizeof(int));
+        argc--; argv++;
+      }
+      mpi_bcast_lbgpu_devices(devices, count);
+    }
+    else if (ARG0_IS_S("get")) {
+      printf("setflag %i\n", setflag);
+      if(setflag){
+        printf("lbdevice get\n");
+        argc--; argv++;
+        char buffer[(count+1)*TCL_INTEGER_SPACE];
+        count = lbgpu::get_devices(devices);
+        for (int i = 0; i <= count; ++i) {
+          Tcl_PrintDouble(interp, devices[i], buffer);
+          Tcl_AppendResult(interp, buffer, " ", (char *)NULL);
+        }
+      }else{
+          printf("lb devices not explicitly set: all GPUs used by default\n");
+          printf("get available GPUs with <cuda getdevice> or use <lbdevice set $device1 $device2 ...>\n");
+          return TCL_ERROR;
+      }
+    }
+    return TCL_OK;
+  }else{
+    Tcl_AppendResult(interp, "lbdevice is only available for GPU code!", NULL);
+    return TCL_ERROR;
+  }
 #else
   Tcl_AppendResult(interp, "LB is not compiled in!", NULL);
   return TCL_ERROR;

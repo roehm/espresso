@@ -30,8 +30,9 @@ int tclcommand_lbnode(ClientData data, Tcl_Interp *interp, int argc, char **argv
 
 int tclcommand_lbfluid_print_interpolated_velocity(Tcl_Interp *interp, int argc, char **argv);
 
-int tclcommand_lbnode_extforce_gpu(ClientData data, Tcl_Interp *interp, int argc, char **argv);
+int tclcommand_lbdevice(ClientData data, Tcl_Interp *interp, int argc, char **argv);
 
+int tclcommand_lbnode_extforce_gpu(ClientData data, Tcl_Interp *interp, int argc, char **argv);
 /** lb boundary command. From \ref lb-boundaries_tcl.c */
 extern int tclcommand_lbboundary(ClientData _data, Tcl_Interp *interp, int argc, char **argv);
 

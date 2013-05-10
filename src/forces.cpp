@@ -69,7 +69,7 @@ void force_calc()
 {
 
 #ifdef LB_GPU
-  if (lattice_switch & LATTICE_LB_GPU) lb_calc_particle_lattice_ia_gpu();
+  if (lattice_switch & LATTICE_LB_GPU) lbgpu::calc_particle_lattice_ia();
 #endif
 
 #ifdef ELECTROSTATICS
@@ -114,7 +114,7 @@ void force_calc()
 #endif
 
 #ifdef LB_GPU
-  if (lattice_switch & LATTICE_LB_GPU) lb_send_forces_gpu();
+  if (lattice_switch & LATTICE_LB_GPU) lbgpu::send_forces();
 #endif
 
 /* this must be the last force to be calculated (Mehmet)*/

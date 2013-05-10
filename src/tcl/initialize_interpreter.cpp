@@ -169,6 +169,7 @@ static void register_tcl_commands(Tcl_Interp* interp) {
 
   REGISTER_COMMAND("lbfluid", tclcommand_lbfluid);
   REGISTER_COMMAND("lbnode", tclcommand_lbnode);
+  REGISTER_COMMAND("lbdevice", tclcommand_lbdevice);
   REGISTER_COMMAND("lbboundary", tclcommand_lbboundary);
   /* here */
   REGISTER_COMMAND("replacestdchannel", tclcommand_replacestdchannel);
@@ -194,12 +195,11 @@ static void register_tcl_commands(Tcl_Interp* interp) {
   /* in metadynamics.c */
   REGISTER_COMMAND("metadynamics", tclcommand_metadynamics);
 #endif
-#ifdef LB_GPU
-  /* in lbgpu_cfile.c */
-  REGISTER_COMMAND("lbnode_extforce", tclcommand_lbnode_extforce_gpu);
-#endif
 #ifdef CUDA
   REGISTER_COMMAND("cuda", tclcommand_cuda);
+#endif
+#ifdef LB_GPU
+  REGISTER_COMMAND("lbext_force", tclcommand_lbnode_extforce_gpu);
 #endif
   /* from collision.c */
 #ifdef COLLISION_DETECTION

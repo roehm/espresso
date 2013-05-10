@@ -61,6 +61,7 @@
 #include "statistics_observable.hpp"
 #include "statistics_correlation.hpp"
 #include "lb-boundaries.hpp"
+#include "lbgpu.hpp"
 #include "ghmc.hpp"
 #include "domain_decomposition.hpp"
 
@@ -124,9 +125,11 @@ void on_program_start() {
 #endif
 
 #ifdef LB_GPU
-  if(this_node == 0){
+  lbgpu::init_struct();
+  lbgpu::setup_plan();
+  //if(this_node == 0){
     //lb_pre_init_gpu();
-  }
+  //}
 #endif
 #ifdef LB
   lb_pre_init();
@@ -236,7 +239,7 @@ void on_integration_start()
   }
 #endif
 #ifdef LB_GPU
-if(this_node == 0){
+//if(this_node == 0){
   if(lattice_switch & LATTICE_LB_GPU) {
     if (lbpar_gpu.agrid < 0.0) {
       errtext = runtime_error(128);
@@ -255,11 +258,11 @@ if(this_node == 0){
       ERROR_SPRINTF(errtext,"{101 Lattice Boltzmann fluid viscosity not set} ");
     }
     if (lb_reinit_particles_gpu) {
-	lb_realloc_particles_gpu();
-	lb_reinit_particles_gpu = 0;
+      lbgpu::realloc_particles();
+      lb_reinit_particles_gpu = 0;
     }
   }
-}
+//}
 
 #endif
 
@@ -529,6 +532,17 @@ void on_boxl_change() {
 #endif
   }
 #endif
+
+#ifdef LB_GPU
+  //if(this_node == 0){
+    if(lattice_switch & LATTICE_LB_GPU) {
+       lbgpu::init();
+#ifdef LB_BOUNDARIES_GPU
+       lb_init_boundaries();
+#endif
+    }
+ //}
+#endif
 }
 
 void on_cell_structure_change()
@@ -600,11 +614,11 @@ void on_temperature_change()
   }
 #endif
 #ifdef LB_GPU
-  if(this_node == 0) {
+  //if(this_node == 0) {
     if (lattice_switch & LATTICE_LB_GPU) {
-      lb_reinit_parameters_gpu();
+      lbgpu::reinit_parameters();
     }
-  }
+  //}
 #endif
 }
 
@@ -642,11 +656,15 @@ void on_parameter_change(int field)
     break;
   case FIELD_TIMESTEP:
 #ifdef LB_GPU
-    if(this_node == 0) {
+    if(this_node == 0 && lbpar_gpu.number_of_gpus == 1) {
       if (lattice_switch & LATTICE_LB_GPU) {
-        lb_reinit_parameters_gpu();
+        lbgpu::reinit_parameters();
       }
-    }  
+    }else{
+      if (lattice_switch & LATTICE_LB_GPU) {
+        lbgpu::reinit_parameters();
+      }
+    }
 #endif    
 #ifdef LB
     if (lattice_switch & LATTICE_LB) {
@@ -697,21 +715,21 @@ void on_lb_params_change(int field) {
 #endif
 
 #if defined (LB) || defined (LB_GPU)
-void on_lb_params_change_gpu(int field) {
-  EVENT_TRACE(fprintf(stderr, "%d: on_lb_params_change_gpu\n", this_node));
+void lbgpu::params_change(int field) {
+  EVENT_TRACE(fprintf(stderr, "%d: lbgpu::params_change\n", this_node));
 
 #ifdef LB_GPU
   if (field == LBPAR_AGRID) {
-    lb_init_gpu();
+    lbgpu::init();
 #ifdef LB_BOUNDARIES_GPU
     lb_init_boundaries();
 #endif
   }
   if (field == LBPAR_DENSITY) {
-    lb_reinit_fluid_gpu();
+    lbgpu::reinit_fluid();
   }
 
-  lb_reinit_parameters_gpu();
+  lbgpu::reinit_parameters();
 #endif
 }
 #endif
