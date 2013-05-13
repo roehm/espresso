@@ -628,8 +628,8 @@ int tclcommand_lbdevice(ClientData data, Tcl_Interp *interp, int argc, char **ar
 #ifdef LB_GPU
   argc--; argv++;
   if (lattice_switch & LATTICE_LB_GPU) {
-    int* devices;
-    devices = (int*)malloc(sizeof(int));
+    //int* devices;
+    lbpar_gpu.devices = (int*)malloc(sizeof(int));
     int dev = 0;
     int count = 0;
     int setflag = 0;
@@ -647,13 +647,14 @@ int tclcommand_lbdevice(ClientData data, Tcl_Interp *interp, int argc, char **ar
           printf("usage: lbdevice set $device1 $device2 ...\n");
           return TCL_ERROR;
         }
-        devices[count] = dev;
-      printf("count %i, dev %i\n", count, devices[count]);
+        lbpar_gpu.devices = (int*)realloc(lbpar_gpu.devices, (count+1)*sizeof(int));
+        lbpar_gpu.devices[count] = dev;
+      //printf("count %i, dev %i\n", count, lbpar_gpu.devices[count]);
         count++;
-        devices = (int*)realloc(devices, (count+1)*sizeof(int));
         argc--; argv++;
       }
-      mpi_bcast_lbgpu_devices(devices, count);
+      //lbpar_gpu.number_of_gpus = count;
+      //mpi_bcast_lbgpu_params(0);
     }
     else if (ARG0_IS_S("get")) {
       printf("setflag %i\n", setflag);
@@ -661,9 +662,9 @@ int tclcommand_lbdevice(ClientData data, Tcl_Interp *interp, int argc, char **ar
         printf("lbdevice get\n");
         argc--; argv++;
         char buffer[(count+1)*TCL_INTEGER_SPACE];
-        count = lbgpu::get_devices(devices);
+        count = lbgpu::get_devices(lbpar_gpu.devices);
         for (int i = 0; i <= count; ++i) {
-          Tcl_PrintDouble(interp, devices[i], buffer);
+          Tcl_PrintDouble(interp, lbpar_gpu.devices[i], buffer);
           Tcl_AppendResult(interp, buffer, " ", (char *)NULL);
         }
       }else{

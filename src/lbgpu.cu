@@ -96,6 +96,7 @@ cudaStream_t *stream;
 cudaError_t err;
 cudaError_t _err;
 
+int plan_initflag = 0;
 /*********************************************************/
 /** \name device funktions called by kernel funktions */
 /*********************************************************/
@@ -3136,7 +3137,7 @@ void hw::check_dev(int dev){
 */
 void hw::get_dev_count(){
   
-  cudaGetDeviceCount(&lbpar_gpu.number_of_gpus);
+  cuda_check_errors(cudaGetDeviceCount(&lbpar_gpu.number_of_gpus));
 
 }
 /**get hardware info of GPUs
@@ -3144,7 +3145,7 @@ void hw::get_dev_count(){
 */
 void hw::set_dev(int dev){
 
-  cudaSetDevice(dev); 
+  cuda_check_errors(cudaSetDevice(dev)); 
   //printf("host no. %i set gpu no. %i \n", this_node, dev);
 
 }
@@ -3169,15 +3170,18 @@ int lbgpu::get_devices(int* dev){
   return count;
 }
 
-void lbgpu::reinit_plan(int* dev, int count){
+void lbgpu::reinit_plan(){
 
 //only one gpu per cpu node so far!!!
   lbpar_gpu.gpus_per_cpu = 1;
-  lbpar_gpu.number_of_gpus = count;
+  if(plan_initflag == 1){
+    free(plan);
+  }
+  //lbpar_gpu.number_of_gpus = count;
 //check if number of nodes suits to number of gpus
-  if(count == 1){
+  if(lbpar_gpu.number_of_gpus == 1){
     if(this_node == 0){
-      lbpar_gpu.gpu_number = dev[0];
+      lbpar_gpu.gpu_number = lbpar_gpu.devices[0];
       //malloc plan struct for each gpu per cpu node 
       plan = (plan_gpu*)malloc(lbpar_gpu.gpus_per_cpu*sizeof(plan_gpu));
       gpu_n = lbpar_gpu.gpus_per_cpu;
@@ -3194,14 +3198,17 @@ void lbgpu::reinit_plan(int* dev, int count){
 //   so far one needs at least #n mpi process to use #n gpus
 //  distribute gpu to cpu nodes  
     //lbpar_gpu.gpu_number = this_node%lbpar_gpu.number_of_gpus;
-    lbpar_gpu.gpu_number = dev[this_node%lbpar_gpu.number_of_gpus];
+    //printf("thisnode %i devs %i %i\n",this_node, lbpar_gpu.devices[0], lbpar_gpu.devices[1]);
+    lbpar_gpu.gpu_number = lbpar_gpu.devices[this_node%lbpar_gpu.number_of_gpus];
+    //printf("thisnode %i gpu_number %i\n",this_node, lbpar_gpu.gpu_number);
     //printf("par gpu dimx address %p \n", &lbpar_gpu.dim_x);
     //printf("GPU number: %i -> this_node %i\n", lbpar_gpu.gpu_number, this_node);
     hw::set_dev(lbpar_gpu.gpu_number);
     //malloc plan struct for each gpu per cpu node 
     plan = (plan_gpu*)malloc(lbpar_gpu.gpus_per_cpu*sizeof(plan_gpu));
     gpu_n = lbpar_gpu.gpus_per_cpu;
-    printf("thisnode %i gpun %i\n",this_node, gpu_n);
+    plan_initflag = 1;
+    //printf("thisnode %i gpun %i\n",this_node, gpu_n);
     for(int g = 0; g < gpu_n; ++g){
       plan[g].initflag = 0;
     }
@@ -3473,12 +3480,12 @@ void lbgpu::cp_buffer_in_vd(){
 */
 void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu){
 
-  //printf("this_node: %i  local_box_l: %i, %i, %i \n", this_node, lbpar_gpu->local_box_l[0], lbpar_gpu->local_box_l[1], lbpar_gpu->local_box_l[2]);
+  printf("this_node: %i  local_box_l: %i, %i, %i \n", this_node, lbpar_gpu->local_box_l[0], lbpar_gpu->local_box_l[1], lbpar_gpu->local_box_l[2]);
   //plan = (plan_gpu*)malloc(lbpar_gpu->cpus_per_gpu*sizeof(plan_gpu));
   if (lbpar_gpu->number_of_gpus == 1) {
     //dims stay like they are, just calc number of nodes 
     lbpar_gpu->number_of_nodes = (unsigned) (lbpar_gpu->agrid*(lbpar_gpu->dim_x*lbpar_gpu->dim_y*lbpar_gpu->dim_z));
-    printf("num of gpus %i",lbpar_gpu->number_of_gpus);
+    printf("Using only on GPU");
   }else{
     //halo in all three directions
     lbpar_gpu->dim_x = lbpar_gpu->local_box_l[0] + 2;
@@ -3582,8 +3589,8 @@ void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu){
     //set a nodes as current nodes due to equilibration values stored in there
     plan[g].current_nodes = &plan[g].nodes_a;
     //printf("current pointer %p\n", plan[g].current_nodes->vd);
-    //barrier for alle init kernels 
-    cudaThreadSynchronize();
+    ///barrier for alle init kernels 
+    cudaStreamSynchronize(stream[g]);
   }
 }
 /** reinitialization for the lb gpu fluid called from host
@@ -3799,7 +3806,7 @@ void lbgpu::copy_forces_GPU(LB_particle_force_gpu *host_forces){
     /** reset part forces with zero*/
     KERNELCALL(reset_particle_force, dim_grid_particles, threads_per_block_particles, (plan[g].particle_force));
   	
-    cudaThreadSynchronize();
+    cudaStreamSynchronize(stream[g]);
   }
 }
 
@@ -4112,7 +4119,7 @@ void lbgpu::set_node_velocity_GPU(int single_nodeindex, float* host_velocity){
 */
 void lbgpu::reinit_parameters_GPU(LB_parameters_gpu *lbpar_gpu){
   //begin loop over devices g
-  //printf("parameter gpu_n %i\n", gpu_n);
+  printf("parameter gpu_n %i\n", gpu_n);
   for(int g = 0; g < gpu_n; ++g){
    //set device g
    cuda_check_errors(cudaSetDevice(lbpar_gpu->gpu_number));
@@ -4120,6 +4127,7 @@ void lbgpu::reinit_parameters_GPU(LB_parameters_gpu *lbpar_gpu){
    /**write parameters in const memory*/
    cuda_check_errors(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
   }
+  printf("node %i reinit parameter on gpu_n %i finished \n",this_node, lbpar_gpu->gpu_number);
 }
 #ifdef LB_BOUNDARIES_GPU
 void lbgpu::get_boundary_forces_GPU(double* forces) {
@@ -4140,7 +4148,7 @@ void lbgpu::get_boundary_forces_GPU(double* forces) {
 void lbgpu::integrate_GPU(){
   //begin loop over devices g
   //printf("integrate gpu_n %i\n", gpu_n);
-  //printf("gpu_number %i\n", lbpar_gpu.gpu_number);
+  printf("lb integrate gpu_number %i\n", lbpar_gpu.gpu_number);
   for(int g = 0; g < gpu_n; ++g){
     //set device g
     //cuda_check_errors(cudaSetDevice(g));

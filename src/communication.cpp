@@ -2392,23 +2392,20 @@ void mpi_bcast_lbgpu_params_slave(int node, int field) {
 #ifdef LB_GPU
   MPI_Bcast(&lbpar_gpu, sizeof(LB_parameters_gpu), MPI_BYTE, 0, comm_cart);
   lbgpu::params_change(field);
+  printf("node %i mpi bcast lbgpu params\n", this_node);
 #endif
 }
 
 /******************* REQ_BCAST_LBGPU_PAR ********************/
 
-void mpi_bcast_lbgpu_devices_slave(int* dev, int count) {
+void mpi_bcast_lbgpu_devices() {
 #ifdef LB_GPU
-  MPI_Bcast(&count, 1, MPI_INT, 0, comm_cart);
-  MPI_Bcast(dev, count*sizeof(int), MPI_BYTE, 0, comm_cart);
-#endif
-}
-
-void mpi_bcast_lbgpu_devices(int* dev, int count) {
-#ifdef LB_GPU
-  mpi_bcast_lbgpu_devices_slave(dev, count);
-  printf("masternode %i\n", this_node);
-  lbgpu::reinit_plan(dev, count);
+  MPI_Bcast(&lbpar_gpu.number_of_gpus, 1, MPI_INT, 0, comm_cart);
+  if(this_node != 0){
+    lbpar_gpu.devices = (int*)malloc(lbpar_gpu.number_of_gpus*sizeof(int));
+  }
+  MPI_Bcast(lbpar_gpu.devices, lbpar_gpu.number_of_gpus, MPI_INT, 0, comm_cart);
+    //printf("mpibcast this node %i dev %i %i\n", this_node, lbpar_gpu.devices[0],lbpar_gpu.devices[1]);
 #endif
 }
 

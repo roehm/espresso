@@ -131,6 +131,7 @@ struct LB_parameters_gpu
   int number_of_gpus;
   int cpus_per_gpu;
   int gpus_per_cpu;
+  int* devices;
 
   unsigned int number_of_nodes;
   unsigned number_of_halo_nodes[3];
@@ -398,7 +399,7 @@ namespace lbgpu {
    * */
   void init_struct();
   void setup_plan();
-  void reinit_plan(int* dev, int count);
+  void reinit_plan();
 
   /**multi-gpu functions
    * */

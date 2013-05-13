@@ -114,10 +114,10 @@ void lbgpu::calc_particle_lattice_ia() {
       }
 #endif
 
-    if(lbpar_gpu.number_of_particles) lbgpu::particle_GPU(host_data);
+      if(lbpar_gpu.number_of_particles){ lbgpu::particle_GPU(host_data);
 
-    LB_TRACE (fprintf(stderr,"lb_calc_particle_lattice_ia_gpu \n"));
-
+        LB_TRACE (fprintf(stderr,"lb_calc_particle_lattice_ia_gpu \n"));
+      }
     }
   }
 }
@@ -206,7 +206,7 @@ void lbgpu::init_struct(){
  //for(int i=0;i<3;++i)
  //  lbpar_gpu.local_box_l[i]=0.0;
  lbpar_gpu.gpu_number=-1;
- lbpar_gpu.number_of_gpus=-1;
+ lbpar_gpu.number_of_gpus=1;
  lbpar_gpu.cpus_per_gpu=-1;
  lbpar_gpu.gpus_per_cpu=-1;
  lbpar_gpu.number_of_nodes=0;
@@ -259,8 +259,10 @@ void lbgpu::reinit_parameters() {
     lbpar_gpu.lb_coupl_pref = 0.0;
     lbpar_gpu.lb_coupl_pref2 = 0.0;
   }
-	LB_TRACE (fprintf(stderr,"lb_reinit_prarameters_gpu \n"));
-
+  lbpar_gpu.local_box_l[0] = (unsigned) local_box_l[0];
+  lbpar_gpu.local_box_l[1] = (unsigned) local_box_l[1];
+  lbpar_gpu.local_box_l[2] = (unsigned) local_box_l[2];
+	LB_TRACE (fprintf(stderr,"node %i lb_reinit_parameters_gpu \n", this_node));
   lbgpu::reinit_parameters_GPU(&lbpar_gpu);
 }
 

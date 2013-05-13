@@ -257,9 +257,14 @@ void on_integration_start()
       errtext = runtime_error(128);
       ERROR_SPRINTF(errtext,"{101 Lattice Boltzmann fluid viscosity not set} ");
     }
-    if (lb_reinit_particles_gpu) {
-      lbgpu::realloc_particles();
-      lb_reinit_particles_gpu = 0;
+    //TODO multi gpu particle stuff
+    //if (lb_reinit_particles_gpu) {
+    //  lbgpu::realloc_particles();
+    //  lb_reinit_particles_gpu = 0;
+    //}
+    if(lbpar_gpu.number_of_gpus > 1) {
+      mpi_bcast_lbgpu_devices();
+      lbgpu::reinit_plan();
     }
   }
 //}
@@ -538,7 +543,8 @@ void on_boxl_change() {
     if(lattice_switch & LATTICE_LB_GPU) {
        lbgpu::init();
 #ifdef LB_BOUNDARIES_GPU
-       lb_init_boundaries();
+       //TODO multi GPU boundary stuff
+       //lb_init_boundaries();
 #endif
     }
  //}
@@ -662,6 +668,8 @@ void on_parameter_change(int field)
       }
     }else{
       if (lattice_switch & LATTICE_LB_GPU) {
+        mpi_bcast_lbgpu_devices();
+        lbgpu::reinit_plan();
         lbgpu::reinit_parameters();
       }
     }
@@ -700,7 +708,7 @@ void on_parameter_change(int field)
 
 #ifdef LB
 void on_lb_params_change(int field) {
-  EVENT_TRACE(fprintf(stderr, "%d: on_lb_params_change\n", this_node));
+  LB_TRACE(fprintf(stderr, "%d: on_lb_params_change\n", this_node));
 
   if (field == LBPAR_AGRID) {
     lb_init();
@@ -714,11 +722,10 @@ void on_lb_params_change(int field) {
 }
 #endif
 
-#if defined (LB) || defined (LB_GPU)
-void lbgpu::params_change(int field) {
-  EVENT_TRACE(fprintf(stderr, "%d: lbgpu::params_change\n", this_node));
-
 #ifdef LB_GPU
+void lbgpu::params_change(int field) {
+  LB_TRACE(fprintf(stderr, "%d: lbgpu::params_change\n", this_node));
+
   if (field == LBPAR_AGRID) {
     lbgpu::init();
 #ifdef LB_BOUNDARIES_GPU
@@ -730,7 +737,6 @@ void lbgpu::params_change(int field) {
   }
 
   lbgpu::reinit_parameters();
-#endif
 }
 #endif
 
