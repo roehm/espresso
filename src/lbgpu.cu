@@ -3491,19 +3491,19 @@ void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu){
   LB_TRACE(printf("this_node: %i  local_box_l: %lf, %lf, %lf \n", this_node, local_box_l[0], local_box_l[1], local_box_l[2]));
   if (lbdevicepar_gpu->number_of_gpus == 1) {
     //dims stay like they are, just calc number of nodes 
-    lbpar_gpu->number_of_nodes = (unsigned) (lbpar_gpu->agrid*(lbpar_gpu->dim_x*lbpar_gpu->dim_y*lbpar_gpu->dim_z));
-    printf("Using only on GPU");
+    lbpar_gpu->number_of_nodes = (unsigned)(lbpar_gpu->dim_x*lbpar_gpu->dim_y*lbpar_gpu->dim_z);
+    printf("Using only one GPU");
   }else{
     //halo in all three directions
-    lbpar_gpu->dim_x = (unsigned)local_box_l[0] + 2;
-    lbpar_gpu->dim_y = (unsigned)local_box_l[1] + 2;
-    lbpar_gpu->dim_z = (unsigned)local_box_l[2] + 2;
-    printf("dims: %i, %i, %i agrid %f\n", lbpar_gpu->dim_x, lbpar_gpu->dim_y, lbpar_gpu->dim_z, lbpar_gpu->agrid);
-    lbpar_gpu->number_of_nodes = (unsigned) ((lbpar_gpu->dim_x*lbpar_gpu->dim_y*lbpar_gpu->dim_z)/lbpar_gpu->agrid);
-    printf("initgpu numberofnodes %i \n", lbpar_gpu->number_of_nodes);
-    lbpar_gpu->number_of_halo_nodes[0] = (lbpar_gpu->dim_y*lbpar_gpu->dim_z)/lbpar_gpu->agrid;
-    lbpar_gpu->number_of_halo_nodes[1] = (lbpar_gpu->dim_x*lbpar_gpu->dim_z)/lbpar_gpu->agrid;
-    lbpar_gpu->number_of_halo_nodes[2] = (lbpar_gpu->dim_x*lbpar_gpu->dim_y)/lbpar_gpu->agrid;
+    lbpar_gpu->dim_x = (unsigned)floor(local_box_l[0]/lbpar_gpu->agrid) + 2;
+    lbpar_gpu->dim_y = (unsigned)floor(local_box_l[1]/lbpar_gpu->agrid) + 2;
+    lbpar_gpu->dim_z = (unsigned)floor(local_box_l[2]/lbpar_gpu->agrid) + 2;
+    printf("dims: %u, %u, %u agrid %f\n", lbpar_gpu->dim_x, lbpar_gpu->dim_y, lbpar_gpu->dim_z, lbpar_gpu->agrid);
+    lbpar_gpu->number_of_nodes = (unsigned) (lbpar_gpu->dim_x*lbpar_gpu->dim_y*lbpar_gpu->dim_z);
+    printf("init gpu number_of_nodes %i \n", lbpar_gpu->number_of_nodes);
+    lbpar_gpu->number_of_halo_nodes[0] = (lbpar_gpu->dim_y*lbpar_gpu->dim_z);
+    lbpar_gpu->number_of_halo_nodes[1] = (lbpar_gpu->dim_x*lbpar_gpu->dim_z);
+    lbpar_gpu->number_of_halo_nodes[2] = (lbpar_gpu->dim_x*lbpar_gpu->dim_y);
     //printf("numberof_halonodes %i %i %i\n", lbpar_gpu->number_of_halo_nodes[0], lbpar_gpu->number_of_halo_nodes[1], lbpar_gpu->number_of_halo_nodes[2]);
   //
   }
@@ -3515,9 +3515,6 @@ void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu){
   stream = (cudaStream_t*)malloc(gpu_n*sizeof(cudaStream_t));
   //if(lbpar_gpu->number_of_nodes)
   //begin loop over devices i
-  cuda_check_errors(cudaDeviceReset());
-  cuda_check_errors(cudaSetDeviceFlags(cudaDeviceMapHost));
-  //printf("gpu_n %i\n", gpu_n);
   //multi gpu per mpi nodes stuff
   for(int g = 0; g < gpu_n; ++g){
     //set device i
@@ -3535,6 +3532,8 @@ void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu){
       cudaFree(plan[g].send_buffer_d);
       cudaFree(plan[g].recv_buffer_d);
     }
+    cuda_check_errors(cudaDeviceReset());
+    cuda_check_errors(cudaSetDeviceFlags(cudaDeviceMapHost));
 #endif
     cuda_check_errors(cudaMalloc((void**)&plan[g].device_values, size_of_values));
 #ifndef SHANCHEN

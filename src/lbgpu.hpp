@@ -112,6 +112,9 @@ struct LB_parameters_gpu
   unsigned int dim_y;
   unsigned int dim_z;
   unsigned int number_of_nodes;
+  unsigned int global_dim_x;
+  unsigned int global_dim_y;
+  unsigned int global_dim_z;
   unsigned int number_of_global_nodes;
   unsigned number_of_halo_nodes[3];
 

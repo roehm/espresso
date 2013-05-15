@@ -93,13 +93,28 @@ void lb_init_boundaries() {
     int *host_boundary_index_list= (int*)malloc(sizeof(int));
     size_t size_of_index;
     int boundary_number; // the number the boundary will actually belong to.
-
-    for(z=0; z<lbpar_gpu.dim_z; z++) {
-      for(y=0; y<lbpar_gpu.dim_y; y++) {
-        for (x=0; x<lbpar_gpu.dim_x; x++) {	    
-          pos[0] = (x+0.5)*lbpar_gpu.agrid;
-          pos[1] = (y+0.5)*lbpar_gpu.agrid;
-          pos[2] = (z+0.5)*lbpar_gpu.agrid;
+//**multi_gpu stuff*/
+    int node_domain_position[3], offset[3];
+    int the_boundary=-1;
+    map_node_array(this_node, node_domain_position);
+//needs local dims
+    offset[0] = node_domain_position[0]*lbpar_gpu.dim_x;
+    offset[1] = node_domain_position[1]*lbpar_gpu.dim_y;
+    offset[2] = node_domain_position[2]*lbpar_gpu.dim_z;
+/*needs global dims        */
+    for(z=0; z<lbpar_gpu.global_dim_z; z++) {
+      for(y=0; y<lbpar_gpu.global_dim_y; y++) {
+        for (x=0; x<lbpar_gpu.global_dim_x; x++) {	    
+          if(lbdevicepar_gpu.number_of_gpus > 1){
+            //minus due to existence of halo 
+            pos[0] = (offset[0]+(x-0.5))*lbpar_gpu.agrid;
+            pos[1] = (offset[1]+(y-0.5))*lbpar_gpu.agrid;
+            pos[2] = (offset[2]+(z-0.5))*lbpar_gpu.agrid;
+          }else{
+            pos[0] = (x+0.5)*lbpar_gpu.agrid;
+            pos[1] = (y+0.5)*lbpar_gpu.agrid;
+            pos[2] = (z+0.5)*lbpar_gpu.agrid;
+          }
              
           dist = 1e99;
 
@@ -137,25 +152,31 @@ void lb_init_boundaries() {
           }
           
           if (dist <= 0 && n_lb_boundaries > 0) {
+            if(lbdevicepar_gpu.number_of_gpus > 1){
+            //calc local x,y,z from global x,y,z
+              x -= offset[0];
+              y -= offset[0];
+              z -= offset[0];
+            }
             size_of_index = (number_of_boundnodes+1)*sizeof(int);
             host_boundary_node_list = (int*)realloc(host_boundary_node_list, size_of_index);
             host_boundary_index_list = (int*)realloc(host_boundary_index_list, size_of_index);
             host_boundary_node_list[number_of_boundnodes] = x + lbpar_gpu.dim_x*y + lbpar_gpu.dim_x*lbpar_gpu.dim_y*z;
             host_boundary_index_list[number_of_boundnodes] = boundary_number; 
             //printf("boundindex %i: \n", host_boundindex[number_of_boundnodes]);  
-            number_of_boundnodes++;  
+            number_of_boundnodes++;
           }
         }
       }
     }
 
-    /**call of cuda fkt*/
     float* boundary_velocity = (float*)malloc(3*n_lb_boundaries*sizeof(float));
     for (n=0; n<n_lb_boundaries; n++) {
       boundary_velocity[3*n+0]=lb_boundaries[n].velocity[0];
       boundary_velocity[3*n+1]=lb_boundaries[n].velocity[1];
       boundary_velocity[3*n+2]=lb_boundaries[n].velocity[2];
     }
+    /**call of device function (copy data to device and init bounds)*/
     if (n_lb_boundaries)
       lbgpu::init_boundaries_GPU(n_lb_boundaries, number_of_boundnodes, host_boundary_node_list, host_boundary_index_list, boundary_velocity);
     free(boundary_velocity);

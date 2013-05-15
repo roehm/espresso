@@ -160,14 +160,17 @@ int lb_lbfluid_set_agrid(double p_agrid){
   if (lattice_switch & LATTICE_LB_GPU) {
 #ifdef LB_GPU
     lbpar_gpu.agrid = (float)p_agrid;
-
-    lbpar_gpu.dim_x = (unsigned int)floor(box_l[0]/p_agrid);
-    lbpar_gpu.dim_y = (unsigned int)floor(box_l[1]/p_agrid);
-    lbpar_gpu.dim_z = (unsigned int)floor(box_l[2]/p_agrid);
     unsigned int tmp[3];
-    tmp[0] = lbpar_gpu.dim_x;
-    tmp[1] = lbpar_gpu.dim_y;
-    tmp[2] = lbpar_gpu.dim_z;
+
+    if(lbdevicepar_gpu.number_of_gpus > 1){
+      tmp[0] = lbpar_gpu.global_dim_x = (unsigned int)floor(box_l[0]/p_agrid);
+      tmp[1] = lbpar_gpu.global_dim_y = (unsigned int)floor(box_l[1]/p_agrid);
+      tmp[2] = lbpar_gpu.global_dim_z = (unsigned int)floor(box_l[2]/p_agrid);
+    }else{
+      tmp[0] = lbpar_gpu.dim_x = (unsigned int)floor(box_l[0]/p_agrid);
+      tmp[1] = lbpar_gpu.dim_y = (unsigned int)floor(box_l[1]/p_agrid);
+      tmp[2] = lbpar_gpu.dim_z = (unsigned int)floor(box_l[2]/p_agrid);
+    }
     /* sanity checks */
     int dir;
     for (dir=0;dir<3;dir++) {
@@ -178,11 +181,9 @@ int lb_lbfluid_set_agrid(double p_agrid){
       }
     }
     lbpar_gpu.number_of_global_nodes = lbpar_gpu.dim_x * lbpar_gpu.dim_y * lbpar_gpu.dim_z;
-    //if(lbpar_gpu.number_of_gpus == 1) {
-    //  lbgpu::params_change(LBPAR_AGRID);
-    //}else{
+    if(lbdevicepar_gpu.number_of_gpus > 1) {
       mpi_bcast_lbgpu_params(LBPAR_AGRID);
-    //}
+    }
 #endif
   } else {
 #ifdef LB

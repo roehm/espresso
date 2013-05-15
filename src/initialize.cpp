@@ -452,8 +452,10 @@ void on_lbboundary_change()
   }
 #endif
 #ifdef LB_BOUNDARIES_GPU
-  if(this_node == 0){
-    if(lattice_switch & LATTICE_LB_GPU) {
+  if(lattice_switch & LATTICE_LB_GPU) {
+    if(this_node == 0 && lbdevicepar_gpu.number_of_gpus == 1){
+      lb_init_boundaries();
+    }else{
       lb_init_boundaries();
     }
   }
@@ -532,15 +534,19 @@ void on_boxl_change() {
 #endif
 
 #ifdef LB_GPU
-  //if(this_node == 0){
-    if(lattice_switch & LATTICE_LB_GPU) {
-       lbgpu::init();
+  if(lattice_switch & LATTICE_LB_GPU) {
+    if(this_node == 0 && lbdevicepar_gpu.number_of_gpus == 1){
+      lbgpu::init();
 #ifdef LB_BOUNDARIES_GPU
-       //TODO multi GPU boundary stuff
-       //lb_init_boundaries();
+      lb_init_boundaries();
+#endif
+    }else{
+      lbgpu::init();
+#ifdef LB_BOUNDARIES_GPU
+      lb_init_boundaries();
 #endif
     }
- //}
+  }
 #endif
 }
 
@@ -657,13 +663,10 @@ void on_parameter_change(int field)
     break;
   case FIELD_TIMESTEP:
 #ifdef LB_GPU
-    //TODO check what nodegrid is doing -> domainchange?
-    if(this_node == 0 && lbdevicepar_gpu.number_of_gpus == 1) {
-      if (lattice_switch & LATTICE_LB_GPU) {
+    if (lattice_switch & LATTICE_LB_GPU) {
+      if(this_node == 0 && lbdevicepar_gpu.number_of_gpus == 1) {
         lbgpu::reinit_parameters();
-      }
-    }else{
-      if (lattice_switch & LATTICE_LB_GPU) {
+      }else{
         lbgpu::reinit_parameters();
       }
     }
@@ -705,13 +708,25 @@ void on_lb_params_change(int field) {
   LB_TRACE(fprintf(stderr, "%d: on_lb_params_change\n", this_node));
 
   if (field == LBPAR_AGRID) {
-    lb_init();
+    if(this_node == 0 && lbdevicepar_gpu.number_of_gpus == 1){
+      lb_init();
+    }else{
+      lb_init();
+    }
   }
   if (field == LBPAR_DENSITY) {
-    lb_reinit_fluid();
+    if(this_node == 0 && lbdevicepar_gpu.number_of_gpus == 1){
+      lb_reinit_fluid();
+    }else{
+      lb_reinit_fluid();
+    }
   }
 
-  lb_reinit_parameters();
+  if(this_node == 0 && lbdevicepar_gpu.number_of_gpus == 1){
+    lb_reinit_parameters();
+  }else{
+    lb_reinit_parameters();
+  }
 
 }
 #endif
@@ -723,8 +738,7 @@ void lbgpu::params_change(int field) {
   if (field == LBPAR_AGRID) {
     lbgpu::init();
 #ifdef LB_BOUNDARIES_GPU
-    //TODO multi GPU stuff
-    //lb_init_boundaries();
+    lb_init_boundaries();
 #endif
   }
   else if (field == LBPAR_DENSITY) {
@@ -732,7 +746,7 @@ void lbgpu::params_change(int field) {
   }
   else if (field == LBPAR_GPUS) {
     lbgpu::reinit_plan();
-    lbgpu::reinit_fluid();
+    lbgpu::init();
   }else{
     lbgpu::reinit_parameters();
   }

@@ -2404,7 +2404,7 @@ void mpi_bcast_lbgpu_params_slave(int node, int field) {
 
 void mpi_bcast_lbgpu_devparams(int field) {
 #ifdef LB_GPU
-  printf("node %i master mpi bcast lbgpu devicepar\n", this_node);
+  LB_TRACE(printf("node %i master mpi bcast lbgpu devicepar\n", this_node));
   mpi_call(mpi_bcast_lbgpu_devparams_slave, -1, field);
   MPI_Bcast(&lbdevicepar_gpu, sizeof(LB_gpus), MPI_BYTE, 0, comm_cart);
   mpi_bcast_lbgpu_devices();
@@ -2414,7 +2414,7 @@ void mpi_bcast_lbgpu_devparams(int field) {
 
 void mpi_bcast_lbgpu_devparams_slave(int node, int field) {
 #ifdef LB_GPU
-  printf("node %i slave mpi bcast lbgpu devicepar\n", this_node);
+  LB_TRACE(printf("node %i slave mpi bcast lbgpu devicepar\n", this_node));
   MPI_Bcast(&lbdevicepar_gpu, sizeof(LB_gpus), MPI_BYTE, 0, comm_cart);
   mpi_bcast_lbgpu_devices();
   lbgpu::params_change(field);
