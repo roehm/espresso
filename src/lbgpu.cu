@@ -89,6 +89,7 @@ static size_t size_of_3floats;
 static size_t size_of_buffer[3];
 /**parameters residing in constant memory */
 static __device__ __constant__ LB_parameters_gpu para;
+static __device__ __constant__ LB_gpus devpara;
 static const float c_sound_sq = 1.f/3.f;
 /**cudasteams for parallel computing on cpu and gpu */
 cudaStream_t *stream;
@@ -2720,7 +2721,7 @@ __global__ void init_particle_force(LB_particle_force_gpu *particle_force, LB_pa
 	
   unsigned int part_index = blockIdx.y * gridDim.x * blockDim.x + blockDim.x * blockIdx.x + threadIdx.x;
 	
-  if(part_index<para.number_of_particles){
+  if(part_index<devpara.number_of_particles){
     particle_force[part_index].f[0] = 0.0f;
     particle_force[part_index].f[1] = 0.0f;
     particle_force[part_index].f[2] = 0.0f;
@@ -2737,7 +2738,7 @@ __global__ void reset_particle_force(LB_particle_force_gpu *particle_force){
 	
   unsigned int part_index = blockIdx.y * gridDim.x * blockDim.x + blockDim.x * blockIdx.x + threadIdx.x;
 	
-  if(part_index<para.number_of_particles){
+  if(part_index<devpara.number_of_particles){
     particle_force[part_index].f[0] = 0.0f;
     particle_force[part_index].f[1] = 0.0f;
     particle_force[part_index].f[2] = 0.0f;
@@ -2812,11 +2813,11 @@ __global__ void integrate(LB_nodes_gpu n_a, LB_nodes_gpu n_b, LB_values_gpu *d_v
     calc_m_from_n(n_a, index, mode);
     /**lb_relax_modes*/
 #ifndef SHANCHEN 
-    relax_modes(mode, index, node_f);
+    //relax_modes(mode, index, node_f);
 #else
-    relax_modes(mode, index, node_f, d_v);
+    //relax_modes(mode, index, node_f, d_v);
 #endif
-#if 1 
+#if 0 
     /**lb_thermalize_modes */
     if (para.fluct) thermalize_modes(mode, index, &rng);
 #ifdef EXTERNAL_FORCES
@@ -2829,9 +2830,9 @@ __global__ void integrate(LB_nodes_gpu n_a, LB_nodes_gpu n_b, LB_values_gpu *d_v
 #else
     /**if partcles are used apply node forces*/
 #ifndef SHANCHEN 
-    if (para.number_of_particles) apply_forces(index, mode, node_f); 
+    if (devpara.number_of_particles) apply_forces(index, mode, node_f); 
 #else // SHANCHEN
-    if (para.number_of_particles) apply_forces(index, mode, node_f, d_v); 
+    if (devpara.number_of_particles) apply_forces(index, mode, node_f, d_v); 
 #endif //SHANCHEN
 #endif
 #endif // 0
@@ -2841,7 +2842,7 @@ __global__ void integrate(LB_nodes_gpu n_a, LB_nodes_gpu n_b, LB_values_gpu *d_v
     //if (*d_gpu_n ==1)
       calc_n_from_modes_push(n_b, mode, index);
     //else{
-      if (para.number_of_gpus > 1) calc_n_from_modes_buffer(n_b, buffer, mode, index);
+      if (devpara.number_of_gpus > 1) calc_n_from_modes_buffer(n_b, buffer, mode, index);
     /** rewriting the seed back to the global memory*/
     n_b.seed[index] = rng.seed;
   }  
@@ -2900,7 +2901,7 @@ __global__ void calc_fluid_particle_ia(LB_nodes_gpu n_a, LB_particle_gpu *partic
   float partgrad3[8*SHANCHEN]; 
 #endif //SHANCHEN
   LB_randomnr_gpu rng_part;
-  if(part_index<para.number_of_particles){
+  if(part_index<devpara.number_of_particles){
 
     rng_part.seed = part[part_index].seed;
     /**force acting on the particle. delta_j will be used later to compute the force that acts back onto the fluid. */
@@ -3137,7 +3138,7 @@ void hw::check_dev(int dev){
 */
 void hw::get_dev_count(){
   
-  cuda_check_errors(cudaGetDeviceCount(&lbpar_gpu.number_of_gpus));
+  cuda_check_errors(cudaGetDeviceCount(&lbdevicepar_gpu.number_of_gpus));
 
 }
 /**get hardware info of GPUs
@@ -3154,7 +3155,7 @@ void hw::set_dev(int dev){
 */
 int lbgpu::set_devices(int* dev, int count){
 
-  lbpar_gpu.number_of_gpus = count;
+  lbdevicepar_gpu.number_of_gpus = count;
   //printf("number of GPUs %i \n", count);
   return ES_OK;
 }
@@ -3165,48 +3166,49 @@ int lbgpu::set_devices(int* dev, int count){
 int lbgpu::get_devices(int* dev){
 
   int count;
-  count = lbpar_gpu.number_of_gpus;
+  count = lbdevicepar_gpu.number_of_gpus;
   //printf("number of GPUs %i \n", count);
   return count;
 }
 
 void lbgpu::reinit_plan(){
 
+  printf("node %i reinit_plan gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
 //only one gpu per cpu node so far!!!
-  lbpar_gpu.gpus_per_cpu = 1;
+  lbdevicepar_gpu.gpus_per_cpu = 1;
   if(plan_initflag == 1){
     free(plan);
   }
   //lbpar_gpu.number_of_gpus = count;
 //check if number of nodes suits to number of gpus
-  if(lbpar_gpu.number_of_gpus == 1){
+  if(lbdevicepar_gpu.number_of_gpus == 1){
     if(this_node == 0){
-      lbpar_gpu.gpu_number = lbpar_gpu.devices[0];
+      lbdevicepar_gpu.gpu_number = lbdevicepar_gpu.devices[0];
       //malloc plan struct for each gpu per cpu node 
-      plan = (plan_gpu*)malloc(lbpar_gpu.gpus_per_cpu*sizeof(plan_gpu));
-      gpu_n = lbpar_gpu.gpus_per_cpu;
+      plan = (plan_gpu*)malloc(lbdevicepar_gpu.gpus_per_cpu*sizeof(plan_gpu));
+      gpu_n = lbdevicepar_gpu.gpus_per_cpu;
       //printf("thisnode %i gpun %i\n",this_node, gpu_n);
       for(int g = 0; g < gpu_n; ++g){
         plan[g].initflag = 0;
       }
     }
   }else{
-    if (n_nodes%lbpar_gpu.number_of_gpus == 1 || lbpar_gpu.number_of_gpus%n_nodes == 1){
+    if (n_nodes%lbdevicepar_gpu.number_of_gpus == 1 || lbdevicepar_gpu.number_of_gpus%n_nodes == 1){
       printf("ERROR: Number of MPI process must be multiple of number of GPUs!!!\n");
       exit(-1);
     }
 //   so far one needs at least #n mpi process to use #n gpus
 //  distribute gpu to cpu nodes  
-    //lbpar_gpu.gpu_number = this_node%lbpar_gpu.number_of_gpus;
+    //lbdevicepar_gpu.gpu_number = this_node%lbpar_gpu.number_of_gpus;
     //printf("thisnode %i devs %i %i\n",this_node, lbpar_gpu.devices[0], lbpar_gpu.devices[1]);
-    lbpar_gpu.gpu_number = lbpar_gpu.devices[this_node%lbpar_gpu.number_of_gpus];
-    //printf("thisnode %i gpu_number %i\n",this_node, lbpar_gpu.gpu_number);
+    lbdevicepar_gpu.gpu_number = lbdevicepar_gpu.devices[this_node%lbdevicepar_gpu.number_of_gpus];
+    //printf("thisnode %i gpu_number %i\n",this_node, lbdevicepar_gpu.gpu_number);
     //printf("par gpu dimx address %p \n", &lbpar_gpu.dim_x);
-    //printf("GPU number: %i -> this_node %i\n", lbpar_gpu.gpu_number, this_node);
-    hw::set_dev(lbpar_gpu.gpu_number);
+    //printf("GPU number: %i -> this_node %i\n", lbdevicepar_gpu.gpu_number, this_node);
+    hw::set_dev(lbdevicepar_gpu.gpu_number);
     //malloc plan struct for each gpu per cpu node 
-    plan = (plan_gpu*)malloc(lbpar_gpu.gpus_per_cpu*sizeof(plan_gpu));
-    gpu_n = lbpar_gpu.gpus_per_cpu;
+    plan = (plan_gpu*)malloc(lbdevicepar_gpu.gpus_per_cpu*sizeof(plan_gpu));
+    gpu_n = lbdevicepar_gpu.gpus_per_cpu;
     plan_initflag = 1;
     //printf("thisnode %i gpun %i\n",this_node, gpu_n);
     for(int g = 0; g < gpu_n; ++g){
@@ -3217,11 +3219,12 @@ void lbgpu::reinit_plan(){
 
 void lbgpu::setup_plan(){
 
+  printf("node %i setup_plan gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
 //only one gpu per cpu node so far!!!
-  lbpar_gpu.gpus_per_cpu = 1;
+  lbdevicepar_gpu.gpus_per_cpu = 1;
   hw::get_dev_count();
 //check if number of nodes suits to number of gpus
-  if (n_nodes%lbpar_gpu.number_of_gpus == 1 || lbpar_gpu.number_of_gpus%n_nodes == 1){
+  if (n_nodes%lbdevicepar_gpu.number_of_gpus == 1 || lbdevicepar_gpu.number_of_gpus%n_nodes == 1){
     printf("ERROR: Number of MPI process must be multiple of number of GPUs!!!\n");
     exit(-1);
   }
@@ -3230,15 +3233,16 @@ void lbgpu::setup_plan(){
   for(int i = 0; i<n_nodes; ++i){
     /* decided which CPU nodes belongs to which GPU*/
     if (this_node == i) {
-      lbpar_gpu.gpu_number = this_node%lbpar_gpu.number_of_gpus;
+      lbdevicepar_gpu.gpu_number = this_node%lbdevicepar_gpu.number_of_gpus;
       //printf("par gpu dimx address %p \n", &lbpar_gpu.dim_x);
       //printf("GPU number: %i -> this_node %i\n", lbpar_gpu.gpu_number, this_node);
-      hw::set_dev(lbpar_gpu.gpu_number);
+      hw::set_dev(lbdevicepar_gpu.gpu_number);
     }
   }
   //malloc plan struct for each gpu per cpu node 
-  plan = (plan_gpu*)malloc(lbpar_gpu.gpus_per_cpu*sizeof(plan_gpu));
-  gpu_n = lbpar_gpu.gpus_per_cpu;
+  plan = (plan_gpu*)malloc(lbdevicepar_gpu.gpus_per_cpu*sizeof(plan_gpu));
+  gpu_n = lbdevicepar_gpu.gpus_per_cpu;
+  plan_initflag=1;
   //printf("thisnode %i gpun %i\n",this_node, gpu_n);
   for(int g = 0; g < gpu_n; ++g){
     plan[g].initflag = 0;
@@ -3374,6 +3378,7 @@ int cuda_comm::p2p_indirect_MPI(float *s_buf_h, float *r_buf_h, float *s_buf_d, 
  * @param r_buf_d pointer to receive buffer of buffer IN the GPU memory
   */
 int lbgpu::send_recv_buffer(float* s_buf_d, float* r_buf_d){
+  printf("node %i sebd_recv_buffer gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
   //empty cpu buffers for communcation betwenn 2 gpus via cpu mem
   float *s_buf_h, *r_buf_h;
   int send_node, recv_node;
@@ -3390,7 +3395,6 @@ int lbgpu::send_recv_buffer(float* s_buf_d, float* r_buf_d){
   //    printf("thisnode %i node_grid: %i %i %i \n", this_node, node_grid[0], node_grid[1], node_grid[2]);
   /* send to right, recv from left i = 1, 7, 9, 11, 13 */
   send_node = node_neighbors[1];
-  //send_node = this_node;
   recv_node = node_neighbors[0];
   if (node_grid[0] > 1) {
     cuda_comm::p2p_indirect_MPI(s_buf_h, r_buf_h, s_buf_d, r_buf_d, count[0], send_node, recv_node);
@@ -3465,12 +3469,14 @@ int lbgpu::send_recv_buffer(float* s_buf_d, float* r_buf_d){
 */
 void lbgpu::cp_buffer_in_vd(){
 
+  printf("node %i cp_buffer_in_vd gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
   int threads_per_block = 64;
   int blocks_per_grid_y = 4;
   int blocks_per_grid_x = (lbpar_gpu.number_of_nodes + threads_per_block * blocks_per_grid_y - 1) /(threads_per_block * blocks_per_grid_y);
   dim3 dim_grid = make_uint3(blocks_per_grid_x, blocks_per_grid_y, 1);
   int g = 0; 
-    //printf("current pointer %p\n", plan[g].current_nodes);
+  //Attention GPU pointers
+   // printf("node %i current pointer %p buffer %p\n", this_node, plan[g].current_nodes, plan[g].recv_buffer_d);
   KERNELCALL(write_buffer, dim_grid, threads_per_block, (*plan[g].current_nodes, plan[g].recv_buffer_d));
 
 }
@@ -3478,25 +3484,25 @@ void lbgpu::cp_buffer_in_vd(){
 /**initialization for the lb gpu fluid called from host
  * @param *lbpar_gpu	Pointer to parameters to setup the lb field
 */
-void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu){
+void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu){
 
-  printf("this_node: %i  local_box_l: %i, %i, %i \n", this_node, lbpar_gpu->local_box_l[0], lbpar_gpu->local_box_l[1], lbpar_gpu->local_box_l[2]);
-  //plan = (plan_gpu*)malloc(lbpar_gpu->cpus_per_gpu*sizeof(plan_gpu));
-  if (lbpar_gpu->number_of_gpus == 1) {
+  printf("node %i init_GPU gpu %i\n", this_node, lbdevicepar_gpu->gpu_number);
+  printf("this_node: %i  local_box_l: %lf, %lf, %lf \n", this_node, local_box_l[0], local_box_l[1], local_box_l[2]);
+  if (lbdevicepar_gpu->number_of_gpus == 1) {
     //dims stay like they are, just calc number of nodes 
     lbpar_gpu->number_of_nodes = (unsigned) (lbpar_gpu->agrid*(lbpar_gpu->dim_x*lbpar_gpu->dim_y*lbpar_gpu->dim_z));
     printf("Using only on GPU");
   }else{
     //halo in all three directions
-    lbpar_gpu->dim_x = lbpar_gpu->local_box_l[0] + 2;
-    lbpar_gpu->dim_y = lbpar_gpu->local_box_l[1] + 2;
-    lbpar_gpu->dim_z = lbpar_gpu->local_box_l[2] + 2;
-    //printf("dims: %i, %i, %i agrid %f\n", lbpar_gpu->dim_x, lbpar_gpu->dim_y, lbpar_gpu->dim_z, lbpar_gpu->agrid);
-    lbpar_gpu->number_of_nodes = (unsigned) (lbpar_gpu->agrid*(lbpar_gpu->dim_x*lbpar_gpu->dim_y*lbpar_gpu->dim_z));
-    //printf("numberofnodes %i \n", lbpar_gpu->number_of_nodes);
-    lbpar_gpu->number_of_halo_nodes[0] = lbpar_gpu->agrid*(lbpar_gpu->dim_y*lbpar_gpu->dim_z);
-    lbpar_gpu->number_of_halo_nodes[1] = lbpar_gpu->agrid*(lbpar_gpu->dim_x*lbpar_gpu->dim_z);
-    lbpar_gpu->number_of_halo_nodes[2] = lbpar_gpu->agrid*(lbpar_gpu->dim_x*lbpar_gpu->dim_y);
+    lbpar_gpu->dim_x = (unsigned)local_box_l[0] + 2;
+    lbpar_gpu->dim_y = (unsigned)local_box_l[1] + 2;
+    lbpar_gpu->dim_z = (unsigned)local_box_l[2] + 2;
+    printf("dims: %i, %i, %i agrid %f\n", lbpar_gpu->dim_x, lbpar_gpu->dim_y, lbpar_gpu->dim_z, lbpar_gpu->agrid);
+    lbpar_gpu->number_of_nodes = (unsigned) ((lbpar_gpu->dim_x*lbpar_gpu->dim_y*lbpar_gpu->dim_z)/lbpar_gpu->agrid);
+    printf("initgpu numberofnodes %i \n", lbpar_gpu->number_of_nodes);
+    lbpar_gpu->number_of_halo_nodes[0] = (lbpar_gpu->dim_y*lbpar_gpu->dim_z)/lbpar_gpu->agrid;
+    lbpar_gpu->number_of_halo_nodes[1] = (lbpar_gpu->dim_x*lbpar_gpu->dim_z)/lbpar_gpu->agrid;
+    lbpar_gpu->number_of_halo_nodes[2] = (lbpar_gpu->dim_x*lbpar_gpu->dim_y)/lbpar_gpu->agrid;
     //printf("numberof_halonodes %i %i %i\n", lbpar_gpu->number_of_halo_nodes[0], lbpar_gpu->number_of_halo_nodes[1], lbpar_gpu->number_of_halo_nodes[2]);
   //
   }
@@ -3514,7 +3520,7 @@ void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu){
   //multi gpu per mpi nodes stuff
   for(int g = 0; g < gpu_n; ++g){
     //set device i
-    cuda_check_errors(cudaSetDevice(lbpar_gpu->gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu->gpu_number));
 #if 1
     if(plan[g].initflag){
       cudaFree(plan[g].device_values);
@@ -3546,10 +3552,11 @@ void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu){
 
     //copy parameter into gpu const mem
     cuda_check_errors(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
+    cuda_check_errors(cudaMemcpyToSymbol(devpara, lbdevicepar_gpu, sizeof(LB_gpus)));
     //set up stream for execution order of gpu kernel functions
     cudaStreamCreate(&stream[g]);
 
-    if (lbpar_gpu->number_of_gpus > 1) {
+    if (lbdevicepar_gpu->number_of_gpus > 1) {
       //size of different buffers
       size_of_buffer[0] = 5 * lbpar_gpu->number_of_halo_nodes[0] * sizeof(float); 
       size_of_buffer[1] = 5 * lbpar_gpu->number_of_halo_nodes[1] * sizeof(float); 
@@ -3569,7 +3576,7 @@ void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu){
 
     }
     //set flag to one for release of gpu memory 
-    plan[g].intflag = 1;
+    plan[g].initflag = 1;
   
     /** values for the kernel call */
     int threads_per_block = 64;
@@ -3588,22 +3595,30 @@ void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu){
 #endif
     //set a nodes as current nodes due to equilibration values stored in there
     plan[g].current_nodes = &plan[g].nodes_a;
+    //and use them in the first integration loop
+    plan[g].intflag = 1;
     //printf("current pointer %p\n", plan[g].current_nodes->vd);
+    //printf("init current pointer %p nodes a %p\n", plan[g].current_nodes, &plan[g].nodes_a);
+    //printf("init send_buf %p recv_buf %p\n", plan[g].send_buffer_d, plan[g].recv_buffer_d);
     ///barrier for alle init kernels 
-    cudaStreamSynchronize(stream[g]);
+    //cudaStreamSynchronize(stream[g]);
+    cuda_check_errors(cudaDeviceSynchronize());
+    //cudaThreadSynchronize();
   }
 }
 /** reinitialization for the lb gpu fluid called from host
  * @param *lbpar_gpu	Pointer to parameters to setup the lb field
 */
-void lbgpu::reinit_GPU(LB_parameters_gpu *lbpar_gpu){
+void lbgpu::reinit_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu){
 
+  printf("node %i reinit_GPU gpu %i\n", this_node, lbdevicepar_gpu->gpu_number);
   //begin loop over devices i
   for(int g = 0; g < gpu_n; ++g){
     //set device i
-    cuda_check_errors(cudaSetDevice(lbpar_gpu->gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu->gpu_number));
     /**write parameters in const memory*/
     cuda_check_errors(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
+    cuda_check_errors(cudaMemcpyToSymbol(devpara, lbdevicepar_gpu, sizeof(LB_gpus)));
   
     /** values for the kernel call */
     int threads_per_block = 64;
@@ -3620,17 +3635,19 @@ void lbgpu::reinit_GPU(LB_parameters_gpu *lbpar_gpu){
  * @param *lbpar_gpu	Pointer to parameters to setup the lb field
  * @param **host_data	Pointer to host information data
 */
-void lbgpu::realloc_particle_GPU(LB_parameters_gpu *lbpar_gpu, LB_particle_gpu **host_data){
+void lbgpu::realloc_particle_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu, LB_particle_gpu **host_data){
 
+  printf("node %i realloc_particle_GPU gpu %i\n", this_node, lbdevicepar_gpu->gpu_number);
   //begin loop over devices i
   for(int g = 0; g < gpu_n; ++g){
     //set device i
-    cuda_check_errors(cudaSetDevice(lbpar_gpu->gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu->gpu_number));
     cuda_check_errors(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
+    cuda_check_errors(cudaMemcpyToSymbol(devpara, lbdevicepar_gpu, sizeof(LB_gpus)));
     /** Allocate struct for particle positions */
-    size_of_forces = lbpar_gpu->number_of_particles * sizeof(LB_particle_force_gpu);
-    size_of_positions = lbpar_gpu->number_of_particles * sizeof(LB_particle_gpu);
-    size_of_seed = lbpar_gpu->number_of_particles * sizeof(LB_particle_seed_gpu);
+    size_of_forces = lbdevicepar_gpu->number_of_particles * sizeof(LB_particle_force_gpu);
+    size_of_positions = lbdevicepar_gpu->number_of_particles * sizeof(LB_particle_gpu);
+    size_of_seed = lbdevicepar_gpu->number_of_particles * sizeof(LB_particle_seed_gpu);
     if(plan[g].partinitflag){
       cudaFreeHost(*host_data);
       cudaFree(plan[g].particle_force);
@@ -3658,10 +3675,10 @@ void lbgpu::realloc_particle_GPU(LB_parameters_gpu *lbpar_gpu, LB_particle_gpu *
     /** values for the particle kernel */
     int threads_per_block_particles = 64;
     int blocks_per_grid_particles_y = 4;
-    int blocks_per_grid_particles_x = (lbpar_gpu->number_of_particles + threads_per_block_particles * blocks_per_grid_particles_y - 1)/(threads_per_block_particles * blocks_per_grid_particles_y);
+    int blocks_per_grid_particles_x = (lbdevicepar_gpu->number_of_particles + threads_per_block_particles * blocks_per_grid_particles_y - 1)/(threads_per_block_particles * blocks_per_grid_particles_y);
     dim3 dim_grid_particles = make_uint3(blocks_per_grid_particles_x, blocks_per_grid_particles_y, 1);
   
-    if(lbpar_gpu->number_of_particles) KERNELCALL(init_particle_force, dim_grid_particles, threads_per_block_particles, (plan[g].particle_force, plan[g].part));
+    if(lbdevicepar_gpu->number_of_particles) KERNELCALL(init_particle_force, dim_grid_particles, threads_per_block_particles, (plan[g].particle_force, plan[g].part));
   }
 }
 #ifdef LB_BOUNDARIES_GPU
@@ -3670,10 +3687,11 @@ void lbgpu::realloc_particle_GPU(LB_parameters_gpu *lbpar_gpu, LB_particle_gpu *
  * @param number_of_boundnodes	number of boundnodes
 */
 void lbgpu::init_boundaries_GPU(int host_n_lb_boundaries, int number_of_boundnodes, int *host_boundary_node_list, int* host_boundary_index_list, float* host_lb_boundary_velocity){
+  printf("node %i init_boundaries_GPU gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
   //begin loop over devices i
   for(int g = 0; g < gpu_n; ++g){
     //set device i
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
     int temp = host_n_lb_boundaries;
   //TODO
     size_of_boundindex = number_of_boundnodes*sizeof(int);
@@ -3718,13 +3736,15 @@ void lbgpu::init_boundaries_GPU(int host_n_lb_boundaries, int number_of_boundnod
 /**setup and call extern single node force initialization from the host
  * @param *lbpar_gpu				Pointer to host parameter struct
 */
-void lbgpu::reinit_extern_nodeforce_GPU(LB_parameters_gpu *lbpar_gpu){
+void lbgpu::reinit_extern_nodeforce_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu){
 
+  printf("node %i reinit_extern_nodeforce_GPU gpu %i\n", this_node, lbdevicepar_gpu->gpu_number);
   //begin loop over devices i
   for(int g = 0; g < gpu_n; ++g){
     //set device i
-    cuda_check_errors(cudaSetDevice(lbpar_gpu->gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu->gpu_number));
     cuda_check_errors(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
+    cuda_check_errors(cudaMemcpyToSymbol(devpara, lbdevicepar_gpu, sizeof(LB_gpus)));
   
     /** values for the kernel call */
     int threads_per_block = 64;
@@ -3740,18 +3760,21 @@ void lbgpu::reinit_extern_nodeforce_GPU(LB_parameters_gpu *lbpar_gpu){
  * @param *host_extern_nodeforces		Pointer to the host extern node forces
  * @param *lbpar_gpu				Pointer to host parameter struct
 */
-void lbgpu::init_extern_nodeforces_GPU(int n_extern_nodeforces, LB_extern_nodeforce_gpu *host_extern_nodeforces, LB_parameters_gpu *lbpar_gpu){
+void lbgpu::init_extern_nodeforces_GPU(int n_extern_nodeforces, LB_extern_nodeforce_gpu *host_extern_nodeforces, LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu){
+  printf("node %i init_extern_nodeforces_GPU gpu %i\n", this_node, lbdevicepar_gpu->gpu_number);
 
   //begin loop over devices i
   for(int g = 0; g < gpu_n; ++g){
     //set device i
-    cuda_check_errors(cudaSetDevice(lbpar_gpu->gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu->gpu_number));
     size_of_extern_nodeforces = n_extern_nodeforces*sizeof(LB_extern_nodeforce_gpu);
     cuda_check_errors(cudaMalloc((void**)&plan[g].extern_nodeforces, size_of_extern_nodeforces));
     cudaMemcpy(plan[g].extern_nodeforces, host_extern_nodeforces, size_of_extern_nodeforces, cudaMemcpyHostToDevice);
   
-    if(lbpar_gpu->external_force == 0)cuda_check_errors(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu))); 
-  
+    if(lbpar_gpu->external_force == 0){
+      cuda_check_errors(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu))); 
+      cuda_check_errors(cudaMemcpyToSymbol(devpara, lbdevicepar_gpu, sizeof(LB_gpus))); 
+    } 
     int threads_per_block_exf = 64;
     int blocks_per_grid_exf_y = 4;
     int blocks_per_grid_exf_x = (n_extern_nodeforces + threads_per_block_exf * blocks_per_grid_exf_y - 1) /(threads_per_block_exf * blocks_per_grid_exf_y);
@@ -3767,16 +3790,17 @@ void lbgpu::init_extern_nodeforces_GPU(int n_extern_nodeforces, LB_extern_nodefo
 */
 void lbgpu::particle_GPU(LB_particle_gpu *host_data){
   //begin loop over devices g
+  printf("node %i particle_GPU gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
   for(int g = 0; g < gpu_n; ++g){
     //set device i
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
    /** get espresso md particle values*/
     cudaMemcpyAsync(plan[g].particle_data, host_data, size_of_positions, cudaMemcpyHostToDevice, stream[0]);
     /** call of the particle kernel */
     /** values for the particle kernel */
     int threads_per_block_particles = 64;
     int blocks_per_grid_particles_y = 4;
-    int blocks_per_grid_particles_x = (lbpar_gpu.number_of_particles + threads_per_block_particles * blocks_per_grid_particles_y - 1)/(threads_per_block_particles * blocks_per_grid_particles_y);
+    int blocks_per_grid_particles_x = (lbdevicepar_gpu.number_of_particles + threads_per_block_particles * blocks_per_grid_particles_y - 1)/(threads_per_block_particles * blocks_per_grid_particles_y);
     dim3 dim_grid_particles = make_uint3(blocks_per_grid_particles_x, blocks_per_grid_particles_y, 1);
 #ifndef SHANCHEN
     KERNELCALL(calc_fluid_particle_ia, dim_grid_particles, threads_per_block_particles, (*plan[g].current_nodes, plan[g].particle_data, plan[g].particle_force, plan[g].node_f, plan[g].part));
@@ -3793,20 +3817,21 @@ void lbgpu::copy_forces_GPU(LB_particle_force_gpu *host_forces){
   //begin loop over devices g
   for(int g = 0; g < gpu_n; ++g){
     //set device i
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
     /** Copy result from device memory to host memory*/
     cudaMemcpy(host_forces, plan[g].particle_force, size_of_forces, cudaMemcpyDeviceToHost);
   
       /** values for the particle kernel */
     int threads_per_block_particles = 64;
     int blocks_per_grid_particles_y = 4;
-    int blocks_per_grid_particles_x = (lbpar_gpu.number_of_particles + threads_per_block_particles * blocks_per_grid_particles_y - 1)/(threads_per_block_particles * blocks_per_grid_particles_y);
+    int blocks_per_grid_particles_x = (lbdevicepar_gpu.number_of_particles + threads_per_block_particles * blocks_per_grid_particles_y - 1)/(threads_per_block_particles * blocks_per_grid_particles_y);
     dim3 dim_grid_particles = make_uint3(blocks_per_grid_particles_x, blocks_per_grid_particles_y, 1);
   
     /** reset part forces with zero*/
     KERNELCALL(reset_particle_force, dim_grid_particles, threads_per_block_particles, (plan[g].particle_force));
   	
-    cudaStreamSynchronize(stream[g]);
+    //cudaStreamSynchronize(stream[g]);
+    cudaThreadSynchronize();
   }
 }
 
@@ -3815,10 +3840,11 @@ void lbgpu::copy_forces_GPU(LB_particle_force_gpu *host_forces){
 */
 void lbgpu::get_values_GPU(LB_values_gpu *host_values){
 
+  printf("node %i get_values_GPU gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
   //begin loop over devices g
   for(int g = 0; g < gpu_n; ++g){
     //set device g
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
     /** values for the kernel call */
     int threads_per_block = 64;
     int blocks_per_grid_y = 4;
@@ -3840,12 +3866,12 @@ void lbgpu::get_values_GPU(LB_values_gpu *host_values){
 */
 void lbgpu::save_checkpoint_GPU(float *host_checkpoint_vd, unsigned int *host_checkpoint_seed, unsigned int *host_checkpoint_boundary, float *host_checkpoint_force){
 
-  printf("save cheackpoint gpu_n %i\n", gpu_n);
+  printf("node %i save cheackpoint gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
   //begin loop over devices g
   for(int g = 0; g < gpu_n; ++g){
     //set device i
     //printf("current pointer %p\n", plan[g].current_nodes->vd);
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
     cudaMemcpy(host_checkpoint_vd, plan[g].current_nodes->vd, size_of_nodes_gpu, cudaMemcpyDeviceToHost);
     cudaMemcpy(host_checkpoint_seed, plan[g].current_nodes->seed, lbpar_gpu.number_of_nodes * sizeof(unsigned int), cudaMemcpyDeviceToHost);
     cudaMemcpy(host_checkpoint_boundary, plan[g].current_nodes->boundary, lbpar_gpu.number_of_nodes * sizeof(unsigned int), cudaMemcpyDeviceToHost);
@@ -3857,11 +3883,11 @@ void lbgpu::save_checkpoint_GPU(float *host_checkpoint_vd, unsigned int *host_ch
    */
 void lbgpu::load_checkpoint_GPU(float *host_checkpoint_vd, unsigned int *host_checkpoint_seed, unsigned int *host_checkpoint_boundary, float *host_checkpoint_force){
 
-  printf("load checkpoint gpu_n %i\n", gpu_n);
+  printf("node %i load cheackpoint gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
   //begin loop over devices g
   for(int g = 0; g < gpu_n; ++g){
     //set device i
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
     cudaMemcpy(plan[g].current_nodes->vd, host_checkpoint_vd, size_of_nodes_gpu, cudaMemcpyHostToDevice);
       plan[g].intflag = 1;
     cudaMemcpy(plan[g].current_nodes->seed, host_checkpoint_seed, lbpar_gpu.number_of_nodes * sizeof(unsigned int), cudaMemcpyHostToDevice);
@@ -3875,10 +3901,11 @@ void lbgpu::load_checkpoint_GPU(float *host_checkpoint_vd, unsigned int *host_ch
  */
 void lbgpu::get_boundary_flags_GPU(unsigned int* host_bound_array){
    
+  printf("node %i get_boundary_flags_GPU gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
   //begin loop over devices g
   for(int g = 0; g < gpu_n; ++g){
     //set device i
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
     unsigned int* device_bound_array;
     cuda_check_errors(cudaMalloc((void**)&device_bound_array, lbpar_gpu.number_of_nodes*sizeof(unsigned int)));
     /** values for the kernel call */
@@ -3897,10 +3924,11 @@ void lbgpu::get_boundary_flags_GPU(unsigned int* host_bound_array){
 
 /** setup and call kernel for getting macroscopic fluid values of a single node*/
 void lbgpu::print_node_GPU(int single_nodeindex, LB_values_gpu *host_print_values){
+  printf("node %i print_node_GPU gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
   //begin loop over devices g
   for(int g = 0; g < gpu_n; ++g){
     //set device g
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
   //TODO
     LB_values_gpu *device_print_values;
     cuda_check_errors(cudaMalloc((void**)&device_print_values, sizeof(LB_values_gpu)));
@@ -3925,10 +3953,11 @@ void lbgpu::print_node_GPU(int single_nodeindex, LB_values_gpu *host_print_value
 */
 void lbgpu::calc_fluid_mass_GPU(double* mass){
 
+  printf("node %i calc_fluid_mass_GPU gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
   //begin loop over devices g
   for(int g = 0; g < gpu_n; ++g){
     //set device g
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
     float* tot_mass;
     float cpu_mass =  0.f ;
     cuda_check_errors(cudaMalloc((void**)&tot_mass, sizeof(float)));
@@ -3953,10 +3982,11 @@ void lbgpu::calc_fluid_mass_GPU(double* mass){
  *  @param host_mom value of the momentum calcutated on the GPU
  */
 void lbgpu::calc_fluid_momentum_GPU(double* host_mom){
+  printf("node %i calc_fluid_momentum_GPU gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
   //begin loop over devices g
   for(int g = 0; g < gpu_n; ++g){
     //set device g
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
   //TODO
     float* tot_momentum;
     float host_momentum[3] = { 0.f, 0.f, 0.f};
@@ -3985,10 +4015,11 @@ void lbgpu::calc_fluid_momentum_GPU(double* host_mom){
  *  @param host_temp value of the temperatur calcutated on the GPU
 */
 void lbgpu::calc_fluid_temperature_GPU(double* host_temp){
+  printf("node %i calc_fluid_temperature_GPU gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
   //begin loop over devices g
   for(int g = 0; g < gpu_n; ++g){
     //set device g
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
     //TODO
     float host_jsquared = 0.f;
     float* device_jsquared;
@@ -4014,10 +4045,11 @@ void lbgpu::calc_fluid_temperature_GPU(double* host_temp){
 */
 #ifdef SHANCHEN
 void lbgpu::calc_fluid_temperature_GPU(double* host_temp){
+  printf("node %i calc_fluid_temperature_GPU SHANCHEN gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
   //begin loop over devices g
   for(int g = 0; g < gpu_n; ++g){
     //set device g
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
     //TODO
     float host_jsquared = 0.f;
     float* device_jsquared;
@@ -4047,10 +4079,11 @@ void lbgpu::calc_fluid_temperature_GPU(double* host_temp){
  *  @param host_flag her goes the value of the boundary flag
  */
 void lbgpu::get_boundary_flag_GPU(int single_nodeindex, unsigned int* host_flag){
+  printf("node %i get_bounday_flag_GPU gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
   //begin loop over devices g
   for(int g = 0; g < gpu_n; ++g){
     //set device i
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
   //TODO
     unsigned int* device_flag;
     cuda_check_errors(cudaMalloc((void**)&device_flag, sizeof(unsigned int)));
@@ -4078,7 +4111,7 @@ void lbgpu::set_node_rho_GPU(int single_nodeindex, float* host_rho){
   //begin loop over devices g
   for(int g = 0; g < gpu_n; ++g){
     //set device i
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
     float* device_rho;
     cuda_check_errors(cudaMalloc((void**)&device_rho, SHANCHEN*sizeof(float)));	
     cudaMemcpy(device_rho, host_rho, SHANCHEN*sizeof(float), cudaMemcpyHostToDevice);
@@ -4100,7 +4133,7 @@ void lbgpu::set_node_velocity_GPU(int single_nodeindex, float* host_velocity){
   //begin loop over devices g
   for(int g = 0; g < gpu_n; ++g){
     //set device i
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
   //TODO
     float* device_velocity;
     cuda_check_errors(cudaMalloc((void**)&device_velocity, 3*sizeof(float)));
@@ -4117,24 +4150,26 @@ void lbgpu::set_node_velocity_GPU(int single_nodeindex, float* host_velocity){
 /** reinit of params 
  * @param *lbpar_gpu struct containing the paramters of the fluid
 */
-void lbgpu::reinit_parameters_GPU(LB_parameters_gpu *lbpar_gpu){
+void lbgpu::reinit_parameters_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu){
   //begin loop over devices g
-  printf("parameter gpu_n %i\n", gpu_n);
+  //printf("parameter gpu_n %i\n", gpu_n);
   for(int g = 0; g < gpu_n; ++g){
    //set device g
-   cuda_check_errors(cudaSetDevice(lbpar_gpu->gpu_number));
+   cuda_check_errors(cudaSetDevice(lbdevicepar_gpu->gpu_number));
  
    /**write parameters in const memory*/
    cuda_check_errors(cudaMemcpyToSymbol(para, lbpar_gpu, sizeof(LB_parameters_gpu)));
+   cuda_check_errors(cudaMemcpyToSymbol(devpara, lbdevicepar_gpu, sizeof(LB_gpus)));
   }
-  printf("node %i reinit parameter on gpu_n %i finished \n",this_node, lbpar_gpu->gpu_number);
+  printf("node %i reinit parameter on gpu %i finished \n",this_node, lbdevicepar_gpu->gpu_number);
 }
 #ifdef LB_BOUNDARIES_GPU
 void lbgpu::get_boundary_forces_GPU(double* forces) {
+  printf("node %i get_boundary_forces_GPU gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
   //begin loop over devices g
   for(int g = 0; g < gpu_n; ++g){
     //set device g
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
     float* temp = (float*) malloc(3*n_lb_boundaries*sizeof(float));
     cuda_check_errors(cudaMemcpy(temp, plan[g].lb_boundary_force, 3*n_lb_boundaries*sizeof(float), cudaMemcpyDeviceToHost));
     for (int i =0; i<3*n_lb_boundaries; i++) {
@@ -4144,15 +4179,71 @@ void lbgpu::get_boundary_forces_GPU(double* forces) {
   }
 }
 #endif
+void lbgpu::barrier_GPU(){
+
+  printf("node %i barrier_GPU gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
+  for(int g = 0; g < gpu_n; ++g){
+    //set device g
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
+    printf("node %i gpu number %i\n", this_node, lbdevicepar_gpu.gpu_number);
+    cuda_check_errors(cudaDeviceSynchronize());
+  }
+
+}
+
+void lbgpu::send_recv_buffer_GPU(){
+
+  printf("node %i send_recv_buffer_GPU gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
+  for(int g = 0; g < gpu_n; ++g){
+    //set device g
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
+    lbgpu::send_recv_buffer(plan[g].send_buffer_d, plan[g].recv_buffer_d);
+  }
+
+}
+
+void print_buffers(float* s_buf_d, float* r_buf_d){
+
+  printf("node %i print_buffers_GPU gpu %i\n", this_node, lbdevicepar_gpu.gpu_number);
+  float *s_buf_h, *r_buf_h;
+  unsigned offset;
+  //for(int i=0; i<3; ++i){
+  //  printf("size_of_buffer %i \n", size_of_buffer[i]);
+   //}
+  s_buf_h = (float*)malloc(2*(size_of_buffer[0] + size_of_buffer[1] + size_of_buffer[2]));   
+  r_buf_h = (float*)malloc(2*(size_of_buffer[0] + size_of_buffer[1] + size_of_buffer[2]));   
+  //printf("bufferlength %i\n",2*5*(lbpar_gpu.number_of_halo_nodes[0]+lbpar_gpu.number_of_halo_nodes[1]+lbpar_gpu.number_of_halo_nodes[2]));
+          
+  cudaMemcpy(s_buf_h,s_buf_d,(2*(size_of_buffer[0]+size_of_buffer[1]+size_of_buffer[2])),cudaMemcpyDeviceToHost);
+  for(int i=0; i<(2*5*(lbpar_gpu.number_of_halo_nodes[0]+lbpar_gpu.number_of_halo_nodes[1]+lbpar_gpu.number_of_halo_nodes[2])); ++i){
+   printf("s_buf_h[%i] %f\n",i, s_buf_h[i]);
+                          //cudaMemcpy(r_buf_h,r_buf_d,size_of_buffer[0],cudaMemcpyDeviceToHost);
+                          //printf("buffer %i r_buf_h[%i] %f\n",i,i, r_buf_h[i]);
+  }
+                   // cuda_check_errors(cudaMemcpy(plan[g].recv_buffer_d[1], testarr, 3*sizeof(float), cudaMemcpyHostToDevice));
+                   // cuda_check_errors(cudaMemcpy(testarr2, plan[g].recv_buffer_d[1], 3*sizeof(float), cudaMemcpyDeviceToHost));
+                  //cudaPointerAttributes* att; 
+                  //cudaPointerGetAttributes(att, s_buf_d);
+                  //cudaPointerGetAttributes(att, s_buf[0]);
+                  //printf("dev ptr: %p, host ptr: %p\n", att->devicePointer,att->hostPointer);
+#if 0
+                  for(int i=0; i<6; ++i){
+                        cuda_check_errors(cudaMemcpy(plan[0].send_buffer_d[i], s_buf[i], size_of_vd_buffer[i], cudaMemcpyHostToDevice));
+                            cuda_check_errors(cudaMemcpy(r_buf[i], plan[0].send_buffer_d[i], size_of_vd_buffer[i], cudaMemcpyDeviceToHost));
+                              printf("buffer %i s_buf[%i][0] %f\n",i,i, r_buf[i][0]);
+                                }
+#endif
+}
+
+
 /**integration kernel for the lb gpu fluid update called from host */
 void lbgpu::integrate_GPU(){
   //begin loop over devices g
   //printf("integrate gpu_n %i\n", gpu_n);
-  printf("lb integrate gpu_number %i\n", lbpar_gpu.gpu_number);
+  printf("node %i integrate_GPU gpu_number %i\n", this_node, lbdevicepar_gpu.gpu_number);
   for(int g = 0; g < gpu_n; ++g){
     //set device g
-    //cuda_check_errors(cudaSetDevice(g));
-    cuda_check_errors(cudaSetDevice(lbpar_gpu.gpu_number));
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
     
     /** values for the kernel call */
     int threads_per_block = 64;
@@ -4163,6 +4254,8 @@ void lbgpu::integrate_GPU(){
   
     /**call of fluid step*/
     if (plan[g].intflag == 1){
+      //printf("current pointer %p nodes a %p nodes b %p\n", plan[g].current_nodes, &plan[g].nodes_a, &plan[g].nodes_b);
+      //printf("send_buf %p recv_buf %p\n", plan[g].send_buffer_d, plan[g].recv_buffer_d);
       KERNELCALL(integrate, dim_grid, threads_per_block, (plan[g].nodes_a, plan[g].nodes_b, plan[g].device_values, plan[g].node_f, plan[g].send_buffer_d, &gpu_n));
       plan[g].current_nodes = &plan[g].nodes_b;
     //printf("integrate kernel 1 ok\n");
@@ -4174,8 +4267,8 @@ void lbgpu::integrate_GPU(){
       }
 #endif
       //cudaThreadSynchronize();
-//      printf("current pointer %p nodes b %p\n", plan[g].current_nodes, &plan[g].nodes_b);
-    if (lbpar_gpu.number_of_gpus > 1) lbgpu::send_recv_buffer(plan[g].send_buffer_d, plan[g].recv_buffer_d);
+     // printf("current pointer %p nodes b %p\n", plan[g].current_nodes, &plan[g].nodes_b);
+    //if (lbdevicepar_gpu.number_of_gpus > 1) lbgpu::send_recv_buffer(plan[g].send_buffer_d, plan[g].recv_buffer_d);
     plan[g].intflag = 0;
 
     }else{
@@ -4190,7 +4283,7 @@ void lbgpu::integrate_GPU(){
       }
 #endif
       //cudaThreadSynchronize();
-      if (lbpar_gpu.number_of_gpus > 1) lbgpu::send_recv_buffer(plan[g].send_buffer_d, plan[g].recv_buffer_d);
+      //if (lbdevicepar_gpu.number_of_gpus > 1) lbgpu::send_recv_buffer(plan[g].send_buffer_d, plan[g].recv_buffer_d);
       plan[g].intflag = 1;
     }
   } 

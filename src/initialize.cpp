@@ -262,10 +262,6 @@ void on_integration_start()
     //  lbgpu::realloc_particles();
     //  lb_reinit_particles_gpu = 0;
     //}
-    if(lbpar_gpu.number_of_gpus > 1) {
-      mpi_bcast_lbgpu_devices();
-      lbgpu::reinit_plan();
-    }
   }
 //}
 
@@ -620,11 +616,13 @@ void on_temperature_change()
   }
 #endif
 #ifdef LB_GPU
-  //if(this_node == 0) {
-    if (lattice_switch & LATTICE_LB_GPU) {
+  if (lattice_switch & LATTICE_LB_GPU) {
+    if(this_node == 0 && lbdevicepar_gpu.number_of_gpus == 1) {
+      lbgpu::reinit_parameters();
+    }else{
       lbgpu::reinit_parameters();
     }
-  //}
+  }
 #endif
 }
 
@@ -662,7 +660,7 @@ void on_parameter_change(int field)
     break;
   case FIELD_TIMESTEP:
 #ifdef LB_GPU
-    if(this_node == 0 && lbpar_gpu.number_of_gpus == 1) {
+    if(this_node == 0 && lbdevicepar_gpu.number_of_gpus == 1) {
       if (lattice_switch & LATTICE_LB_GPU) {
         lbgpu::reinit_parameters();
       }
@@ -729,14 +727,15 @@ void lbgpu::params_change(int field) {
   if (field == LBPAR_AGRID) {
     lbgpu::init();
 #ifdef LB_BOUNDARIES_GPU
-    lb_init_boundaries();
+    //TODO multi GPU stuff
+    //lb_init_boundaries();
 #endif
   }
-  if (field == LBPAR_DENSITY) {
+  else if (field == LBPAR_DENSITY) {
     lbgpu::reinit_fluid();
+  }else{
+    lbgpu::reinit_parameters();
   }
-
-  lbgpu::reinit_parameters();
 }
 #endif
 

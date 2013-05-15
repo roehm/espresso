@@ -629,7 +629,7 @@ int tclcommand_lbdevice(ClientData data, Tcl_Interp *interp, int argc, char **ar
   argc--; argv++;
   if (lattice_switch & LATTICE_LB_GPU) {
     //int* devices;
-    lbpar_gpu.devices = (int*)malloc(sizeof(int));
+    lbdevicepar_gpu.devices = (int*)malloc(sizeof(int));
     int dev = 0;
     int count = 0;
     int setflag = 0;
@@ -639,7 +639,7 @@ int tclcommand_lbdevice(ClientData data, Tcl_Interp *interp, int argc, char **ar
       return TCL_ERROR;
     }
     else if (ARG0_IS_S("set")) {
-        argc--; argv++;
+      argc--; argv++;
       setflag = 1;
       //printf("lbdevice set\n");
   	  while (argc > 0) {
@@ -647,9 +647,9 @@ int tclcommand_lbdevice(ClientData data, Tcl_Interp *interp, int argc, char **ar
           printf("usage: lbdevice set $device1 $device2 ...\n");
           return TCL_ERROR;
         }
-        lbpar_gpu.devices = (int*)realloc(lbpar_gpu.devices, (count+1)*sizeof(int));
-        lbpar_gpu.devices[count] = dev;
-      //printf("count %i, dev %i\n", count, lbpar_gpu.devices[count]);
+        lbdevicepar_gpu.devices = (int*)realloc(lbdevicepar_gpu.devices, (count+1)*sizeof(int));
+        lbdevicepar_gpu.devices[count] = dev;
+      //printf("count %i, dev %i\n", count, lbdevicepar_gpu.devices[count]);
         count++;
         argc--; argv++;
       }
@@ -662,14 +662,14 @@ int tclcommand_lbdevice(ClientData data, Tcl_Interp *interp, int argc, char **ar
         printf("lbdevice get\n");
         argc--; argv++;
         char buffer[(count+1)*TCL_INTEGER_SPACE];
-        count = lbgpu::get_devices(lbpar_gpu.devices);
+        count = lbgpu::get_devices(lbdevicepar_gpu.devices);
         for (int i = 0; i <= count; ++i) {
-          Tcl_PrintDouble(interp, lbpar_gpu.devices[i], buffer);
+          Tcl_PrintDouble(interp, lbdevicepar_gpu.devices[i], buffer);
           Tcl_AppendResult(interp, buffer, " ", (char *)NULL);
         }
       }else{
           printf("lb devices not explicitly set: all GPUs used by default\n");
-          printf("get available GPUs with <cuda getdevice> or use <lbdevice set $device1 $device2 ...>\n");
+          printf("get available GPUs with <cuda getdevice> or use <lbdevice set $device1 $device2 ...> to set devices explicilty\n");
           return TCL_ERROR;
       }
     }

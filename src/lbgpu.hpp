@@ -126,17 +126,10 @@ struct LB_parameters_gpu
   unsigned int dim_x;
   unsigned int dim_y;
   unsigned int dim_z;
-  unsigned int local_box_l[3];
-  int gpu_number;
-  int number_of_gpus;
-  int cpus_per_gpu;
-  int gpus_per_cpu;
-  int* devices;
-
   unsigned int number_of_nodes;
+  unsigned int number_of_global_nodes;
   unsigned number_of_halo_nodes[3];
 
-  unsigned int number_of_particles;
   /** Flag indicating whether fluctuations are present. */
   int fluct;
   /**to calc and print out phys values */
@@ -156,6 +149,17 @@ struct LB_parameters_gpu
 //  LB_parameters_gpu(unsigned int _reinit, float rho, float mu, float viscosity, float gamma_shear, float gamma_bulk, float gamma_odd, float gamma_even, float friction, float agrid, float tau, float time_step, unsigned int dim_x, unsigned int dim_y, unsigned int dim_z, int gpu_number, int number_of_gpus, int cpus_per_gpu, int gpus_per_cpu, unsigned int number_of_nodes, unsigned int number_of_particles, int fluct, int calc_val, int external_force, unsigned int your_seed) : reinit(_reinit), rho(1.0), mu(1.0), viscosity(1.0), gamma_shear(1.0), gamma_bulk(1.0), gamma_odd(0.0), gamma_even(0.0), friction(1.0), agrid(1.0), tau(0.01), time_step(0.01), dim_x(12), dim_y(12), dim_z(12), gpu_number(0), number_of_gpus(0), cpus_per_gpu(0), gpus_per_cpu(0), number_of_nodes(0), number_of_particles(0), fluct(0), calc_val(0), external_force(0), your_seed(12345) {};
 
 };
+/** Data structure holding multi GPU environment info for the Lattice Boltzmann system. */
+typedef struct {
+
+  unsigned int number_of_particles;
+  int gpu_number;
+  int number_of_gpus;
+  int cpus_per_gpu;
+  int gpus_per_cpu;
+  int* devices;
+
+} LB_gpus;
 /** Data structure holding the phys. values for the Lattice Boltzmann system. */
 typedef struct {
 
@@ -279,6 +283,7 @@ typedef struct {
 //#endif
 /** Switch indicating momentum exchange between particles and fluid */
 extern LB_parameters_gpu lbpar_gpu;
+extern LB_gpus lbdevicepar_gpu;
 extern LB_values_gpu *host_values;
 extern int transfer_momentum_gpu;
 extern LB_extern_nodeforce_gpu *extern_nodeforces_gpu;
@@ -360,7 +365,7 @@ namespace lbgpu {
   /** sen calculated particle forces from GPU to CPU and distibute them*/
   void send_forces();
   
-  void init_GPU(LB_parameters_gpu *lbpar_gpu);
+  void init_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu);
   void integrate_GPU();
   void particle_GPU(LB_particle_gpu *host_data);
   #ifdef SHANCHEN
@@ -368,13 +373,13 @@ namespace lbgpu {
   #endif
   void free_GPU();
   void get_values_GPU(LB_values_gpu *host_values);
-  void realloc_particle_GPU(LB_parameters_gpu *lbpar_gpu, LB_particle_gpu **host_data);
+  void realloc_particle_GPU(LB_parameters_gpu *lbpar_gpu,  LB_gpus *lbdevicepar_gpu, LB_particle_gpu **host_data);
   void copy_forces_GPU(LB_particle_force_gpu *host_forces);
   void print_node_GPU(int single_nodeindex, LB_values_gpu *host_print_values);
   #ifdef LB_BOUNDARIES_GPU
   void init_boundaries_GPU(int n_lb_boundaries, int number_of_boundnodes, int* host_boundary_node_list, int* host_boundary_index_list, float* lb_bounday_velocity);
   #endif
-  void init_extern_nodeforces_GPU(int n_extern_nodeforces, LB_extern_nodeforce_gpu *host_extern_nodeforces, LB_parameters_gpu *lbpar_gpu);
+  void init_extern_nodeforces_GPU(int n_extern_nodeforces, LB_extern_nodeforce_gpu *host_extern_nodeforces, LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu);
   
   void calc_fluid_mass_GPU(double* mass);
   void calc_fluid_momentum_GPU(double* host_mom);
@@ -386,9 +391,9 @@ namespace lbgpu {
   void set_node_velocity_GPU(int single_nodeindex, float* host_velocity);
   void set_node_rho_GPU(int single_nodeindex, float* host_rho);
   
-  void reinit_parameters_GPU(LB_parameters_gpu *lbpar_gpu);
-  void reinit_extern_nodeforce_GPU(LB_parameters_gpu *lbpar_gpu);
-  void reinit_GPU(LB_parameters_gpu *lbpar_gpu);
+  void reinit_parameters_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu);
+  void reinit_extern_nodeforce_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu);
+  void reinit_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu);
 
   int lbnode_set_extforce_GPU(int ind[3], double f[3]);
   void get_boundary_forces_GPU(double* forces);
@@ -407,6 +412,9 @@ namespace lbgpu {
   void cp_buffer_in_vd();
   int set_devices(int* devices, int count);
   int get_devices(int* devices);
+  void barrier_GPU();
+  void send_recv_buffer_gpu();
+  void send_recv_buffer_GPU();
   /**no used but still present function :p
    */
   void release();

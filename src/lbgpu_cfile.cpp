@@ -49,6 +49,7 @@
 
 /** Struct holding the Lattice Boltzmann parameters */
 LB_parameters_gpu lbpar_gpu;
+LB_gpus lbdevicepar_gpu;
 //= { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0 ,0.0, -1.0, 0, 0, 0, 0, 0, 0, 1, 0, {0.0, 0.0, 0.0}, 12345, 0};
 LB_values_gpu *host_values = NULL;
 LB_nodes_gpu *host_nodes = NULL;
@@ -94,7 +95,15 @@ void lbgpu::lattice_boltzmann_update() {
     fluidstep=0;
 
     lbgpu::integrate_GPU();
-
+  if(this_node == 0)
+  lb_lbfluid_save_checkpoint("checkpoint2.dat", 0);
+  else
+  lb_lbfluid_save_checkpoint("checkpoint3.dat", 0);
+    if (lbdevicepar_gpu.number_of_gpus > 1) lbgpu::send_recv_buffer_gpu();
+  if(this_node == 0)
+  lb_lbfluid_save_checkpoint("checkpoint4.dat", 0);
+  else
+  lb_lbfluid_save_checkpoint("checkpoint5.dat", 0);
     LB_TRACE (fprintf(stderr,"lb_integrate_GPU \n"));
 
   }
@@ -114,7 +123,7 @@ void lbgpu::calc_particle_lattice_ia() {
       }
 #endif
 
-      if(lbpar_gpu.number_of_particles){ lbgpu::particle_GPU(host_data);
+      if(lbdevicepar_gpu.number_of_particles){ lbgpu::particle_GPU(host_data);
 
         LB_TRACE (fprintf(stderr,"lb_calc_particle_lattice_ia_gpu \n"));
       }
@@ -128,7 +137,7 @@ void lbgpu::send_forces(){
 
   if (transfer_momentum_gpu) {
     if(this_node == 0){
-      if (lbpar_gpu.number_of_particles) lbgpu::copy_forces_GPU(host_forces);
+      if (lbdevicepar_gpu.number_of_particles) lbgpu::copy_forces_GPU(host_forces);
 
       LB_TRACE (fprintf(stderr,"send_forces \n"));
 #if 0
@@ -144,32 +153,38 @@ void lbgpu::send_forces(){
 /** (re-) allocation of the memory need for the particles (cpu part)*/
 void lbgpu::realloc_particles(){
 
-  lbpar_gpu.number_of_particles = n_total_particles;
-  LB_TRACE (printf("#particles realloc\t %u \n", lbpar_gpu.number_of_particles));
+  lbdevicepar_gpu.number_of_particles = n_total_particles;
+  LB_TRACE (printf("#particles realloc\t %u \n", lbdevicepar_gpu.number_of_particles));
   //fprintf(stderr, "%u \t \n", lbpar_gpu.number_of_particles);
   /**-----------------------------------------------------*/
   /** allocating of the needed memory for several structs */
   /**-----------------------------------------------------*/
   /**Allocate struct for particle forces */
-  size_t size_of_forces = lbpar_gpu.number_of_particles * sizeof(LB_particle_force_gpu);
+  size_t size_of_forces = lbdevicepar_gpu.number_of_particles * sizeof(LB_particle_force_gpu);
   host_forces = (LB_particle_force_gpu*) realloc(host_forces, size_of_forces);
 
   lbpar_gpu.your_seed = (unsigned int)i_random(max_ran);
 
   LB_TRACE (fprintf(stderr,"test your_seed %u \n", lbpar_gpu.your_seed));
-  lbgpu::realloc_particle_GPU(&lbpar_gpu, &host_data);
+  lbgpu::realloc_particle_GPU(&lbpar_gpu,  &lbdevicepar_gpu, &host_data);
 }
 /** (Re-)initializes the fluid according to the given value of rho. */
 void lbgpu::reinit_fluid() {
 
   //lbpar_gpu.your_seed = (unsigned int)i_random(max_ran);
   lbgpu::reinit_parameters();
-  if(lbpar_gpu.number_of_nodes != 0){
-    lbgpu::reinit_GPU(&lbpar_gpu);
+  if(lbpar_gpu.number_of_global_nodes != 0){
+    //printf("node %i number_of_nodes %i\n",this_node, lbpar_gpu.number_of_nodes);
+    lbgpu::reinit_GPU(&lbpar_gpu, &lbdevicepar_gpu);
     lbpar_gpu.reinit = 1;
-  }
+  
 
-  LB_TRACE (fprintf(stderr,"lb_reinit_fluid_gpu \n"));
+  if(this_node == 0)
+  lb_lbfluid_save_checkpoint("checkpoint6.dat", 0);
+  else
+  lb_lbfluid_save_checkpoint("checkpoint7.dat", 0);
+  LB_TRACE (fprintf(stderr,"lb_reinit_fluid_gpu finished\n"));
+  }
 }
 
 /** Release the fluid. */
@@ -182,6 +197,18 @@ void lbgpu::release(){
   free(host_data);
 }
 
+/** call excange of buffer after mpi barrier */
+/*not needed in Espresso but still not deleted*/
+void lbgpu::send_recv_buffer_gpu(){
+
+  lbgpu::barrier_GPU();
+
+  MPI_Barrier(comm_cart);
+  
+  lbgpu::send_recv_buffer_GPU();
+  printf("send_recv finished\n");
+
+}
 /** inint parameter strcut with default values */
 /**/
 void lbgpu::init_struct(){
@@ -205,12 +232,12 @@ void lbgpu::init_struct(){
  lbpar_gpu.dim_z=0;
  //for(int i=0;i<3;++i)
  //  lbpar_gpu.local_box_l[i]=0.0;
- lbpar_gpu.gpu_number=-1;
- lbpar_gpu.number_of_gpus=1;
- lbpar_gpu.cpus_per_gpu=-1;
- lbpar_gpu.gpus_per_cpu=-1;
+ lbdevicepar_gpu.gpu_number=-1;
+ lbdevicepar_gpu.number_of_gpus=1;
+ lbdevicepar_gpu.cpus_per_gpu=-1;
+ lbdevicepar_gpu.gpus_per_cpu=-1;
  lbpar_gpu.number_of_nodes=0;
- lbpar_gpu.number_of_particles=0;
+ lbdevicepar_gpu.number_of_particles=0;
  lbpar_gpu.fluct=0;
  lbpar_gpu.calc_val=1;
  lbpar_gpu.external_force=0;
@@ -259,11 +286,11 @@ void lbgpu::reinit_parameters() {
     lbpar_gpu.lb_coupl_pref = 0.0;
     lbpar_gpu.lb_coupl_pref2 = 0.0;
   }
-  lbpar_gpu.local_box_l[0] = (unsigned) local_box_l[0];
-  lbpar_gpu.local_box_l[1] = (unsigned) local_box_l[1];
-  lbpar_gpu.local_box_l[2] = (unsigned) local_box_l[2];
+  //lbpar_gpu.local_box_l[0] = (unsigned) local_box_l[0];
+  //lbpar_gpu.local_box_l[1] = (unsigned) local_box_l[1];
+  //lbpar_gpu.local_box_l[2] = (unsigned) local_box_l[2];
 	LB_TRACE (fprintf(stderr,"node %i lb_reinit_parameters_gpu \n", this_node));
-  lbgpu::reinit_parameters_GPU(&lbpar_gpu);
+  lbgpu::reinit_parameters_GPU(&lbpar_gpu, &lbdevicepar_gpu);
 }
 
 /** Performs a full initialization of
@@ -275,10 +302,13 @@ void lbgpu::init() {
   /** set parameters for transfer to gpu */
   lbgpu::reinit_parameters();
 
-  lbgpu::realloc_particles();
+  if (lbdevicepar_gpu.number_of_particles)lbgpu::realloc_particles();
 	
-  lbgpu::init_GPU(&lbpar_gpu);
-
+  lbgpu::init_GPU(&lbpar_gpu, &lbdevicepar_gpu);
+  if(this_node == 0)
+  lb_lbfluid_save_checkpoint("checkpoint0.dat", 0);
+  else
+  lb_lbfluid_save_checkpoint("checkpoint1.dat", 0);
   LB_TRACE(printf("Initialzing fluid on GPU successful\n"));
 }
 
@@ -518,7 +548,7 @@ int lbgpu::lbnode_set_extforce_GPU(int ind[3], double f[3])
   
   if(lbpar_gpu.external_force == 0)lbpar_gpu.external_force = 1;
 
-  lbgpu::init_extern_nodeforces_GPU(n_extern_nodeforces, host_extern_nodeforces, &lbpar_gpu);
+  lbgpu::init_extern_nodeforces_GPU(n_extern_nodeforces, host_extern_nodeforces, &lbpar_gpu, &lbdevicepar_gpu);
 
   return ES_OK;
 }
