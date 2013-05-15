@@ -121,6 +121,7 @@ typedef void (SlaveCallback)(int node, int param);
 /*  CB(mpi_morse_cap_forces_slave) */ \
   CB(mpi_bcast_lb_params_slave) \
   CB(mpi_bcast_lbgpu_params_slave) \
+  CB(mpi_bcast_lbgpu_devparams_slave) \
   CB(mpi_send_dip_slave) \
   CB(mpi_send_dipm_slave) \
   CB(mpi_send_fluid_slave) \
@@ -2384,7 +2385,7 @@ void mpi_bcast_lb_params_slave(int node, int field) {
 
 void mpi_bcast_lbgpu_params(int field) {
 #ifdef LB_GPU
-  printf("node %i master mpi bcast lbgpu params\n", this_node);
+  LB_TRACE(printf("node %i master mpi bcast lbgpu params\n", this_node));
   mpi_call(mpi_bcast_lbgpu_params_slave, -1, field);
   MPI_Bcast(&lbpar_gpu, sizeof(LB_parameters_gpu), MPI_BYTE, 0, comm_cart);
   lbgpu::params_change(field);
@@ -2393,14 +2394,35 @@ void mpi_bcast_lbgpu_params(int field) {
 
 void mpi_bcast_lbgpu_params_slave(int node, int field) {
 #ifdef LB_GPU
-  printf("node %i slave mpi bcast lbgpu params\n", this_node);
+  LB_TRACE(printf("node %i slave mpi bcast lbgpu params\n", this_node));
   MPI_Bcast(&lbpar_gpu, sizeof(LB_parameters_gpu), MPI_BYTE, 0, comm_cart);
   lbgpu::params_change(field);
 #endif
 }
 
-/******************* REQ_BCAST_LBGPU_PAR ********************/
+/******************* REQ_BCAST_LBGPU_DEVPAR ********************/
 
+void mpi_bcast_lbgpu_devparams(int field) {
+#ifdef LB_GPU
+  printf("node %i master mpi bcast lbgpu devicepar\n", this_node);
+  mpi_call(mpi_bcast_lbgpu_devparams_slave, -1, field);
+  MPI_Bcast(&lbdevicepar_gpu, sizeof(LB_gpus), MPI_BYTE, 0, comm_cart);
+  mpi_bcast_lbgpu_devices();
+  lbgpu::params_change(field);
+#endif
+}
+
+void mpi_bcast_lbgpu_devparams_slave(int node, int field) {
+#ifdef LB_GPU
+  printf("node %i slave mpi bcast lbgpu devicepar\n", this_node);
+  MPI_Bcast(&lbdevicepar_gpu, sizeof(LB_gpus), MPI_BYTE, 0, comm_cart);
+  mpi_bcast_lbgpu_devices();
+  lbgpu::params_change(field);
+#endif
+}
+
+/******************* REQ_BCAST_LBGPU_DEVS ********************/
+#if 1
 void mpi_bcast_lbgpu_devices() {
 #ifdef LB_GPU
   MPI_Bcast(&lbdevicepar_gpu.number_of_gpus, 1, MPI_INT, 0, comm_cart);
@@ -2411,7 +2433,7 @@ void mpi_bcast_lbgpu_devices() {
     //printf("mpibcast this node %i dev %i %i\n", this_node, lbdevicepar_gpu.devices[0],lbdevicepar_gpu.devices[1]);
 #endif
 }
-
+#endif
 /******************* REQ_GET_ERRS ********************/
 
 int mpi_gather_runtime_errors(char **errors)

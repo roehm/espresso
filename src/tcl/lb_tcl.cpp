@@ -653,8 +653,7 @@ int tclcommand_lbdevice(ClientData data, Tcl_Interp *interp, int argc, char **ar
         count++;
         argc--; argv++;
       }
-      //lbpar_gpu.number_of_gpus = count;
-      //mpi_bcast_lbgpu_params(0);
+      mpi_bcast_lbgpu_devparams(LBPAR_GPUS);
     }
     else if (ARG0_IS_S("get")) {
       printf("setflag %i\n", setflag);

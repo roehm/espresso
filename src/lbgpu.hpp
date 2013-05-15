@@ -26,32 +26,17 @@
 #ifndef LB_GPU_H
 #define LB_GPU_H
 
-/* For the D3Q19 model most functions have a separate implementation
- * where the coefficients and the velocity vectors are hardcoded
- * explicitly. This saves a lot of multiplications with 1's and 0's
- * thus making the code more efficient. */
-#define D3Q19
-#define LBQ 19
 
 /** \name Parameter fields for Lattice Boltzmann
  * The numbers are referenced in \ref mpi_bcast_lb_params
  * to determine what actions have to take place upon change
  * of the respective parameter. */
 /*@{*/
-#define LBPAR_DENSITY   0 /**< fluid density */
-#define LBPAR_VISCOSITY 1 /**< fluid kinematic viscosity */
-#define LBPAR_AGRID     2 /**< grid constant for fluid lattice */
-#define LBPAR_TAU       3 /**< time step for fluid propagation */
-#define LBPAR_FRICTION  4 /**< friction coefficient for viscous coupling between particles and fluid */
-#define LBPAR_EXTFORCE  5 /**< external force acting on the fluid */
-#define LBPAR_BULKVISC  6 /**< fluid bulk viscosity */
-#ifdef CONSTRAINTS
-#define LBPAR_BOUNDARY  7 /**< boundary parameters */
-#endif
 #ifdef SHANCHEN
 #define LBPAR_COUPLING 8
 #define LBPAR_MOBILITY 9
 #endif
+#define LBPAR_GPUS 10 /**< multi GPU parameter */
 /*@}*/
 
 /**-------------------------------------------------------------------------*/

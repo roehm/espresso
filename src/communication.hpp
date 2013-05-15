@@ -476,6 +476,11 @@ void mpi_bcast_lb_params(int field);
  */
 void mpi_bcast_lbgpu_params(int field);
 
+/** Issue REQ_BCAST_LBGPU_PAR: Broadcast a multi GPU parameter for Lattice Boltzmann GPU.
+ * @param field References the parameter field to be broadcasted. The references are defined in \ref lb.h "lb.h"
+ */
+void mpi_bcast_lbgpu_devparams(int field);
+
 /** Issue REQ_BCAST_LBPAR: Broadcast a parameter for Lattice Boltzmann.
  * @param dev pointer to device list
  * @param count number of GPU devices

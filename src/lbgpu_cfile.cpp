@@ -95,16 +95,20 @@ void lbgpu::lattice_boltzmann_update() {
     fluidstep=0;
 
     lbgpu::integrate_GPU();
+#if 0
   if(this_node == 0)
   lb_lbfluid_save_checkpoint("checkpoint2.dat", 0);
   else
   lb_lbfluid_save_checkpoint("checkpoint3.dat", 0);
+#endif
     if (lbdevicepar_gpu.number_of_gpus > 1) lbgpu::send_recv_buffer_gpu();
+#if 0
   if(this_node == 0)
   lb_lbfluid_save_checkpoint("checkpoint4.dat", 0);
   else
   lb_lbfluid_save_checkpoint("checkpoint5.dat", 0);
-    LB_TRACE (fprintf(stderr,"lb_integrate_GPU \n"));
+#endif
+    LB_TRACE (fprintf(stderr,"node %i lb_integrate_GPU finished\n", this_node));
 
   }
 }
@@ -125,7 +129,7 @@ void lbgpu::calc_particle_lattice_ia() {
 
       if(lbdevicepar_gpu.number_of_particles){ lbgpu::particle_GPU(host_data);
 
-        LB_TRACE (fprintf(stderr,"lb_calc_particle_lattice_ia_gpu \n"));
+        LB_TRACE (fprintf(stderr,"node %i lb_calc_particle_lattice_ia_gpu \n",this_node));
       }
     }
   }
@@ -137,9 +141,11 @@ void lbgpu::send_forces(){
 
   if (transfer_momentum_gpu) {
     if(this_node == 0){
-      if (lbdevicepar_gpu.number_of_particles) lbgpu::copy_forces_GPU(host_forces);
+      if (lbdevicepar_gpu.number_of_particles){
+        lbgpu::copy_forces_GPU(host_forces);
 
-      LB_TRACE (fprintf(stderr,"send_forces \n"));
+        LB_TRACE (fprintf(stderr,"node %i send_forces \n", this_node));
+      }
 #if 0
         for (i=0;i<n_total_particles;i++) {
           fprintf(stderr, "%i particle forces , %f %f %f \n", i, host_forces[i].f[0], host_forces[i].f[1], host_forces[i].f[2]);
@@ -154,7 +160,7 @@ void lbgpu::send_forces(){
 void lbgpu::realloc_particles(){
 
   lbdevicepar_gpu.number_of_particles = n_total_particles;
-  LB_TRACE (printf("#particles realloc\t %u \n", lbdevicepar_gpu.number_of_particles));
+  LB_TRACE (printf("node %i #particles realloc\t %u \n", this_node,lbdevicepar_gpu.number_of_particles));
   //fprintf(stderr, "%u \t \n", lbpar_gpu.number_of_particles);
   /**-----------------------------------------------------*/
   /** allocating of the needed memory for several structs */
@@ -178,12 +184,13 @@ void lbgpu::reinit_fluid() {
     lbgpu::reinit_GPU(&lbpar_gpu, &lbdevicepar_gpu);
     lbpar_gpu.reinit = 1;
   
-
+#if 0
   if(this_node == 0)
   lb_lbfluid_save_checkpoint("checkpoint6.dat", 0);
   else
   lb_lbfluid_save_checkpoint("checkpoint7.dat", 0);
   LB_TRACE (fprintf(stderr,"lb_reinit_fluid_gpu finished\n"));
+#endif
   }
 }
 
@@ -206,7 +213,7 @@ void lbgpu::send_recv_buffer_gpu(){
   MPI_Barrier(comm_cart);
   
   lbgpu::send_recv_buffer_GPU();
-  printf("send_recv finished\n");
+  printf("node %i send_recv finished\n",this_node);
 
 }
 /** inint parameter strcut with default values */
@@ -298,17 +305,19 @@ void lbgpu::reinit_parameters() {
  *  and the fluid are reset to their default values. */
 void lbgpu::init() {
 
-  LB_TRACE(printf("Begin initialzing fluid on GPU\n"));
+  LB_TRACE(printf("node %i Begin initialzing fluid on GPU\n", this_node));
   /** set parameters for transfer to gpu */
   lbgpu::reinit_parameters();
 
   if (lbdevicepar_gpu.number_of_particles)lbgpu::realloc_particles();
 	
   lbgpu::init_GPU(&lbpar_gpu, &lbdevicepar_gpu);
+#if 0
   if(this_node == 0)
   lb_lbfluid_save_checkpoint("checkpoint0.dat", 0);
   else
   lb_lbfluid_save_checkpoint("checkpoint1.dat", 0);
+#endif
   LB_TRACE(printf("Initialzing fluid on GPU successful\n"));
 }
 

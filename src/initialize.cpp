@@ -127,9 +127,6 @@ void on_program_start() {
 #ifdef LB_GPU
   lbgpu::init_struct();
   lbgpu::setup_plan();
-  //if(this_node == 0){
-    //lb_pre_init_gpu();
-  //}
 #endif
 #ifdef LB
   lb_pre_init();
@@ -660,14 +657,13 @@ void on_parameter_change(int field)
     break;
   case FIELD_TIMESTEP:
 #ifdef LB_GPU
+    //TODO check what nodegrid is doing -> domainchange?
     if(this_node == 0 && lbdevicepar_gpu.number_of_gpus == 1) {
       if (lattice_switch & LATTICE_LB_GPU) {
         lbgpu::reinit_parameters();
       }
     }else{
       if (lattice_switch & LATTICE_LB_GPU) {
-        mpi_bcast_lbgpu_devices();
-        lbgpu::reinit_plan();
         lbgpu::reinit_parameters();
       }
     }
@@ -732,6 +728,10 @@ void lbgpu::params_change(int field) {
 #endif
   }
   else if (field == LBPAR_DENSITY) {
+    lbgpu::reinit_fluid();
+  }
+  else if (field == LBPAR_GPUS) {
+    lbgpu::reinit_plan();
     lbgpu::reinit_fluid();
   }else{
     lbgpu::reinit_parameters();
