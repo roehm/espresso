@@ -502,16 +502,29 @@ int lb_lbfluid_print_vtk_velocity(char* filename) {
 
 	 if (lattice_switch & LATTICE_LB_GPU) {
 #ifdef LB_GPU
-    size_t size_of_values = lbpar_gpu.number_of_nodes * sizeof(LB_values_gpu);
-    host_values = (LB_values_gpu*)malloc(size_of_values);
-    lbgpu::get_values_GPU(host_values);
+    if(lbdevicepar_gpu.number_of_devices == 1){
+      size_t size_of_values = lbpar_gpu.number_of_nodes * sizeof(LB_values_gpu);
+      host_values = (LB_values_gpu*)malloc(size_of_values);
+      lbgpu::get_values_GPU(host_values);
 		  fprintf(fp, "# vtk DataFile Version 2.0\nlbfluid_gpu\nASCII\nDATASET STRUCTURED_POINTS\nDIMENSIONS %u %u %u\nORIGIN %f %f %f\nSPACING %f %f %f\nPOINT_DATA %u\nSCALARS OutArray  floats 3\nLOOKUP_TABLE default\n", lbpar_gpu.dim_x, lbpar_gpu.dim_y, lbpar_gpu.dim_z, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.number_of_nodes);
-    unsigned int j;	
-    for(j=0; j<lbpar_gpu.number_of_nodes; ++j){
+      unsigned int j;	
+      for(j=0; j<lbpar_gpu.number_of_nodes; ++j){
       /** print of the calculated phys values */
-      fprintf(fp, "%f %f %f\n", host_values[j].v[0], host_values[j].v[1], host_values[j].v[2]);
-    }
+        fprintf(fp, "%f %f %f\n", host_values[j].v[0], host_values[j].v[1], host_values[j].v[2]);
+      }
     free(host_values);
+    }else{
+      size_t size_of_values = lbpar_gpu.number_of_global_nodes * sizeof(LB_values_gpu);
+      host_values = (LB_values_gpu*)malloc(size_of_values);
+      lbgpu::get_values_multigpu(host_values);
+		  fprintf(fp, "# vtk DataFile Version 2.0\nlbfluid_gpu\nASCII\nDATASET STRUCTURED_POINTS\nDIMENSIONS %u %u %u\nORIGIN %f %f %f\nSPACING %f %f %f\nPOINT_DATA %u\nSCALARS OutArray  floats 3\nLOOKUP_TABLE default\n", lbpar_gpu.dim_x, lbpar_gpu.dim_y, lbpar_gpu.dim_z, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.number_of_nodes);
+      unsigned int j;	
+      for(j=0; j<lbpar_gpu.number_of_nodes; ++j){
+      
+      /** print of the calculated phys values */
+        fprintf(fp, "%f %f %f\n", host_values[j].v[0], host_values[j].v[1], host_values[j].v[2]);
+      }
+    }
 #endif
   } else {
 #ifdef LB

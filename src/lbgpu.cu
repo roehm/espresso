@@ -3851,13 +3851,21 @@ void lbgpu::get_values_GPU(LB_values_gpu *host_values){
     int blocks_per_grid_y = 4;
     int blocks_per_grid_x = (lbpar_gpu.number_of_nodes + threads_per_block * blocks_per_grid_y - 1) /(threads_per_block * blocks_per_grid_y);
     dim3 dim_grid = make_uint3(blocks_per_grid_x, blocks_per_grid_y, 1);
-  #ifndef SHANCHEN
-    KERNELCALL(values, dim_grid, threads_per_block, (*plan[g].current_nodes, plan[g].device_values));
-  #endif // SHANCHEN
+#ifndef SHANCHEN
+    if(lbdevicepar_gpu.number_of_gpus == 1){
+      KERNELCALL(values, dim_grid, threads_per_block, (*plan[g].current_nodes, plan[g].device_values));
+    }else{
+      KERNELCALL(values_without_halo, dim_grid, threads_per_block, (*plan[g].current_nodes, plan[g].device_values));
+    }
+#endif
     /* Note: in the Shan-Chen implementation the hydrodynamic fields (device_values) are computed in apply_forces(), 
   	   we need only to copy them
      */
-    cudaMemcpy(host_values, plan[g].device_values, size_of_values, cudaMemcpyDeviceToHost);
+    if(lbdevicepar_gpu.number_of_gpus == 1){
+      cudaMemcpy(host_values, plan[g].device_values, size_of_values, cudaMemcpyDeviceToHost);
+    }else{
+      cudaMemcpy(host_values, plan[g].device_values, size_of_values_wo_halo, cudaMemcpyDeviceToHost);
+    }
   }
 }
 

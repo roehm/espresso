@@ -403,6 +403,7 @@ namespace lbgpu {
   void barrier_GPU();
   void send_recv_buffer_gpu();
   void send_recv_buffer_GPU();
+  void get_values_multigpu(LB_values_gpu *host_values);
   /**no used but still present function :p
    */
   void release();
