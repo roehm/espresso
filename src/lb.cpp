@@ -519,13 +519,33 @@ int lb_lbfluid_print_vtk_velocity(char* filename) {
       host_values = (LB_values_gpu*)malloc(size_of_values);
       lbgpu::get_values_multigpu(host_values);
 		  fprintf(fp, "# vtk DataFile Version 2.0\nlbfluid_gpu\nASCII\nDATASET STRUCTURED_POINTS\nDIMENSIONS %u %u %u\nORIGIN %f %f %f\nSPACING %f %f %f\nPOINT_DATA %u\nSCALARS OutArray  floats 3\nLOOKUP_TABLE default\n", lbpar_gpu.global_dim_x, lbpar_gpu.global_dim_y, lbpar_gpu.global_dim_z, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.number_of_global_nodes);
-      unsigned int j;	
-      for(j=0; j<lbpar_gpu.number_of_global_nodes; ++j){
+      int x,y,z,j;
+      int xx = 0;
+      int yy = 0;
+      int zz = 0;
+      for(int gz=0; gz<(node_grid[2]); ++gz){
+        for(z=0; z<((lbpar_gpu.dim_z-2)/lbpar_gpu.agrid); ++z){
+          for(int gy=0; gy<(node_grid[1]); ++gy){
+           for(y=0; y<((lbpar_gpu.dim_y-2)/lbpar_gpu.agrid); ++y){
+             for(int gx=0; gx<(node_grid[0]); ++gx){
+               for(x=0; x<((lbpar_gpu.dim_x-2)/lbpar_gpu.agrid); ++x){
       
-      /** print of the calculated phys values */
-        fprintf(fp, "%f %f %f\n", host_values[j].v[0], host_values[j].v[1], host_values[j].v[2]);
-      }
+               /** print of the calculated phys values */
+                 j=xx+yy*lbpar_gpu.global_dim_x+zz*lbpar_gpu.global_dim_x*lbpar_gpu.global_dim_y;
+                 fprintf(fp, "%f %f %f\n", host_values[j].v[0], host_values[j].v[1], host_values[j].v[2]);
+                 xx++;
+               }
+               xx=gx*((lbpar_gpu.dim_x-2)/lbpar_gpu.agrid);
+             }
+             yy++;
+           }
+           yy=gy*((lbpar_gpu.dim_y-2)/lbpar_gpu.agrid);
+         }
+         zz++;
+       }
+      zz=gz*((lbpar_gpu.dim_z-2)/lbpar_gpu.agrid);
     }
+  }
 #endif
   } else {
 #ifdef LB
