@@ -79,6 +79,7 @@ static int gpu_n = 0;
 
 /**defining size values for allocating global memory */
 static size_t size_of_values;
+static size_t size_of_values_wo_halo;
 static size_t size_of_forces;
 static size_t size_of_positions;
 static size_t size_of_seed;
@@ -900,10 +901,10 @@ __device__ void apply_forces(unsigned int index, float *mode, LB_node_force_gpu 
  * This function is a clone of lb_calc_local_fields and
  * additionally performs unit conversions.
 */
-__device__ void calc_values(LB_nodes_gpu n_a, float *mode, LB_values_gpu *d_v, unsigned int index, unsigned int singlenode){
+__device__ void calc_values(LB_nodes_gpu n_a, float *mode, LB_values_gpu *d_v, unsigned int index, unsigned int singlenode, LB_node_force_gpu node_f){
 
   float rho = mode[0] + para.rho*para.agrid*para.agrid*para.agrid;
-	
+
   float *v, *pi;
   if(singlenode == 1){ 
     v=&(d_v[0].v[0]);
@@ -920,10 +921,9 @@ __device__ void calc_values(LB_nodes_gpu n_a, float *mode, LB_values_gpu *d_v, u
   j[1] = mode[2];
   j[2] = mode[3];
 
-// To Do: Here half the forces have to go in!
-//  j[0] += 0.5*lbfields[index].force[0];
-//  j[1] += 0.5*lbfields[index].force[1];
-//  j[2] += 0.5*lbfields[index].force[2];
+  j[0] += 0.5*node_f.force[0*para.number_of_nodes + index];
+  j[1] += 0.5*node_f.force[1*para.number_of_nodes + index];
+  j[2] += 0.5*node_f.force[2*para.number_of_nodes + index];
 
   v[0]=j[0]/rho;
   v[1]=j[1]/rho;
@@ -966,7 +966,90 @@ __device__ void calc_values(LB_nodes_gpu n_a, float *mode, LB_values_gpu *d_v, u
   }
 
 }
-/**
+/**function used to calc physical values of every node
+ * @param index		node index / thread index (Input)
+ * @param mode		Pointer to the local register values mode (Input)
+ * @param n_a		Pointer to local node residing in array a for boundary flag(Input)
+ * @param *d_v		Pointer to local device values (Input/Output)
+ * @param singlenode	Flag, if there is only one node
+ * This function is a clone of lb_calc_local_fields and
+ * additionally performs unit conversions.
+*/
+__device__ void calc_values_wo_halo(LB_nodes_gpu n_a, float *mode, LB_values_gpu *d_v, unsigned int index, unsigned int singlenode, LB_node_force_gpu node_f){
+
+    unsigned int xyz[3];
+    index_to_xyz(index, xyz);
+    unsigned int x = xyz[0];
+    unsigned int y = xyz[1];
+    unsigned int z = xyz[2];
+
+    if(x != 0 && x != (para.dim_x-1) && y != 0 && y != (para.dim_y-1) && z != 0 && z != (para.dim_z-1)){
+     float rho = mode[0] + para.rho*para.agrid*para.agrid*para.agrid;
+int iindex;
+     iindex = (x-1) + (y-1)*(para.dim_x-2) + (z-1)*(para.dim_x-2)*(para.dim_y-2);
+     float *v, *pi;
+     if(singlenode == 1){ 
+      v=&(d_v[0].v[0]);
+      pi=&(d_v[0].pi[0]);
+      d_v[0].rho = rho;
+     } else {
+       //TODO compute correct index
+         v=&(d_v[iindex].v[0]);
+         pi=&(d_v[iindex].pi[0]);
+         d_v[iindex].rho = rho;
+       }
+     float j[3]; float pi_eq[6];
+  
+     j[0] = mode[1];
+     j[1] = mode[2];
+     j[2] = mode[3];
+
+    j[0] += 0.5*node_f.force[0*para.number_of_nodes + index];
+    j[1] += 0.5*node_f.force[1*para.number_of_nodes + index];
+    j[2] += 0.5*node_f.force[2*para.number_of_nodes + index];
+
+    v[0]=j[0]/rho;
+    v[1]=j[1]/rho;
+    v[2]=j[2]/rho;
+
+    /* equilibrium part of the stress modes */
+    pi_eq[0] = (j[0]*j[0]+j[1]*j[1]+j[2]*j[2])/ rho;
+    pi_eq[1] = ((j[0]*j[0])-(j[1]*j[1]))/ rho;
+    pi_eq[2] = (j[0]*j[0]+j[1]*j[1]+j[2]*j[2] - 3.0*j[2]*j[2])/ rho;
+    pi_eq[3] = j[0]*j[1]/ rho;
+    pi_eq[4] = j[0]*j[2]/ rho;
+    pi_eq[5] = j[1]*j[2]/ rho;
+
+    /* Now we must predict the outcome of the next collision */
+    /* We immediately average pre- and post-collision. */
+    mode[4] = pi_eq[0] + (0.5+0.5*para.gamma_bulk )*(mode[4] - pi_eq[0]);
+    mode[5] = pi_eq[1] + (0.5+0.5*para.gamma_shear)*(mode[5] - pi_eq[1]);
+    mode[6] = pi_eq[2] + (0.5+0.5*para.gamma_shear)*(mode[6] - pi_eq[2]);
+    mode[7] = pi_eq[3] + (0.5+0.5*para.gamma_shear)*(mode[7] - pi_eq[3]);
+    mode[8] = pi_eq[4] + (0.5+0.5*para.gamma_shear)*(mode[8] - pi_eq[4]);
+    mode[9] = pi_eq[5] + (0.5+0.5*para.gamma_shear)*(mode[9] - pi_eq[5]);
+
+    /* Now we have to transform to the "usual" stress tensor components */
+    /* We use eq. 116ff in Duenweg Ladd for that. */
+    pi[0]=(mode[0]+mode[4]+mode[5])/3.;
+    pi[2]=(2*mode[0]+2*mode[4]-mode[5]+3*mode[6])/6.;
+    pi[5]=(2*mode[0]+2*mode[4]-mode[5]+3*mode[6])/6.;
+    pi[1]=mode[7];
+    pi[3]=mode[8];
+    pi[4]=mode[9];
+
+    /* Finally some unit conversions */
+    rho*=1./para.agrid/para.agrid/para.agrid;
+    v[0]*=1./para.tau/para.agrid;
+    v[1]*=1./para.tau/para.agrid;
+    v[2]*=1./para.tau/para.agrid;
+    for (int i =0; i<6; i++) {
+      pi[i]*=1./para.tau/para.tau/para.agrid/para.agrid/para.agrid;
+    }
+  }
+
+}
+/** calculates only 4 conserved modes
  * @param node_index	node index around (8) particle (Input)
  * @param *mode			Pointer to the local register values mode (Output)
  * @param n_a			Pointer to local node residing in array a(Input)
@@ -2950,7 +3033,7 @@ __global__ void bb_write(LB_nodes_gpu n_a, LB_nodes_gpu n_b){
  * @param *d_v		Pointer to local device values (Input)
 */
 #ifndef SHANCHEN
-__global__ void values(LB_nodes_gpu n_a, LB_values_gpu *d_v){
+__global__ void values(LB_nodes_gpu n_a, LB_values_gpu *d_v, LB_node_force_gpu node_f){
 
   unsigned int singlenode = 0;
   unsigned int index = blockIdx.y * gridDim.x * blockDim.x + blockDim.x * blockIdx.x + threadIdx.x;
@@ -2958,11 +3041,26 @@ __global__ void values(LB_nodes_gpu n_a, LB_values_gpu *d_v){
   if(index<para.number_of_nodes){
     float mode[4];
     calc_mode(mode, n_a, index);
-    calc_values(n_a, mode, d_v, index, singlenode);
+    calc_values(n_a, mode, d_v, index, singlenode, node_f);
+  }
+}
+/** get physical values of the nodes without halonodes (density, velocity, ...)
+ * @param n_a		Pointer to local node residing in array a (Input)
+ * @param *d_v		Pointer to local device values (Input)
+*/
+__global__ void values_wo_halo(LB_nodes_gpu n_a, LB_values_gpu *d_v, LB_node_force_gpu node_f){
+
+  unsigned int singlenode = 0;
+  unsigned int index = blockIdx.y * gridDim.x * blockDim.x + blockDim.x * blockIdx.x + threadIdx.x;
+
+  if(index<para.number_of_nodes){
+    float mode[4];
+    calc_mode(mode, n_a, index);
+    calc_values_wo_halo(n_a, mode, d_v, index, singlenode, node_f);
   }
 }
 #else // SHANCHEN
-__global__ void values(LB_nodes_gpu n_a, LB_values_gpu *d_v,LB_node_force_gpu node_f){
+__global__ void values(LB_nodes_gpu n_a, LB_values_gpu *d_v, LB_node_force_gpu node_f){
  /* NOTE: in SHANCHEN d_v are updated in relax_modes() because the
  forces are needed, which are reset to zero (or to the ext. force
  value) in apply_forces(), at the end of the LB loop. When a request
@@ -3008,14 +3106,14 @@ __global__ void lb_get_boundaries(LB_nodes_gpu n_a, unsigned int *device_bound_a
  * @param n_a				Pointer to local node residing in array a (Input)
 */
 #ifndef SHANCHEN
-__global__ void lb_print_node(int single_nodeindex, LB_values_gpu *d_p_v, LB_nodes_gpu n_a){
+__global__ void lb_print_node(int single_nodeindex, LB_values_gpu *d_p_v, LB_nodes_gpu n_a, LB_node_force_gpu node_f){
 
   float mode[19];
   unsigned int singlenode = 1;
   unsigned int index = blockIdx.y * gridDim.x * blockDim.x + blockDim.x * blockIdx.x + threadIdx.x;
   if(index == 0){
     calc_m_from_n(n_a, single_nodeindex, mode);
-    calc_values(n_a, mode, d_p_v, single_nodeindex, singlenode);
+    calc_values(n_a, mode, d_p_v, single_nodeindex, singlenode, node_f);
   }
 }
 #else //SHANCHEN
@@ -3494,10 +3592,14 @@ void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu){
     lbpar_gpu->number_of_nodes = (unsigned)(lbpar_gpu->dim_x*lbpar_gpu->dim_y*lbpar_gpu->dim_z);
     printf("Using only one GPU");
   }else{
-    //halo in all three directions
-    lbpar_gpu->dim_x = (unsigned)floor(local_box_l[0]/lbpar_gpu->agrid) + 2;
-    lbpar_gpu->dim_y = (unsigned)floor(local_box_l[1]/lbpar_gpu->agrid) + 2;
-    lbpar_gpu->dim_z = (unsigned)floor(local_box_l[2]/lbpar_gpu->agrid) + 2;
+    lbpar_gpu->dim_x = (unsigned)floor(local_box_l[0]/lbpar_gpu->agrid);
+    lbpar_gpu->dim_y = (unsigned)floor(local_box_l[1]/lbpar_gpu->agrid);
+    lbpar_gpu->dim_z = (unsigned)floor(local_box_l[2]/lbpar_gpu->agrid);
+    lbpar_gpu->number_of_nodes_wo_halo = (unsigned) (lbpar_gpu->dim_x*lbpar_gpu->dim_y*lbpar_gpu->dim_z);
+    //with halo in all three directions
+    lbpar_gpu->dim_x += 2;
+    lbpar_gpu->dim_y += 2;
+    lbpar_gpu->dim_z += 2;
     printf("dims: %u, %u, %u agrid %f\n", lbpar_gpu->dim_x, lbpar_gpu->dim_y, lbpar_gpu->dim_z, lbpar_gpu->agrid);
     lbpar_gpu->number_of_nodes = (unsigned) (lbpar_gpu->dim_x*lbpar_gpu->dim_y*lbpar_gpu->dim_z);
     printf("init gpu number_of_nodes %i \n", lbpar_gpu->number_of_nodes);
@@ -3509,6 +3611,7 @@ void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu){
   }
   /** Allocate structs in device memory*/
   size_of_values = lbpar_gpu->number_of_nodes * sizeof(LB_values_gpu);
+  size_of_values_wo_halo = lbpar_gpu->number_of_nodes_wo_halo * sizeof(LB_values_gpu);
   size_of_nodes_gpu = lbpar_gpu->number_of_nodes * 19 * sizeof(float);
   size_of_uint = lbpar_gpu->number_of_nodes * sizeof(unsigned int);
   size_of_3floats = lbpar_gpu->number_of_nodes * 3 * sizeof(float);
@@ -3522,6 +3625,7 @@ void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu){
 #if 1
     if(plan[g].initflag){
       cudaFree(plan[g].device_values);
+      cudaFree(plan[g].device_values_wo_halo);
       cudaFree(plan[g].nodes_a.vd);
       cudaFree(plan[g].nodes_b.vd);
       cudaFree(plan[g].nodes_a.seed);
@@ -3536,6 +3640,7 @@ void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu){
     cuda_check_errors(cudaSetDeviceFlags(cudaDeviceMapHost));
 #endif
     cuda_check_errors(cudaMalloc((void**)&plan[g].device_values, size_of_values));
+    cuda_check_errors(cudaMalloc((void**)&plan[g].device_values_wo_halo, size_of_values_wo_halo));
 #ifndef SHANCHEN
     cuda_check_errors(cudaMalloc((void**)&plan[g].nodes_a.vd, size_of_nodes_gpu));
     cuda_check_errors(cudaMalloc((void**)&plan[g].nodes_b.vd, size_of_nodes_gpu));
@@ -3805,7 +3910,7 @@ void lbgpu::particle_GPU(LB_particle_gpu *host_data){
 #ifndef SHANCHEN
     KERNELCALL(calc_fluid_particle_ia, dim_grid_particles, threads_per_block_particles, (*plan[g].current_nodes, plan[g].particle_data, plan[g].particle_force, plan[g].node_f, plan[g].part));
 #else 
-    KERNELCALL(calc_fluid_particle_ia, dim_grid_particles, threads_per_block_particles, (*plan[g].current_nodes, particle_data, particle_force, node_f, part,device_values));
+    KERNELCALL(calc_fluid_particle_ia, dim_grid_particles, threads_per_block_particles, (*plan[g].current_nodes, particle_data, particle_force, plan[g].node_f, part,device_values));
 #endif
   }
 }
@@ -3853,9 +3958,9 @@ void lbgpu::get_values_GPU(LB_values_gpu *host_values){
     dim3 dim_grid = make_uint3(blocks_per_grid_x, blocks_per_grid_y, 1);
 #ifndef SHANCHEN
     if(lbdevicepar_gpu.number_of_gpus == 1){
-      KERNELCALL(values, dim_grid, threads_per_block, (*plan[g].current_nodes, plan[g].device_values));
+      KERNELCALL(values, dim_grid, threads_per_block, (*plan[g].current_nodes, plan[g].device_values, plan[g].node_f));
     }else{
-      KERNELCALL(values_without_halo, dim_grid, threads_per_block, (*plan[g].current_nodes, plan[g].device_values));
+      KERNELCALL(values_wo_halo, dim_grid, threads_per_block, (*plan[g].current_nodes, plan[g].device_values_wo_halo, plan[g].node_f));
     }
 #endif
     /* Note: in the Shan-Chen implementation the hydrodynamic fields (device_values) are computed in apply_forces(), 
@@ -3864,7 +3969,7 @@ void lbgpu::get_values_GPU(LB_values_gpu *host_values){
     if(lbdevicepar_gpu.number_of_gpus == 1){
       cudaMemcpy(host_values, plan[g].device_values, size_of_values, cudaMemcpyDeviceToHost);
     }else{
-      cudaMemcpy(host_values, plan[g].device_values, size_of_values_wo_halo, cudaMemcpyDeviceToHost);
+      cudaMemcpy(host_values, plan[g].device_values_wo_halo, size_of_values_wo_halo, cudaMemcpyDeviceToHost);
     }
   }
 }
@@ -3947,7 +4052,7 @@ void lbgpu::print_node_GPU(int single_nodeindex, LB_values_gpu *host_print_value
     dim3 dim_grid_print = make_uint3(blocks_per_grid_print_x, blocks_per_grid_print_y, 1);
   
 #ifndef SHANCHEN
-    KERNELCALL(lb_print_node, dim_grid_print, threads_per_block_print, (single_nodeindex, device_print_values, *plan[g].current_nodes));
+    KERNELCALL(lb_print_node, dim_grid_print, threads_per_block_print, (single_nodeindex, device_print_values, *plan[g].current_nodes, plan[g].node_f));
 #else 
     KERNELCALL(lb_print_node, dim_grid_print, threads_per_block_print, (single_nodeindex, device_print_values, *plan[g].current_nodes, plan[g].device_values));
 #endif 

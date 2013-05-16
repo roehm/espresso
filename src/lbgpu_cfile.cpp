@@ -326,7 +326,11 @@ void lbgpu::init() {
 /***********************************************************************/
 /** \name MPI stuff */
 /***********************************************************************/
+void lbgpu::get_values_multigpu(LB_values_gpu *host_values){
+  
+  mpi_recv_fluid_gpu(this_node, host_values);
 
+}
 /*************** REQ_GETPARTS ************/
 /**
  * @params host_data struct storing all needed particle data (Output)

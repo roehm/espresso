@@ -180,7 +180,8 @@ int lb_lbfluid_set_agrid(double p_agrid){
         ERROR_SPRINTF(errtxt, "{097 Lattice spacing p_agrid=%f is incompatible with box_l[%i]=%f} ",p_agrid,dir,box_l[dir]);
       }
     }
-    lbpar_gpu.number_of_global_nodes = lbpar_gpu.dim_x * lbpar_gpu.dim_y * lbpar_gpu.dim_z;
+    lbpar_gpu.number_of_global_nodes = lbpar_gpu.global_dim_x * lbpar_gpu.global_dim_y * lbpar_gpu.global_dim_z;
+    printf("#glob nodes%i\n", lbpar_gpu.number_of_global_nodes);
     if(lbdevicepar_gpu.number_of_gpus > 1) {
       mpi_bcast_lbgpu_params(LBPAR_AGRID);
     }
@@ -502,7 +503,7 @@ int lb_lbfluid_print_vtk_velocity(char* filename) {
 
 	 if (lattice_switch & LATTICE_LB_GPU) {
 #ifdef LB_GPU
-    if(lbdevicepar_gpu.number_of_devices == 1){
+    if(lbdevicepar_gpu.number_of_gpus == 1){
       size_t size_of_values = lbpar_gpu.number_of_nodes * sizeof(LB_values_gpu);
       host_values = (LB_values_gpu*)malloc(size_of_values);
       lbgpu::get_values_GPU(host_values);
@@ -517,9 +518,9 @@ int lb_lbfluid_print_vtk_velocity(char* filename) {
       size_t size_of_values = lbpar_gpu.number_of_global_nodes * sizeof(LB_values_gpu);
       host_values = (LB_values_gpu*)malloc(size_of_values);
       lbgpu::get_values_multigpu(host_values);
-		  fprintf(fp, "# vtk DataFile Version 2.0\nlbfluid_gpu\nASCII\nDATASET STRUCTURED_POINTS\nDIMENSIONS %u %u %u\nORIGIN %f %f %f\nSPACING %f %f %f\nPOINT_DATA %u\nSCALARS OutArray  floats 3\nLOOKUP_TABLE default\n", lbpar_gpu.dim_x, lbpar_gpu.dim_y, lbpar_gpu.dim_z, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.number_of_nodes);
+		  fprintf(fp, "# vtk DataFile Version 2.0\nlbfluid_gpu\nASCII\nDATASET STRUCTURED_POINTS\nDIMENSIONS %u %u %u\nORIGIN %f %f %f\nSPACING %f %f %f\nPOINT_DATA %u\nSCALARS OutArray  floats 3\nLOOKUP_TABLE default\n", lbpar_gpu.global_dim_x, lbpar_gpu.global_dim_y, lbpar_gpu.global_dim_z, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.number_of_global_nodes);
       unsigned int j;	
-      for(j=0; j<lbpar_gpu.number_of_nodes; ++j){
+      for(j=0; j<lbpar_gpu.number_of_global_nodes; ++j){
       
       /** print of the calculated phys values */
         fprintf(fp, "%f %f %f\n", host_values[j].v[0], host_values[j].v[1], host_values[j].v[2]);

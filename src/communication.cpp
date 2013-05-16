@@ -126,6 +126,7 @@ typedef void (SlaveCallback)(int node, int param);
   CB(mpi_send_dipm_slave) \
   CB(mpi_send_fluid_slave) \
   CB(mpi_recv_fluid_slave) \
+  CB(mpi_recv_fluid_slave_gpu) \
   CB(mpi_local_stress_tensor_slave) \
 /*  CB(mpi_ljangle_cap_forces_slave)*/ \
   CB(mpi_send_virtual_slave) \
@@ -2553,33 +2554,45 @@ void mpi_recv_fluid(int node, int index, double *rho, double *j, double *pi) {
 #endif
 }
 
-/************** REQ_GET_FLUID_GPU **************/
-
-void mpi_recv_fluid_gpu(int node, LB_values_gpu *host_values, int offset) {
-#ifdef LB_GPU
-//**multi_gpu stuff*/
-    int node_domain_position[3], offset[3], global_offset;
-    map_node_array(this_node, node_domain_position);
-//needs local dims
-    offset[0] = node_domain_position[0]*lbpar_gpu.dim_x;
-    offset[1] = node_domain_position[1]*lbpar_gpu.dim_y;
-    offset[2] = node_domain_position[2]*lbpar_gpu.dim_z;
-    global_offset = offset[0]*offset[1]*offset[2];
+void mpi_recv_fluid_slave(int node, int index) {
+#ifdef LB
   if (node==this_node) {
-    lbgpu::get_values_GPU((host_values+global_offset));
-  } else {
-    mpi_call(mpi_recv_fluid_slave, node, host_values, global_offset);
-    MPI_Recv((hostvalues+global_offset), lbpar_gpu.number_of_nodes*sizeof(LB_values_gpu), MPI_BYTE, node, SOME_TAG, comm_cart, MPI_STATUS_IGNORE);
-
+    double data[10];
+    lb_calc_local_fields(index, &data[0], &data[1], &data[4]);
+    MPI_Send(data, 10, MPI_DOUBLE, 0, SOME_TAG, comm_cart);
   }
 #endif
 }
-void mpi_recv_fluid_slave(int node, LB_values *host_values, int global_offset) {
+
+/************** REQ_GET_FLUID_GPU **************/
+
+void mpi_recv_fluid_gpu(int node, LB_values_gpu *host_values) {
 #ifdef LB_GPU
-  if (node==this_node) {
-    lbgpu::get_values_GPU((host_values+global_offset));
-    MPI_Send((host_values+global_offset), lbpar_gpu.number_of_nodes*sizeof(LB_values_gpu), MPI_BYTE, 0, SOME_TAG, comm_cart);
-  }
+//**multi_gpu stuff*/
+  int offset;
+//needs local dims
+  offset = (lbpar_gpu.dim_x-2)*(lbpar_gpu.dim_y-2)*(lbpar_gpu.dim_z-2);
+
+    /* master: fetch particle informations into 'result' */
+    for (int pnode = 0; pnode < n_nodes; pnode++) {
+        if (pnode == 0) {
+         printf("node %i recv_fluid_master_gpu offset: %i\n", this_node, offset);
+         lbgpu::get_values_GPU((host_values));
+        } else {
+          offset *= pnode;
+          mpi_call(mpi_recv_fluid_slave_gpu, pnode, offset);
+          MPI_Recv((host_values+offset), lbpar_gpu.number_of_nodes_wo_halo*sizeof(LB_values_gpu), MPI_BYTE, pnode, SOME_TAG, comm_cart, MPI_STATUS_IGNORE);
+        }
+    }
+#endif
+}
+void mpi_recv_fluid_slave_gpu(int node, int offset) {
+#ifdef LB_GPU
+    printf("node %i recv_fluid_slave_gpu offset: %i\n", this_node, offset);
+    size_t size_of_values = lbpar_gpu.number_of_global_nodes * sizeof(LB_values_gpu);
+    host_values = (LB_values_gpu*)malloc(size_of_values);
+    lbgpu::get_values_GPU((host_values+offset));
+    MPI_Send((host_values+offset), lbpar_gpu.number_of_nodes_wo_halo*sizeof(LB_values_gpu), MPI_BYTE, 0, SOME_TAG, comm_cart);
 #endif
 }
 

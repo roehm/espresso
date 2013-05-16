@@ -112,6 +112,7 @@ struct LB_parameters_gpu
   unsigned int dim_y;
   unsigned int dim_z;
   unsigned int number_of_nodes;
+  unsigned int number_of_nodes_wo_halo;
   unsigned int global_dim_x;
   unsigned int global_dim_y;
   unsigned int global_dim_z;
@@ -229,6 +230,7 @@ typedef struct {
 typedef struct {
   //structs for nodes    
   LB_values_gpu *device_values;
+  LB_values_gpu *device_values_wo_halo;
   /** structs for velocity densities */
   LB_nodes_gpu nodes_a;
   LB_nodes_gpu nodes_b;

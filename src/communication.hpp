@@ -56,6 +56,7 @@
 #include "particle_data.hpp"
 #include "random.hpp"
 #include "topology.hpp"
+#include "lbgpu.hpp"
 #include <mpi.h>
 
 /**************************************************
@@ -504,6 +505,12 @@ void mpi_send_fluid(int node, int index, double rho, double *j, double *pi);
  * @param pi    local fluid pressure
  */
 void mpi_recv_fluid(int node, int index, double *rho, double *j, double *pi);
+
+/** Issue REQ_GET_FLUID_GPU: Receive a single lattice site from a processor.
+ * @param node  processor to send to (master)
+ * @param host_values array written into
+ */
+void mpi_recv_fluid_gpu(int node, LB_values_gpu *host_values);
 
 /** Issue REQ_LB_GET_BOUNDARY_FLAG: Receive a single lattice sites boundary flag from a processor.
  * @param node     processor to send to
