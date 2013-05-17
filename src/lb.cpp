@@ -463,7 +463,7 @@ int lb_lbfluid_print_vtk_boundary(char* filename) {
       unsigned int j;	
            /** print of the calculated phys values */
         fprintf(fp, "# vtk DataFile Version 2.0\nlbboundaries\nASCII\nDATASET STRUCTURED_POINTS\nDIMENSIONS %u %u %u\nORIGIN %f %f %f\nSPACING %f %f %f\nPOINT_DATA %u\nSCALARS OutArray  floats 1\nLOOKUP_TABLE default\n", lbpar_gpu.dim_x, lbpar_gpu.dim_y, lbpar_gpu.dim_z, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.number_of_nodes);
-          for(j=0; j<lbpar_gpu.number_of_nodes; ++j){
+        for(j=0; j<lbpar_gpu.number_of_nodes; ++j){
           /** print of the calculated phys values */
           fprintf(fp, " %u \n", bound_array[j]);
         }     
@@ -472,14 +472,18 @@ int lb_lbfluid_print_vtk_boundary(char* filename) {
       unsigned int* bound_array; 
       bound_array = (unsigned int*) malloc(lbpar_gpu.number_of_global_nodes*sizeof(unsigned int));
       lbgpu::get_bounds_multigpu(bound_array);
+        //for(int j=0; j<lbpar_gpu.number_of_global_nodes; ++j){
+          /** print of the calculated phys values */
+        //  printf( " %u \n", bound_array[j]);
+        //}     
 		  fprintf(fp, "# vtk DataFile Version 2.0\nlbfluid_gpu\nASCII\nDATASET STRUCTURED_POINTS\nDIMENSIONS %u %u %u\nORIGIN %f %f %f\nSPACING %f %f %f\nPOINT_DATA %u\nSCALARS OutArray  floats 1\nLOOKUP_TABLE default\n", lbpar_gpu.global_dim_x, lbpar_gpu.global_dim_y, lbpar_gpu.global_dim_z, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.number_of_global_nodes);
       int x,y,z,j;
       int xx = 0;
       int yy = 0;
       int zz = 0;
       for(int gz=0; gz<(node_grid[2]); ++gz){
+        zz=gz*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
         for(z=0; z<((lbpar_gpu.dim_z-2)/lbpar_gpu.agrid); ++z){
-          zz=gz*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
           for(int gy=0; gy<(node_grid[1]); ++gy){
            yy=gy*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
            for(y=0; y<((lbpar_gpu.dim_y-2)/lbpar_gpu.agrid); ++y){
@@ -488,8 +492,10 @@ int lb_lbfluid_print_vtk_boundary(char* filename) {
                for(x=0; x<((lbpar_gpu.dim_x-2)/lbpar_gpu.agrid); ++x){
       
                /** print of the calculated phys values */
-                 j=xx+yy*lbpar_gpu.global_dim_x+zz*lbpar_gpu.global_dim_x*lbpar_gpu.global_dim_y;
-                 fprintf(fp, " %u \n", bound_array[j]);
+                 j=xx+yy*(lbpar_gpu.dim_x-2)+zz*(lbpar_gpu.dim_x-2)*(lbpar_gpu.dim_y-2);
+                 fprintf(fp, "%u \n", bound_array[j]);
+                 printf( " %i \n", j);
+
                  xx++;
                }
              }
@@ -558,8 +564,8 @@ int lb_lbfluid_print_vtk_velocity(char* filename) {
       int yy = 0;
       int zz = 0;
       for(int gz=0; gz<(node_grid[2]); ++gz){
+        zz=gz*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
         for(z=0; z<((lbpar_gpu.dim_z-2)/lbpar_gpu.agrid); ++z){
-          zz=gz*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
           for(int gy=0; gy<(node_grid[1]); ++gy){
            yy=gy*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
            for(y=0; y<((lbpar_gpu.dim_y-2)/lbpar_gpu.agrid); ++y){
@@ -568,7 +574,7 @@ int lb_lbfluid_print_vtk_velocity(char* filename) {
                for(x=0; x<((lbpar_gpu.dim_x-2)/lbpar_gpu.agrid); ++x){
       
                /** print of the calculated phys values */
-                 j=xx+yy*lbpar_gpu.global_dim_x+zz*lbpar_gpu.global_dim_x*lbpar_gpu.global_dim_y;
+                 j=xx+yy*(lbpar_gpu.dim_x-2)+zz*(lbpar_gpu.dim_x-2)*(lbpar_gpu.dim_y-2);
                  fprintf(fp, "%f %f %f\n", host_values[j].v[0], host_values[j].v[1], host_values[j].v[2]);
                  xx++;
                }
@@ -579,8 +585,8 @@ int lb_lbfluid_print_vtk_velocity(char* filename) {
          zz++;
        }
     }
+    free(host_values);
   }
-  free(host_values);
 #endif
   } else {
 #ifdef LB

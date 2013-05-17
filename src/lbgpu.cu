@@ -2896,11 +2896,11 @@ __global__ void integrate(LB_nodes_gpu n_a, LB_nodes_gpu n_b, LB_values_gpu *d_v
     calc_m_from_n(n_a, index, mode);
     /**lb_relax_modes*/
 #ifndef SHANCHEN 
-    //relax_modes(mode, index, node_f);
+    relax_modes(mode, index, node_f);
 #else
-    //relax_modes(mode, index, node_f, d_v);
+    relax_modes(mode, index, node_f, d_v);
 #endif
-#if 0 
+#if 1 
     /**lb_thermalize_modes */
     if (para.fluct) thermalize_modes(mode, index, &rng);
 #ifdef EXTERNAL_FORCES

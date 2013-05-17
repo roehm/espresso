@@ -165,7 +165,7 @@ void lb_init_boundaries() {
             host_boundary_index_list = (int*)realloc(host_boundary_index_list, size_of_index);
             host_boundary_node_list[number_of_boundnodes] = x + lbpar_gpu.dim_x*y + lbpar_gpu.dim_x*lbpar_gpu.dim_y*z;
             host_boundary_index_list[number_of_boundnodes] = boundary_number; 
-            printf("node %i #bounds %i boundindex %i: \n", this_node,number_of_boundnodes,host_boundary_node_list[number_of_boundnodes]);  
+            //printf("node %i #bounds %i boundindex %i: \n", this_node,number_of_boundnodes,host_boundary_node_list[number_of_boundnodes]);  
             number_of_boundnodes++;
           }
         }
