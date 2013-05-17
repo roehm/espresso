@@ -519,6 +519,11 @@ void mpi_recv_fluid_gpu(int node, LB_values_gpu *host_values);
  */
 void mpi_recv_fluid_boundary_flag(int node, int index, int *boundary);
 
+/** Issue REQ_LB_GET_BOUNDARY_FLAG: Receive a single lattice sites boundary flag from a processor.
+ * @param node     processor to send to
+ * @param bound_array boundary flag array
+ */
+void mpi_recv_fluid_boundary_flags_gpu(int node, unsigned *bound_array);
 /** Issue REQ_ICCP3M_ITERATION: performs iccp3m iteration.
     @return nonzero on error
 */

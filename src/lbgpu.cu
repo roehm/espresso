@@ -977,16 +977,16 @@ __device__ void calc_values(LB_nodes_gpu n_a, float *mode, LB_values_gpu *d_v, u
 */
 __device__ void calc_values_wo_halo(LB_nodes_gpu n_a, float *mode, LB_values_gpu *d_v, unsigned int index, unsigned int singlenode, LB_node_force_gpu node_f){
 
+    unsigned int iindex;
     unsigned int xyz[3];
     index_to_xyz(index, xyz);
     unsigned int x = xyz[0];
     unsigned int y = xyz[1];
     unsigned int z = xyz[2];
-
+    iindex=index;
     if(x != 0 && x != (para.dim_x-1) && y != 0 && y != (para.dim_y-1) && z != 0 && z != (para.dim_z-1)){
-     float rho = mode[0] + para.rho*para.agrid*para.agrid*para.agrid;
-int iindex;
      iindex = (x-1) + (y-1)*(para.dim_x-2) + (z-1)*(para.dim_x-2)*(para.dim_y-2);
+     float rho = mode[0] + para.rho*para.agrid*para.agrid*para.agrid;
      float *v, *pi;
      if(singlenode == 1){ 
       v=&(d_v[0].v[0]);
@@ -3098,7 +3098,30 @@ __global__ void lb_get_boundaries(LB_nodes_gpu n_a, unsigned int *device_bound_a
   }
 }
 
+/** get boundary flags
+ *  @param n_a	              Pointer to local node residing in array a (Input)
+ *  @param device_bound_array Pointer to local device values (Input)
+ */
+__global__ void lb_get_boundaries_wo_halo(LB_nodes_gpu n_a, unsigned int *device_bound_array){
 
+  unsigned int index = blockIdx.y * gridDim.x * blockDim.x + blockDim.x * blockIdx.x + threadIdx.x;
+
+  if(index<para.number_of_nodes){
+
+    unsigned int iindex;
+    unsigned int xyz[3];
+    index_to_xyz(index, xyz);
+    unsigned int x = xyz[0];
+    unsigned int y = xyz[1];
+    unsigned int z = xyz[2];
+    iindex=index;
+    if(x != 0 && x != (para.dim_x-1) && y != 0 && y != (para.dim_y-1) && z != 0 && z != (para.dim_z-1)){
+     iindex = (x-1) + (y-1)*(para.dim_x-2) + (z-1)*(para.dim_x-2)*(para.dim_y-2);
+     device_bound_array[iindex] = n_a.boundary[index];
+     //printf("bounds %i index %i\n", device_bound_array[iindex], iindex);
+    }
+  }
+}
 
 /**print single node values kernel
  * @param single_nodeindex		index of the node (Input)
@@ -3600,9 +3623,9 @@ void lbgpu::init_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu){
     lbpar_gpu->dim_x += 2;
     lbpar_gpu->dim_y += 2;
     lbpar_gpu->dim_z += 2;
-    printf("dims: %u, %u, %u agrid %f\n", lbpar_gpu->dim_x, lbpar_gpu->dim_y, lbpar_gpu->dim_z, lbpar_gpu->agrid);
+    //printf("dims: %u, %u, %u agrid %f\n", lbpar_gpu->dim_x, lbpar_gpu->dim_y, lbpar_gpu->dim_z, lbpar_gpu->agrid);
     lbpar_gpu->number_of_nodes = (unsigned) (lbpar_gpu->dim_x*lbpar_gpu->dim_y*lbpar_gpu->dim_z);
-    printf("init gpu number_of_nodes %i \n", lbpar_gpu->number_of_nodes);
+    //printf("init gpu number_of_nodes %i \n", lbpar_gpu->number_of_nodes);
     lbpar_gpu->number_of_halo_nodes[0] = (lbpar_gpu->dim_y*lbpar_gpu->dim_z);
     lbpar_gpu->number_of_halo_nodes[1] = (lbpar_gpu->dim_x*lbpar_gpu->dim_z);
     lbpar_gpu->number_of_halo_nodes[2] = (lbpar_gpu->dim_x*lbpar_gpu->dim_y);
@@ -4021,17 +4044,20 @@ void lbgpu::get_boundary_flags_GPU(unsigned int* host_bound_array){
     //set device i
     cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
     unsigned int* device_bound_array;
-    cuda_check_errors(cudaMalloc((void**)&device_bound_array, lbpar_gpu.number_of_nodes*sizeof(unsigned int)));
     /** values for the kernel call */
     int threads_per_block = 64;
     int blocks_per_grid_y = 4;
     int blocks_per_grid_x = (lbpar_gpu.number_of_nodes + threads_per_block * blocks_per_grid_y - 1) /(threads_per_block * blocks_per_grid_y);
     dim3 dim_grid = make_uint3(blocks_per_grid_x, blocks_per_grid_y, 1);
-  
-    KERNELCALL(lb_get_boundaries, dim_grid, threads_per_block, (*plan[g].current_nodes, device_bound_array));
-  //TODO
-    cudaMemcpy(host_bound_array, device_bound_array, lbpar_gpu.number_of_nodes*sizeof(unsigned int), cudaMemcpyDeviceToHost);
-  
+    if(lbdevicepar_gpu.number_of_gpus ==1){
+      cuda_check_errors(cudaMalloc((void**)&device_bound_array, lbpar_gpu.number_of_nodes*sizeof(unsigned int)));
+      KERNELCALL(lb_get_boundaries, dim_grid, threads_per_block, (*plan[g].current_nodes, device_bound_array));
+      cudaMemcpy(host_bound_array, device_bound_array, lbpar_gpu.number_of_nodes*sizeof(unsigned int), cudaMemcpyDeviceToHost);
+    }else{
+      cuda_check_errors(cudaMalloc((void**)&device_bound_array, lbpar_gpu.number_of_nodes_wo_halo*sizeof(unsigned int)));
+      KERNELCALL(lb_get_boundaries_wo_halo, dim_grid, threads_per_block, (*plan[g].current_nodes, device_bound_array));
+      cudaMemcpy(host_bound_array, device_bound_array, lbpar_gpu.number_of_nodes_wo_halo*sizeof(unsigned int), cudaMemcpyDeviceToHost);
+    }
     cudaFree(device_bound_array);
   } 
 }
@@ -4319,40 +4345,6 @@ void lbgpu::send_recv_buffer_GPU(){
 
 }
 
-void print_buffers(float* s_buf_d, float* r_buf_d){
-
-  LB_TRACE(printf("node %i print_buffers_GPU gpu %i\n", this_node, lbdevicepar_gpu.gpu_number));
-  float *s_buf_h, *r_buf_h;
-  unsigned offset;
-  //for(int i=0; i<3; ++i){
-  //  printf("size_of_buffer %i \n", size_of_buffer[i]);
-   //}
-  s_buf_h = (float*)malloc(2*(size_of_buffer[0] + size_of_buffer[1] + size_of_buffer[2]));   
-  r_buf_h = (float*)malloc(2*(size_of_buffer[0] + size_of_buffer[1] + size_of_buffer[2]));   
-  //printf("bufferlength %i\n",2*5*(lbpar_gpu.number_of_halo_nodes[0]+lbpar_gpu.number_of_halo_nodes[1]+lbpar_gpu.number_of_halo_nodes[2]));
-          
-  cudaMemcpy(s_buf_h,s_buf_d,(2*(size_of_buffer[0]+size_of_buffer[1]+size_of_buffer[2])),cudaMemcpyDeviceToHost);
-  for(int i=0; i<(2*5*(lbpar_gpu.number_of_halo_nodes[0]+lbpar_gpu.number_of_halo_nodes[1]+lbpar_gpu.number_of_halo_nodes[2])); ++i){
-   printf("s_buf_h[%i] %f\n",i, s_buf_h[i]);
-                          //cudaMemcpy(r_buf_h,r_buf_d,size_of_buffer[0],cudaMemcpyDeviceToHost);
-                          //printf("buffer %i r_buf_h[%i] %f\n",i,i, r_buf_h[i]);
-  }
-                   // cuda_check_errors(cudaMemcpy(plan[g].recv_buffer_d[1], testarr, 3*sizeof(float), cudaMemcpyHostToDevice));
-                   // cuda_check_errors(cudaMemcpy(testarr2, plan[g].recv_buffer_d[1], 3*sizeof(float), cudaMemcpyDeviceToHost));
-                  //cudaPointerAttributes* att; 
-                  //cudaPointerGetAttributes(att, s_buf_d);
-                  //cudaPointerGetAttributes(att, s_buf[0]);
-                  //printf("dev ptr: %p, host ptr: %p\n", att->devicePointer,att->hostPointer);
-#if 0
-                  for(int i=0; i<6; ++i){
-                        cuda_check_errors(cudaMemcpy(plan[0].send_buffer_d[i], s_buf[i], size_of_vd_buffer[i], cudaMemcpyHostToDevice));
-                            cuda_check_errors(cudaMemcpy(r_buf[i], plan[0].send_buffer_d[i], size_of_vd_buffer[i], cudaMemcpyDeviceToHost));
-                              printf("buffer %i s_buf[%i][0] %f\n",i,i, r_buf[i][0]);
-                                }
-#endif
-}
-
-
 /**integration kernel for the lb gpu fluid update called from host */
 void lbgpu::integrate_GPU(){
   //begin loop over devices g
@@ -4372,27 +4364,20 @@ void lbgpu::integrate_GPU(){
     /**call of fluid step*/
     if (plan[g].intflag == 1){
       //printf("current pointer %p nodes a %p nodes b %p\n", plan[g].current_nodes, &plan[g].nodes_a, &plan[g].nodes_b);
-      //printf("send_buf %p recv_buf %p\n", plan[g].send_buffer_d, plan[g].recv_buffer_d);
       KERNELCALL(integrate, dim_grid, threads_per_block, (plan[g].nodes_a, plan[g].nodes_b, plan[g].device_values, plan[g].node_f, plan[g].send_buffer_d, &gpu_n));
       plan[g].current_nodes = &plan[g].nodes_b;
-    //printf("integrate kernel 1 ok\n");
-    //print_buffers(plan[g].send_buffer_d, plan[g].recv_buffer_d);
 #ifdef LB_BOUNDARIES_GPU		
       if (n_lb_boundaries > 0) {
         KERNELCALL(bb_read, dim_grid, threads_per_block, (plan[g].nodes_a, plan[g].nodes_b, plan[g].lb_boundary_velocity, plan[g].lb_boundary_force));
         KERNELCALL(bb_write, dim_grid, threads_per_block, (plan[g].nodes_a, plan[g].nodes_b));
       }
 #endif
-      //cudaThreadSynchronize();
      // printf("current pointer %p nodes b %p\n", plan[g].current_nodes, &plan[g].nodes_b);
-    //if (lbdevicepar_gpu.number_of_gpus > 1) lbgpu::send_recv_buffer(plan[g].send_buffer_d, plan[g].recv_buffer_d);
     plan[g].intflag = 0;
 
     }else{
       KERNELCALL(integrate, dim_grid, threads_per_block, (plan[g].nodes_b, plan[g].nodes_a, plan[g].device_values, plan[g].node_f, plan[g].send_buffer_d, &gpu_n));
       plan[g].current_nodes = &plan[g].nodes_a;
-    //printf("integrate kernel 2 ok\n");
-    //print_buffers(plan[g].send_buffer_d, plan[g].recv_buffer_d);
 #ifdef LB_BOUNDARIES_GPU		
       if (n_lb_boundaries > 0) {
         KERNELCALL(bb_read, dim_grid, threads_per_block, (plan[g].nodes_b, plan[g].nodes_a, plan[g].lb_boundary_velocity, plan[g].lb_boundary_force));
@@ -4400,7 +4385,6 @@ void lbgpu::integrate_GPU(){
       }
 #endif
       //cudaThreadSynchronize();
-      //if (lbdevicepar_gpu.number_of_gpus > 1) lbgpu::send_recv_buffer(plan[g].send_buffer_d, plan[g].recv_buffer_d);
       plan[g].intflag = 1;
     }
   } 

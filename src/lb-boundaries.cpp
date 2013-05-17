@@ -98,18 +98,20 @@ void lb_init_boundaries() {
     int the_boundary=-1;
     map_node_array(this_node, node_domain_position);
 //needs local dims
-    offset[0] = node_domain_position[0]*lbpar_gpu.dim_x;
-    offset[1] = node_domain_position[1]*lbpar_gpu.dim_y;
-    offset[2] = node_domain_position[2]*lbpar_gpu.dim_z;
-/*needs global dims        */
-    for(z=0; z<lbpar_gpu.global_dim_z; z++) {
-      for(y=0; y<lbpar_gpu.global_dim_y; y++) {
-        for (x=0; x<lbpar_gpu.global_dim_x; x++) {	    
+    offset[0] = node_domain_position[0]*(lbpar_gpu.dim_x-2);
+    offset[1] = node_domain_position[1]*(lbpar_gpu.dim_y-2);
+    offset[2] = node_domain_position[2]*(lbpar_gpu.dim_z-2);
+    //printf("node %i offset %i %i %i\n", this_node, offset[0], offset[1], offset[2]);
+/*needs global dims    TODO check this    */
+    for(z=0; z<lbpar_gpu.dim_z; z++) {
+      for(y=0; y<lbpar_gpu.dim_y; y++) {
+        for (x=0; x<lbpar_gpu.dim_x; x++) {	    
           if(lbdevicepar_gpu.number_of_gpus > 1){
             //minus due to existence of halo 
             pos[0] = (offset[0]+(x-0.5))*lbpar_gpu.agrid;
             pos[1] = (offset[1]+(y-0.5))*lbpar_gpu.agrid;
             pos[2] = (offset[2]+(z-0.5))*lbpar_gpu.agrid;
+    //printf("node %i pos %lf %lf %lf\n", this_node, pos[0], pos[1], pos[2]);
           }else{
             pos[0] = (x+0.5)*lbpar_gpu.agrid;
             pos[1] = (y+0.5)*lbpar_gpu.agrid;
@@ -152,18 +154,18 @@ void lb_init_boundaries() {
           }
           
           if (dist <= 0 && n_lb_boundaries > 0) {
-            if(lbdevicepar_gpu.number_of_gpus > 1){
+            //if(lbdevicepar_gpu.number_of_gpus > 1){
             //calc local x,y,z from global x,y,z
-              x -= offset[0];
-              y -= offset[0];
-              z -= offset[0];
-            }
+            //  x -= offset[0];
+            //  y -= offset[0];
+            //  z -= offset[0];
+            //}
             size_of_index = (number_of_boundnodes+1)*sizeof(int);
             host_boundary_node_list = (int*)realloc(host_boundary_node_list, size_of_index);
             host_boundary_index_list = (int*)realloc(host_boundary_index_list, size_of_index);
             host_boundary_node_list[number_of_boundnodes] = x + lbpar_gpu.dim_x*y + lbpar_gpu.dim_x*lbpar_gpu.dim_y*z;
             host_boundary_index_list[number_of_boundnodes] = boundary_number; 
-            //printf("boundindex %i: \n", host_boundindex[number_of_boundnodes]);  
+            printf("node %i #bounds %i boundindex %i: \n", this_node,number_of_boundnodes,host_boundary_node_list[number_of_boundnodes]);  
             number_of_boundnodes++;
           }
         }

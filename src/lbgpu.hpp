@@ -406,10 +406,17 @@ namespace lbgpu {
   void send_recv_buffer_gpu();
   void send_recv_buffer_GPU();
   void get_values_multigpu(LB_values_gpu *host_values);
+  void get_bounds_multigpu(unsigned *bound_array);
   /**no used but still present function :p
    */
   void release();
-
+  inline void transform_index_to_xyz(int index, int* xyz){
+    xyz[0] = index%lbpar_gpu.dim_x;
+    int k = index/lbpar_gpu.dim_x;
+    xyz[1] = k%lbpar_gpu.dim_y;
+    k /= lbpar_gpu.dim_y;
+    xyz[2] = k;
+  }
 }
 /*@{*/
 

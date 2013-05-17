@@ -455,18 +455,52 @@ int lb_lbfluid_print_vtk_boundary(char* filename) {
 
   if (lattice_switch & LATTICE_LB_GPU) {	
 #ifdef LB_GPU
-    unsigned int* bound_array;
-    bound_array = (unsigned int*) malloc(lbpar_gpu.number_of_nodes*sizeof(unsigned int));
-    lbgpu::get_boundary_flags_GPU(bound_array);
+    if(lbdevicepar_gpu.number_of_gpus == 1){
+      unsigned int* bound_array;
+      bound_array = (unsigned int*) malloc(lbpar_gpu.number_of_nodes*sizeof(unsigned int));
+      lbgpu::get_boundary_flags_GPU(bound_array);
   
-    unsigned int j;	
-         /** print of the calculated phys values */
-      fprintf(fp, "# vtk DataFile Version 2.0\nlbboundaries\nASCII\nDATASET STRUCTURED_POINTS\nDIMENSIONS %u %u %u\nORIGIN %f %f %f\nSPACING %f %f %f\nPOINT_DATA %u\nSCALARS OutArray  floats 1\nLOOKUP_TABLE default\n", lbpar_gpu.dim_x, lbpar_gpu.dim_y, lbpar_gpu.dim_z, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.number_of_nodes);
-        for(j=0; j<lbpar_gpu.number_of_nodes; ++j){
-        /** print of the calculated phys values */
-        fprintf(fp, " %u \n", bound_array[j]);
-      }     
+      unsigned int j;	
+           /** print of the calculated phys values */
+        fprintf(fp, "# vtk DataFile Version 2.0\nlbboundaries\nASCII\nDATASET STRUCTURED_POINTS\nDIMENSIONS %u %u %u\nORIGIN %f %f %f\nSPACING %f %f %f\nPOINT_DATA %u\nSCALARS OutArray  floats 1\nLOOKUP_TABLE default\n", lbpar_gpu.dim_x, lbpar_gpu.dim_y, lbpar_gpu.dim_z, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.number_of_nodes);
+          for(j=0; j<lbpar_gpu.number_of_nodes; ++j){
+          /** print of the calculated phys values */
+          fprintf(fp, " %u \n", bound_array[j]);
+        }     
+      free(bound_array);
+    }else{
+      unsigned int* bound_array; 
+      bound_array = (unsigned int*) malloc(lbpar_gpu.number_of_global_nodes*sizeof(unsigned int));
+      lbgpu::get_bounds_multigpu(bound_array);
+		  fprintf(fp, "# vtk DataFile Version 2.0\nlbfluid_gpu\nASCII\nDATASET STRUCTURED_POINTS\nDIMENSIONS %u %u %u\nORIGIN %f %f %f\nSPACING %f %f %f\nPOINT_DATA %u\nSCALARS OutArray  floats 1\nLOOKUP_TABLE default\n", lbpar_gpu.global_dim_x, lbpar_gpu.global_dim_y, lbpar_gpu.global_dim_z, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.number_of_global_nodes);
+      int x,y,z,j;
+      int xx = 0;
+      int yy = 0;
+      int zz = 0;
+      for(int gz=0; gz<(node_grid[2]); ++gz){
+        for(z=0; z<((lbpar_gpu.dim_z-2)/lbpar_gpu.agrid); ++z){
+          zz=gz*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
+          for(int gy=0; gy<(node_grid[1]); ++gy){
+           yy=gy*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
+           for(y=0; y<((lbpar_gpu.dim_y-2)/lbpar_gpu.agrid); ++y){
+             for(int gx=0; gx<(node_grid[0]); ++gx){
+               xx=gx*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
+               for(x=0; x<((lbpar_gpu.dim_x-2)/lbpar_gpu.agrid); ++x){
+      
+               /** print of the calculated phys values */
+                 j=xx+yy*lbpar_gpu.global_dim_x+zz*lbpar_gpu.global_dim_x*lbpar_gpu.global_dim_y;
+                 fprintf(fp, " %u \n", bound_array[j]);
+                 xx++;
+               }
+             }
+             yy++;
+           }
+         }
+         zz++;
+       }
+    }
     free(bound_array);
+  }
 #endif
   } else {	
 #ifdef LB
@@ -525,9 +559,12 @@ int lb_lbfluid_print_vtk_velocity(char* filename) {
       int zz = 0;
       for(int gz=0; gz<(node_grid[2]); ++gz){
         for(z=0; z<((lbpar_gpu.dim_z-2)/lbpar_gpu.agrid); ++z){
+          zz=gz*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
           for(int gy=0; gy<(node_grid[1]); ++gy){
+           yy=gy*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
            for(y=0; y<((lbpar_gpu.dim_y-2)/lbpar_gpu.agrid); ++y){
              for(int gx=0; gx<(node_grid[0]); ++gx){
+               xx=gx*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
                for(x=0; x<((lbpar_gpu.dim_x-2)/lbpar_gpu.agrid); ++x){
       
                /** print of the calculated phys values */
@@ -535,17 +572,15 @@ int lb_lbfluid_print_vtk_velocity(char* filename) {
                  fprintf(fp, "%f %f %f\n", host_values[j].v[0], host_values[j].v[1], host_values[j].v[2]);
                  xx++;
                }
-               xx=gx*((lbpar_gpu.dim_x-2)/lbpar_gpu.agrid);
              }
              yy++;
            }
-           yy=gy*((lbpar_gpu.dim_y-2)/lbpar_gpu.agrid);
          }
          zz++;
        }
-      zz=gz*((lbpar_gpu.dim_z-2)/lbpar_gpu.agrid);
     }
   }
+  free(host_values);
 #endif
   } else {
 #ifdef LB
@@ -581,22 +616,22 @@ int lb_lbfluid_print_boundary(char* filename) {
 
   if (lattice_switch & LATTICE_LB_GPU) {	
 #ifdef LB_GPU
-    unsigned int* bound_array; 
-    bound_array = (unsigned int*) malloc(lbpar_gpu.number_of_nodes*sizeof(unsigned int));
-    lbgpu::get_boundary_flags_GPU(bound_array);
+    if(lbdevicepar_gpu.number_of_gpus == 1){
+      unsigned int* bound_array; 
+      bound_array = (unsigned int*) malloc(lbpar_gpu.number_of_nodes*sizeof(unsigned int));
+      lbgpu::get_boundary_flags_GPU(bound_array);
 
-    int xyz[3];
-    unsigned int j;	
-    for(j=0; j<lbpar_gpu.number_of_nodes; ++j){
-      xyz[0] = j%lbpar_gpu.dim_x;
-      int k = j/lbpar_gpu.dim_x;
-      xyz[1] = k%lbpar_gpu.dim_y;
-      k /= lbpar_gpu.dim_y;
-      xyz[2] = k;
-      /** print of the calculated phys values */
-      fprintf(fp, "%f %f %f %d\n", (xyz[0]+0.5)*lbpar_gpu.agrid, (xyz[1]+0.5)*lbpar_gpu.agrid, (xyz[2]+0.5)*lbpar_gpu.agrid, bound_array[j]);
-    }
+      int xyz[3];
+      unsigned int j;	
+      for(j=0; j<lbpar_gpu.number_of_nodes; ++j){
+        lbgpu::transform_index_to_xyz(j, xyz);
+        /** print of the calculated values */
+        fprintf(fp, "%f %f %f %d\n", (xyz[0]+0.5)*lbpar_gpu.agrid, (xyz[1]+0.5)*lbpar_gpu.agrid, (xyz[2]+0.5)*lbpar_gpu.agrid, bound_array[j]);
+      }
     free(bound_array);
+    }else{
+      //TODO fill in multigpu code here
+    }
 #endif  
   } else {
 #ifdef LB

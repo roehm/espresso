@@ -745,35 +745,35 @@ int tclcommand_lbboundary(ClientData data, Tcl_Interp *interp, int argc, char **
   if(!strncmp(argv[1], "wall", strlen(argv[1]))) {
     status = tclcommand_lbboundary_wall(generate_lbboundary(),interp, argc - 2, argv + 2);
     if (lattice_switch & LATTICE_LB_GPU) {
-        mpi_bcast_lbboundary(-3);
+        mpi_bcast_lbboundary(-1);
     } else 
         mpi_bcast_lbboundary(-1);
   }
   else if(!strncmp(argv[1], "sphere", strlen(argv[1]))) {
     status = tclcommand_lbboundary_sphere(generate_lbboundary(),interp, argc - 2, argv + 2);
     if (lattice_switch & LATTICE_LB_GPU) {
-        mpi_bcast_lbboundary(-3);
+        mpi_bcast_lbboundary(-1);
     } else 
         mpi_bcast_lbboundary(-1);
   }
   else if(!strncmp(argv[1], "cylinder", strlen(argv[1]))) {
     status = tclcommand_lbboundary_cylinder(generate_lbboundary(),interp, argc - 2, argv + 2);
     if (lattice_switch & LATTICE_LB_GPU) {
-        mpi_bcast_lbboundary(-3);
+        mpi_bcast_lbboundary(-1);
     } else 
         mpi_bcast_lbboundary(-1);
   }
   else if(!strncmp(argv[1], "rhomboid", strlen(argv[1]))) {
     status = tclcommand_lbboundary_rhomboid(generate_lbboundary(),interp, argc - 2, argv + 2);
     if (lattice_switch & LATTICE_LB_GPU) {
-        mpi_bcast_lbboundary(-3);
+        mpi_bcast_lbboundary(-1);
     } else 
         mpi_bcast_lbboundary(-1);
   }
   else if(!strncmp(argv[1], "pore", strlen(argv[1]))) {
     status = tclcommand_lbboundary_pore(generate_lbboundary(),interp, argc - 2, argv + 2);
     if (lattice_switch & LATTICE_LB_GPU) {
-        mpi_bcast_lbboundary(-3);
+        mpi_bcast_lbboundary(-1);
     } else 
         mpi_bcast_lbboundary(-1);
   }
@@ -817,7 +817,7 @@ int tclcommand_lbboundary(ClientData data, Tcl_Interp *interp, int argc, char **
 	return (TCL_ERROR);
       }
       if (lattice_switch & LATTICE_LB_GPU) {
-	mpi_bcast_lbboundary(-3);
+	mpi_bcast_lbboundary(c_num);
       } else 
 	mpi_bcast_lbboundary(c_num);
       status = TCL_OK;    

@@ -141,6 +141,7 @@ typedef void (SlaveCallback)(int node, int param);
   CB(mpi_recv_fluid_populations_slave) \
   CB(mpi_send_fluid_populations_slave) \
   CB(mpi_recv_fluid_boundary_flag_slave) \
+  CB(mpi_recv_fluid_boundary_flags_slave_gpu) \
   CB(mpi_set_particle_temperature_slave) \
   CB(mpi_set_particle_gamma_slave) \
   CB(mpi_kill_particle_motion_slave) \
@@ -2576,7 +2577,7 @@ void mpi_recv_fluid_gpu(int node, LB_values_gpu *host_values) {
     /* master: fetch particle informations into 'result' */
     for (int pnode = 0; pnode < n_nodes; pnode++) {
         if (pnode == 0) {
-         printf("node %i recv_fluid_master_gpu offset: %i\n", this_node, offset);
+         LB_TRACE(printf("node %i recv_fluid_master_gpu offset: %i\n", this_node, offset));
          lbgpu::get_values_GPU((host_values));
         } else {
           offset *= pnode;
@@ -2588,11 +2589,45 @@ void mpi_recv_fluid_gpu(int node, LB_values_gpu *host_values) {
 }
 void mpi_recv_fluid_slave_gpu(int node, int offset) {
 #ifdef LB_GPU
-    printf("node %i recv_fluid_slave_gpu offset: %i\n", this_node, offset);
+    LB_TRACE(printf("node %i recv_fluid_slave_gpu offset: %i\n", this_node, offset));
     size_t size_of_values = lbpar_gpu.number_of_global_nodes * sizeof(LB_values_gpu);
     host_values = (LB_values_gpu*)malloc(size_of_values);
     lbgpu::get_values_GPU((host_values+offset));
+    //TODO alloc and send only need size of array
     MPI_Send((host_values+offset), lbpar_gpu.number_of_nodes_wo_halo*sizeof(LB_values_gpu), MPI_BYTE, 0, SOME_TAG, comm_cart);
+    free(host_values);
+#endif
+}
+
+void mpi_recv_fluid_boundary_flags_gpu(int node, unsigned *bound_array) {
+#ifdef LB_GPU
+//**multi_gpu stuff*/
+  int offset;
+//needs local dims
+  offset = (lbpar_gpu.dim_x-2)*(lbpar_gpu.dim_y-2)*(lbpar_gpu.dim_z-2);
+
+    /* master: fetch particle informations into 'result' */
+    for (int pnode = 0; pnode < n_nodes; pnode++) {
+        if (pnode == 0) {
+         LB_TRACE(printf("node %i recv_bounds_master_gpu offset: %i\n", this_node, offset));
+         lbgpu::get_boundary_flags_GPU((bound_array));
+        } else {
+          offset *= pnode;
+          mpi_call(mpi_recv_fluid_boundary_flags_slave_gpu, pnode, offset);
+          MPI_Recv((bound_array+offset), lbpar_gpu.number_of_nodes_wo_halo*sizeof(LB_values_gpu), MPI_BYTE, pnode, SOME_TAG, comm_cart, MPI_STATUS_IGNORE);
+        }
+    }
+#endif
+}
+void mpi_recv_fluid_boundary_flags_slave_gpu(int node, int offset) {
+#ifdef LB_GPU
+    LB_TRACE(printf("node %i recv_bounds_slave_gpu offset: %i\n", this_node, offset));
+    unsigned int* bound_array; 
+    bound_array = (unsigned int*) malloc(lbpar_gpu.number_of_nodes_wo_halo*sizeof(unsigned int));
+    lbgpu::get_boundary_flags_GPU((bound_array));
+    //TODO alloc and send only need size of array
+    MPI_Send((bound_array), lbpar_gpu.number_of_nodes_wo_halo*sizeof(unsigned), MPI_BYTE, 0, SOME_TAG, comm_cart);
+    free(bound_array);
 #endif
 }
 
