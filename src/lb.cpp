@@ -482,27 +482,24 @@ int lb_lbfluid_print_vtk_boundary(char* filename) {
       int yy = 0;
       int zz = 0;
       for(int gz=0; gz<(node_grid[2]); ++gz){
-        zz=gz*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
+        zz=gz*(node_grid[0]+node_grid[1])*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
         for(z=0; z<((lbpar_gpu.dim_z-2)/lbpar_gpu.agrid); ++z){
           for(int gy=0; gy<(node_grid[1]); ++gy){
-           yy=gy*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
+           yy=gy*node_grid[0]*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
            for(y=0; y<((lbpar_gpu.dim_y-2)/lbpar_gpu.agrid); ++y){
              for(int gx=0; gx<(node_grid[0]); ++gx){
                xx=gx*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
                for(x=0; x<((lbpar_gpu.dim_x-2)/lbpar_gpu.agrid); ++x){
       
                /** print of the calculated phys values */
-                 j=xx+yy*(lbpar_gpu.dim_x-2)+zz*(lbpar_gpu.dim_x-2)*(lbpar_gpu.dim_y-2);
+                 j=x+y*(lbpar_gpu.dim_x-2)+z*(lbpar_gpu.dim_x-2)*(lbpar_gpu.dim_y-2)+xx+yy+zz;
                  fprintf(fp, "%u \n", bound_array[j]);
                  printf( " %i \n", j);
 
-                 xx++;
                }
              }
-             yy++;
            }
          }
-         zz++;
        }
     }
     free(bound_array);
@@ -564,25 +561,22 @@ int lb_lbfluid_print_vtk_velocity(char* filename) {
       int yy = 0;
       int zz = 0;
       for(int gz=0; gz<(node_grid[2]); ++gz){
-        zz=gz*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
+        zz=gz*(node_grid[0]+node_grid[1])*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
         for(z=0; z<((lbpar_gpu.dim_z-2)/lbpar_gpu.agrid); ++z){
           for(int gy=0; gy<(node_grid[1]); ++gy){
-           yy=gy*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
+           yy=gy*node_grid[0]*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
            for(y=0; y<((lbpar_gpu.dim_y-2)/lbpar_gpu.agrid); ++y){
              for(int gx=0; gx<(node_grid[0]); ++gx){
                xx=gx*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
                for(x=0; x<((lbpar_gpu.dim_x-2)/lbpar_gpu.agrid); ++x){
       
                /** print of the calculated phys values */
-                 j=xx+yy*(lbpar_gpu.dim_x-2)+zz*(lbpar_gpu.dim_x-2)*(lbpar_gpu.dim_y-2);
+                 j=x+y*(lbpar_gpu.dim_x-2)+z*(lbpar_gpu.dim_x-2)*(lbpar_gpu.dim_y-2)+xx+yy+zz;
                  fprintf(fp, "%f %f %f\n", host_values[j].v[0], host_values[j].v[1], host_values[j].v[2]);
-                 xx++;
                }
              }
-             yy++;
            }
          }
-         zz++;
        }
     }
     free(host_values);
