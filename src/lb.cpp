@@ -478,21 +478,19 @@ int lb_lbfluid_print_vtk_boundary(char* filename) {
         //}     
 		  fprintf(fp, "# vtk DataFile Version 2.0\nlbfluid_gpu\nASCII\nDATASET STRUCTURED_POINTS\nDIMENSIONS %u %u %u\nORIGIN %f %f %f\nSPACING %f %f %f\nPOINT_DATA %u\nSCALARS OutArray  floats 1\nLOOKUP_TABLE default\n", lbpar_gpu.global_dim_x, lbpar_gpu.global_dim_y, lbpar_gpu.global_dim_z, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.number_of_global_nodes);
       int x,y,z,j;
-      int xx = 0;
-      int yy = 0;
-      int zz = 0;
+      int offset[3] = {0,0,0};
       for(int gz=0; gz<(node_grid[2]); ++gz){
-        zz=gz*(node_grid[0]+node_grid[1])*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
+        offset[2]=gz*(node_grid[0]+node_grid[1])*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
         for(z=0; z<((lbpar_gpu.dim_z-2)/lbpar_gpu.agrid); ++z){
           for(int gy=0; gy<(node_grid[1]); ++gy){
-           yy=gy*node_grid[0]*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
+           offset[1]=gy*node_grid[0]*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
            for(y=0; y<((lbpar_gpu.dim_y-2)/lbpar_gpu.agrid); ++y){
              for(int gx=0; gx<(node_grid[0]); ++gx){
-               xx=gx*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
+               offset[0]=gx*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
                for(x=0; x<((lbpar_gpu.dim_x-2)/lbpar_gpu.agrid); ++x){
       
                /** print of the calculated phys values */
-                 j=x+y*(lbpar_gpu.dim_x-2)+z*(lbpar_gpu.dim_x-2)*(lbpar_gpu.dim_y-2)+xx+yy+zz;
+                 j=x+y*(lbpar_gpu.dim_x-2)+z*(lbpar_gpu.dim_x-2)*(lbpar_gpu.dim_y-2)+offset[0]+offset[1]+offset[2];
                  fprintf(fp, "%u \n", bound_array[j]);
                  printf( " %i \n", j);
 
@@ -557,21 +555,19 @@ int lb_lbfluid_print_vtk_velocity(char* filename) {
       lbgpu::get_values_multigpu(host_values);
 		  fprintf(fp, "# vtk DataFile Version 2.0\nlbfluid_gpu\nASCII\nDATASET STRUCTURED_POINTS\nDIMENSIONS %u %u %u\nORIGIN %f %f %f\nSPACING %f %f %f\nPOINT_DATA %u\nSCALARS OutArray  floats 3\nLOOKUP_TABLE default\n", lbpar_gpu.global_dim_x, lbpar_gpu.global_dim_y, lbpar_gpu.global_dim_z, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid*0.5, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.agrid, lbpar_gpu.number_of_global_nodes);
       int x,y,z,j;
-      int xx = 0;
-      int yy = 0;
-      int zz = 0;
+      int offset[3] = {0,0,0};
       for(int gz=0; gz<(node_grid[2]); ++gz){
-        zz=gz*(node_grid[0]+node_grid[1])*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
+        offset[2]=gz*(node_grid[0]+node_grid[1])*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
         for(z=0; z<((lbpar_gpu.dim_z-2)/lbpar_gpu.agrid); ++z){
           for(int gy=0; gy<(node_grid[1]); ++gy){
-           yy=gy*node_grid[0]*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
+           offset[1]=gy*node_grid[0]*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
            for(y=0; y<((lbpar_gpu.dim_y-2)/lbpar_gpu.agrid); ++y){
              for(int gx=0; gx<(node_grid[0]); ++gx){
-               xx=gx*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
+               offset[0]=gx*((lbpar_gpu.number_of_nodes_wo_halo)/lbpar_gpu.agrid);
                for(x=0; x<((lbpar_gpu.dim_x-2)/lbpar_gpu.agrid); ++x){
       
                /** print of the calculated phys values */
-                 j=x+y*(lbpar_gpu.dim_x-2)+z*(lbpar_gpu.dim_x-2)*(lbpar_gpu.dim_y-2)+xx+yy+zz;
+                 j=x+y*(lbpar_gpu.dim_x-2)+z*(lbpar_gpu.dim_x-2)*(lbpar_gpu.dim_y-2)+offset[0]+offset[1]+offset[2];
                  fprintf(fp, "%f %f %f\n", host_values[j].v[0], host_values[j].v[1], host_values[j].v[2]);
                }
              }
