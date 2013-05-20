@@ -492,8 +492,7 @@ int lb_lbfluid_print_vtk_boundary(char* filename) {
                /** print of the calculated phys values */
                  j=x+y*(lbpar_gpu.dim_x-2)+z*(lbpar_gpu.dim_x-2)*(lbpar_gpu.dim_y-2)+offset[0]+offset[1]+offset[2];
                  fprintf(fp, "%u \n", bound_array[j]);
-                 printf( " %i \n", j);
-
+  //               printf( " %i \n", j);
                }
              }
            }

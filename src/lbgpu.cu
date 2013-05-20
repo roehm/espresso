@@ -467,7 +467,43 @@ __device__ void calc_n_from_modes_push(LB_nodes_gpu n_b, float *mode, unsigned i
   n_b.vd[18*para.number_of_nodes + x + para.dim_x*((para.dim_y+y-1)%para.dim_y) + para.dim_x*para.dim_y*((z+1)%para.dim_z)] = 1.f/36.f * (mode[0] - mode[2] + mode[3] + mode[4] - mode[5] - mode[6] - mode[9] - mode[11] + mode[12] + mode[14] - mode[15] + mode[16] - mode[17] - mode[18]);
 
 }
+/**backtransformation from modespace to desityspace and streaming with the push method and without halo region
+* @param index         node index / thread index (Input)
+* @param mode          Pointer to the local register values mode (Input)
+* @param *n_b          Pointer to local node residing in array b (Output)
+* @param *buffer Pointer to buffer (Output)
+*/
+__device__ void calc_n_from_modes_push_wo_halo(LB_nodes_gpu n_b, float *mode, unsigned int index){
 
+  unsigned int xyz[3];
+  index_to_xyz(index, xyz);
+  unsigned int x = xyz[0];
+  unsigned int y = xyz[1];
+  unsigned int z = xyz[2];
+
+  if(x != 0 && x != (para.dim_x-1) && y != 0 && y != (para.dim_y-1) && z != 0 && z != (para.dim_z-1)){
+    n_b.vd[0*para.number_of_nodes + x + para.dim_x*y + para.dim_x*para.dim_y*z] = 1.f/3.f * (mode[0] - mode[4] + mode[16]);
+    n_b.vd[1*para.number_of_nodes + (x+1) + para.dim_x*y + para.dim_x*para.dim_y*z] = 1.f/18.f * (mode[0] + mode[1] + mode[5] + mode[6] - mode[17] - mode[18] - 2.f*(mode[10] + mode[16]));
+    n_b.vd[2*para.number_of_nodes + (x-1) + para.dim_x*y + para.dim_x*para.dim_y*z] = 1.f/18.f * (mode[0] - mode[1] + mode[5] + mode[6] - mode[17] - mode[18] + 2.f*(mode[10] - mode[16]));
+    n_b.vd[3*para.number_of_nodes + x + para.dim_x*(y+1) + para.dim_x*para.dim_y*z] = 1.f/18.f * (mode[0] + mode[2] - mode[5] + mode[6] + mode[17] - mode[18] - 2.f*(mode[11] + mode[16]));
+    n_b.vd[4*para.number_of_nodes + x + para.dim_x*(y-1) + para.dim_x*para.dim_y*z] = 1.f/18.f * (mode[0] - mode[2] - mode[5] + mode[6] + mode[17] - mode[18] + 2.f*(mode[11] - mode[16]));
+    n_b.vd[5*para.number_of_nodes + x + para.dim_x*y + para.dim_x*para.dim_y*(z+1)] = 1.f/18.f * (mode[0] + mode[3] - 2.f*(mode[6] + mode[12] + mode[16] - mode[18]));
+    n_b.vd[6*para.number_of_nodes + x + para.dim_x*y + para.dim_x*para.dim_y*(z-1)] = 1.f/18.f * (mode[0] - mode[3] - 2.f*(mode[6] - mode[12] + mode[16] - mode[18]));
+    n_b.vd[7*para.number_of_nodes + (x+1) + para.dim_x*(y+1) + para.dim_x*para.dim_y*z] = 1.f/36.f * (mode[0] + mode[1] + mode[2] + mode[4] + 2.f*mode[6] + mode[7] + mode[10] + mode[11] + mode[13] + mode[14] + mode[16] + 2.f*mode[18]);
+    n_b.vd[8*para.number_of_nodes + (x-1) + para.dim_x*(y-1) + para.dim_x*para.dim_y*z] = 1.f/36.f * (mode[0] - mode[1] - mode[2] + mode[4] + 2.f*mode[6] + mode[7] - mode[10] - mode[11] - mode[13] - mode[14] + mode[16] + 2.f*mode[18]);
+    n_b.vd[9*para.number_of_nodes + (x+1) + para.dim_x*(y-1) + para.dim_x*para.dim_y*z] = 1.f/36.f * (mode[0] + mode[1] - mode[2] + mode[4] + 2.f*mode[6] - mode[7] + mode[10] - mode[11] + mode[13] - mode[14] + mode[16] + 2.f*mode[18]);
+    n_b.vd[10*para.number_of_nodes + (x-1) + para.dim_x*(y+1) + para.dim_x*para.dim_y*z] = 1.f/36.f * (mode[0] - mode[1] + mode[2] + mode[4] + 2.f*mode[6] - mode[7] - mode[10] + mode[11] - mode[13] + mode[14] + mode[16] + 2.f*mode[18]);
+    n_b.vd[11*para.number_of_nodes + (x+1) + para.dim_x*y + para.dim_x*para.dim_y*(z+1)] = 1.f/36.f * (mode[0] + mode[1] + mode[3] + mode[4] + mode[5] - mode[6] + mode[8] + mode[10] + mode[12] - mode[13] + mode[15] + mode[16] + mode[17] - mode[18]);
+    n_b.vd[12*para.number_of_nodes + (x-1) + para.dim_x*y + para.dim_x*para.dim_y*(z-1)] = 1.f/36.f * (mode[0] - mode[1] - mode[3] + mode[4] + mode[5] - mode[6] + mode[8] - mode[10] - mode[12] + mode[13] - mode[15] + mode[16] + mode[17] - mode[18]);
+    n_b.vd[13*para.number_of_nodes + (x+1) + para.dim_x*y + para.dim_x*para.dim_y*(z-1)] = 1.f/36.f * (mode[0] + mode[1] - mode[3] + mode[4] + mode[5] - mode[6] - mode[8] + mode[10] - mode[12] - mode[13] - mode[15] + mode[16] + mode[17] - mode[18]);
+    n_b.vd[14*para.number_of_nodes + (x-1) + para.dim_x*y + para.dim_x*para.dim_y*(z+1)] = 1.f/36.f * (mode[0] - mode[1] + mode[3] + mode[4] + mode[5] - mode[6] - mode[8] - mode[10] + mode[12] + mode[13] + mode[15] + mode[16] + mode[17] - mode[18]);
+    n_b.vd[15*para.number_of_nodes + x + para.dim_x*(y+1) + para.dim_x*para.dim_y*(z+1)] = 1.f/36.f * (mode[0] + mode[2] + mode[3] + mode[4] - mode[5] - mode[6] + mode[9] + mode[11] + mode[12] - mode[14] - mode[15] + mode[16] - mode[17] - mode[18]);
+    n_b.vd[16*para.number_of_nodes + x + para.dim_x*(y-1) + para.dim_x*para.dim_y*(z-1)] = 1.f/36.f * (mode[0] - mode[2] - mode[3] + mode[4] - mode[5] - mode[6] + mode[9] - mode[11] - mode[12] + mode[14] + mode[15] + mode[16] - mode[17] - mode[18]);
+    n_b.vd[17*para.number_of_nodes + x + para.dim_x*(y+1) + para.dim_x*para.dim_y*(z-1)] = 1.f/36.f * (mode[0] + mode[2] - mode[3] + mode[4] - mode[5] - mode[6] - mode[9] + mode[11] - mode[12] - mode[14] + mode[15] + mode[16] - mode[17] - mode[18]);
+    n_b.vd[18*para.number_of_nodes + x + para.dim_x*(y-1) + para.dim_x*para.dim_y*(z+1)] = 1.f/36.f * (mode[0] - mode[2] + mode[3] + mode[4] - mode[5] - mode[6] - mode[9] - mode[11] + mode[12] + mode[14] - mode[15] + mode[16] - mode[17] - mode[18]);
+                                             //printf("x %i, y %i, z %i, vd: %lf\n", x,y,z,n_b.vd[3*para.number_of_nodes + x + para.dim_x*(y+1) + para.dim_x*para.dim_y*z]);
+  }
+ }
 /*-------------------------------------------------------*/
 /**backtransformation from modespace to desityspace and streaming with the push method and buffering of border desities
  * @param index		node index / thread index (Input)
@@ -2924,6 +2960,7 @@ __global__ void integrate(LB_nodes_gpu n_a, LB_nodes_gpu n_b, LB_values_gpu *d_v
     /**calc of velocity densities and streaming with pbc*/
     //if (*d_gpu_n ==1)
       calc_n_from_modes_push(n_b, mode, index);
+      //calc_n_from_modes_push_wo_halo(n_b, mode, index);
     //else{
       if (devpara.number_of_gpus > 1) calc_n_from_modes_buffer(n_b, buffer, mode, index);
     /** rewriting the seed back to the global memory*/
@@ -4390,3 +4427,56 @@ void lbgpu::integrate_GPU(){
   } 
 }
 
+/**integration kernel for the lb gpu fluid update called from host */
+void lbgpu::integrate_multigpu_GPU(){
+  //begin loop over devices g
+  //printf("integrate gpu_n %i\n", gpu_n);
+  /** values for the kernel call */
+  int threads_per_block = 64;
+  int blocks_per_grid_y = 4;
+  int blocks_per_grid_x = (lbpar_gpu.number_of_nodes + threads_per_block * blocks_per_grid_y - 1) /(threads_per_block * blocks_per_grid_y);
+  dim3 dim_grid = make_uint3(blocks_per_grid_x, blocks_per_grid_y, 1);
+  LB_TRACE(printf("node %i integrate_GPU gpu_number %i\n", this_node, lbdevicepar_gpu.gpu_number));
+  for(int g = 0; g < gpu_n; ++g){
+    //set device g
+    cuda_check_errors(cudaSetDevice(lbdevicepar_gpu.gpu_number));
+    
+    /**call of fluid step*/
+    if (plan[g].intflag == 1){
+      //printf("current pointer %p nodes a %p nodes b %p\n", plan[g].current_nodes, &plan[g].nodes_a, &plan[g].nodes_b);
+      KERNELCALL(integrate, dim_grid, threads_per_block, (plan[g].nodes_a, plan[g].nodes_b, plan[g].device_values, plan[g].node_f, plan[g].send_buffer_d, &gpu_n));
+      plan[g].current_nodes = &plan[g].nodes_b;
+     // printf("current pointer %p nodes b %p\n", plan[g].current_nodes, &plan[g].nodes_b);
+      plan[g].intflag = 0;
+
+    }else{
+      KERNELCALL(integrate, dim_grid, threads_per_block, (plan[g].nodes_b, plan[g].nodes_a, plan[g].device_values, plan[g].node_f, plan[g].send_buffer_d, &gpu_n));
+      plan[g].current_nodes = &plan[g].nodes_a;
+      //cudaThreadSynchronize();
+      plan[g].intflag = 1;
+    }
+  }
+}
+/**apply bounce back boundaries*/
+void lbgpu::bb_bounds_GPU(){
+    /** values for the kernel call */
+    int threads_per_block = 64;
+    int blocks_per_grid_y = 4;
+    int blocks_per_grid_x = (lbpar_gpu.number_of_nodes + threads_per_block * blocks_per_grid_y - 1) /(threads_per_block * blocks_per_grid_y);
+    dim3 dim_grid = make_uint3(blocks_per_grid_x, blocks_per_grid_y, 1);
+  for(int g = 0; g < gpu_n; ++g){
+    if (plan[g].intflag == 0){
+#ifdef LB_BOUNDARIES_GPU		
+      if (n_lb_boundaries > 0) {
+        KERNELCALL(bb_read, dim_grid, threads_per_block, (plan[g].nodes_a, plan[g].nodes_b, plan[g].lb_boundary_velocity, plan[g].lb_boundary_force));
+        KERNELCALL(bb_write, dim_grid, threads_per_block, (plan[g].nodes_a, plan[g].nodes_b));
+      }
+    }else{
+      if (n_lb_boundaries > 0) {
+        KERNELCALL(bb_read, dim_grid, threads_per_block, (plan[g].nodes_b, plan[g].nodes_a, plan[g].lb_boundary_velocity, plan[g].lb_boundary_force));
+        KERNELCALL(bb_write, dim_grid, threads_per_block, (plan[g].nodes_b, plan[g].nodes_a));
+      }
+    }
+  }
+#endif
+}

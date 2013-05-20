@@ -94,14 +94,20 @@ void lbgpu::lattice_boltzmann_update() {
   if (fluidstep>=factor) {
     fluidstep=0;
 
-    lbgpu::integrate_GPU();
+    //lbgpu::integrate_GPU();
 #if 0
   if(this_node == 0)
   lb_lbfluid_save_checkpoint("checkpoint2.dat", 0);
   else
   lb_lbfluid_save_checkpoint("checkpoint3.dat", 0);
 #endif
-    if (lbdevicepar_gpu.number_of_gpus > 1) lbgpu::send_recv_buffer_gpu();
+    if (lbdevicepar_gpu.number_of_gpus > 1) {
+      lbgpu::integrate_multigpu_GPU();
+      lbgpu::send_recv_buffer_gpu();
+      lbgpu::bb_bounds_GPU();
+    }else{
+    lbgpu::integrate_GPU();
+    }
 #if 0
   if(this_node == 0)
   lb_lbfluid_save_checkpoint("checkpoint4.dat", 0);

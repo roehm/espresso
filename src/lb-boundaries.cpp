@@ -98,12 +98,11 @@ void lb_init_boundaries() {
     int the_boundary=-1;
     map_node_array(this_node, node_domain_position);
 //needs local dims
-//FIXME 0 1 exchange!!!
     offset[0] = node_domain_position[0]*(lbpar_gpu.dim_x-2);
     offset[1] = node_domain_position[1]*(lbpar_gpu.dim_y-2);
     offset[2] = node_domain_position[2]*(lbpar_gpu.dim_z-2);
     //printf("node %i offset %i %i %i\n", this_node, offset[0], offset[1], offset[2]);
-    printf("node %i offset %i %i %i\n", this_node, node_domain_position[0], node_domain_position[1], node_domain_position[2]);
+    //printf("node %i offset %i %i %i\n", this_node, node_domain_position[0], node_domain_position[1], node_domain_position[2]);
 /*needs global dims    TODO check this    */
     for(z=0; z<lbpar_gpu.dim_z; z++) {
       for(y=0; y<lbpar_gpu.dim_y; y++) {

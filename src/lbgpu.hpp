@@ -407,6 +407,8 @@ namespace lbgpu {
   void send_recv_buffer_GPU();
   void get_values_multigpu(LB_values_gpu *host_values);
   void get_bounds_multigpu(unsigned *bound_array);
+  void integrate_multigpu_GPU();
+  void bb_bounds_GPU();
   /**no used but still present function :p
    */
   void release();
