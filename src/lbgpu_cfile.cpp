@@ -103,10 +103,10 @@ void lbgpu::lattice_boltzmann_update() {
 #endif
     if (lbdevicepar_gpu.number_of_gpus > 1) {
       lbgpu::integrate_multigpu_GPU();
-      lbgpu::send_recv_buffer_gpu();
       lbgpu::bb_bounds_GPU();
+      lbgpu::send_recv_buffer_gpu();
     }else{
-    lbgpu::integrate_GPU();
+      lbgpu::integrate_GPU();
     }
 #if 0
   if(this_node == 0)

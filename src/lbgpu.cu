@@ -874,6 +874,333 @@ __device__ void bounce_back_write(LB_nodes_gpu n_b, LB_nodes_gpu n_a, unsigned i
     n_b.vd[18*para.number_of_nodes + x + para.dim_x*((para.dim_y+y-1)%para.dim_y) + para.dim_x*para.dim_y*((z+1)%para.dim_z)] = n_a.vd[18*para.number_of_nodes + x + para.dim_x*((para.dim_y+y-1)%para.dim_y) + para.dim_x*para.dim_y*((z+1)%para.dim_z)];
   }
 }
+/** Bounce back boundary conditions wihtout halo.
+ * The populations that have propagated into a boundary node
+ * are bounced back to the node they came from. This results
+ * in no slip boundary conditions.
+ *
+ * [cf. Ladd and Verberg, J. Stat. Phys. 104(5/6):1191-1251, 2001]
+ * @param index			node index / thread index (Input)
+ * @param n_b			Pointer to local node residing in array b (Input)
+ * @param n_a			Pointer to local node residing in array a (Output) (temp stored in buffer a)
+*/
+__device__ void bounce_back_read_wo_halo(LB_nodes_gpu n_b, LB_nodes_gpu n_a, unsigned int index, \
+    float* lb_boundary_velocity, float* lb_boundary_force){
+    
+  unsigned int xyz[3];
+  int c[3];
+  float v[3];
+  float shift, weight, pop_to_bounce_back;
+  float boundary_force[3] = {0,0,0};
+  size_t to_index, to_index_x, to_index_y, to_index_z;
+  int population, inverse;
+  int boundary_index;
+
+
+  boundary_index=n_b.boundary[index];
+  if(boundary_index != 0){
+    
+    v[0]=lb_boundary_velocity[3*(boundary_index-1)+0];
+    v[1]=lb_boundary_velocity[3*(boundary_index-1)+1];
+    v[2]=lb_boundary_velocity[3*(boundary_index-1)+2];
+    index_to_xyz(index, xyz);
+
+    unsigned int x = xyz[0];
+    unsigned int y = xyz[1];
+    unsigned int z = xyz[2];
+
+  if(x != 0 && x != (para.dim_x-1) && y != 0 && y != (para.dim_y-1) && z != 0 && z != (para.dim_z-1)){
+/* CPU analog of shift:
+   lbpar.agrid*lbpar.agrid*lbpar.agrid*lbpar.rho*2*lbmodel.c[i][l]*lb_boundaries[lbfields[k].boundary-1].velocity[l] */
+  
+    /** store vd temporary in second lattice to avoid race conditions */
+#define BOUNCEBACK_WO_HALO  \
+  shift = para.agrid*para.agrid*para.agrid*para.agrid*para.rho*2.*3.*weight*para.tau*(v[0]*c[0] + v[1]*c[1] + v[2]*c[2]); \
+  pop_to_bounce_back = n_b.vd[population*para.number_of_nodes + index]; \
+  to_index_x = (x+c[0]); \
+  to_index_y = (y+c[1]); \
+  to_index_z = (z+c[2]); \
+  to_index = to_index_x + para.dim_x*to_index_y + para.dim_x*para.dim_y*to_index_z; \
+  if (n_b.boundary[to_index] == 0) \
+  { \
+    boundary_force[0] += (2*pop_to_bounce_back+shift)*c[0]/para.tau/para.tau/para.agrid; \
+    boundary_force[1] += (2*pop_to_bounce_back+shift)*c[1]/para.tau/para.tau/para.agrid; \
+    boundary_force[2] += (2*pop_to_bounce_back+shift)*c[2]/para.tau/para.tau/para.agrid; \
+    n_b.vd[inverse*para.number_of_nodes + to_index] = pop_to_bounce_back + shift; \
+  }
+
+// ***** SHOULDN'T THERE BE AN ELSE STATMENT IN "BOUNCEBACK"?
+// ***** THERE IS AN ODD FACTOR OF 2 THAT YOU INCUR IN THE FORCES FOR THE "lb_stokes_sphere_gpu.tcl" TEST CASE
+
+/*        printf("boundary %d population %d creates force  %f %f %f\n", boundary_index-1, population, 1000*pop_to_bounce_back*c[0],  1000*pop_to_bounce_back*c[1],  1000*pop_to_bounce_back*c[2]);\
+      } */
+
+// ***** WHAT DO THE "to_index" STATMENTS? THEY GET WRITTEN OVER BY "BOUNCEBACK" ANYWAY? I THINK THESE CAN BE REMOVED, COMMENTING THEM OUT DID NOT SEEM TO EFFECT ANYTHING.
+
+    // the resting population does nothing.
+    c[0]=1;c[1]=0;c[2]=0; weight=1./18.; population=2; inverse=1; 
+//    to_index=(x+1)%para.dim_x + para.dim_x*y + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_WO_HALO
+    
+    c[0]=-1;c[1]=0;c[2]=0; weight=1./18.; population=1; inverse=2; 
+//    to_index=(para.dim_x+x-1)%para.dim_x + para.dim_x*y + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_WO_HALO
+    
+    c[0]=0;c[1]=1;c[2]=0;  weight=1./18.; population=4; inverse=3; 
+ //   to_index= x + para.dim_x*((y+1)%para.dim_y) + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_WO_HALO
+
+    c[0]=0;c[1]=-1;c[2]=0; weight=1./18.; population=3; inverse=4; 
+//    to_index=x + para.dim_x*((para.dim_y+y-1)%para.dim_y) + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_WO_HALO
+    
+    c[0]=0;c[1]=0;c[2]=1; weight=1./18.; population=6; inverse=5; 
+//    to_index=x + para.dim_x*y + para.dim_x*para.dim_y*((z+1)%para.dim_z);  
+    BOUNCEBACK_WO_HALO
+
+    c[0]=0;c[1]=0;c[2]=-1; weight=1./18.; population=5; inverse=6; 
+ //   to_index=x + para.dim_x*y + para.dim_x*para.dim_y*((para.dim_z+z-1)%para.dim_z);  
+    BOUNCEBACK_WO_HALO
+    
+    c[0]=1;c[1]=1;c[2]=0; weight=1./36.; population=8; inverse=7; 
+//    to_index=+(x+1)%para.dim_x + para.dim_x*((y+1)%para.dim_y) + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_WO_HALO
+    
+    c[0]=-1;c[1]=-1;c[2]=0; weight=1./36.; population=7; inverse=8; 
+//    to_index= (para.dim_x+x-1)%para.dim_x + para.dim_x*((para.dim_y+y-1)%para.dim_y) + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_WO_HALO
+    
+    c[0]=1;c[1]=-1;c[2]=0; weight=1./36.; population=10; inverse=9; 
+//    to_index= (x+1)%para.dim_x + para.dim_x*((para.dim_y+y-1)%para.dim_y) + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_WO_HALO
+
+    c[0]=-1;c[1]=+1;c[2]=0; weight=1./36.; population=9; inverse=10; 
+//    to_index= + (para.dim_x+x-1)%para.dim_x + para.dim_x*((y+1)%para.dim_y) + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_WO_HALO
+    
+    c[0]=1;c[1]=0;c[2]=1; weight=1./36.; population=12; inverse=11; 
+//    to_index= + (x+1)%para.dim_x + para.dim_x*y + para.dim_x*para.dim_y*((z+1)%para.dim_z);  
+    BOUNCEBACK_WO_HALO
+    
+    c[0]=-1;c[1]=0;c[2]=-1; weight=1./36.; population=11; inverse=12; 
+ //   to_index= + (para.dim_x+x-1)%para.dim_x + para.dim_x*y + para.dim_x*para.dim_y*((para.dim_z+z-1)%para.dim_z);  
+    BOUNCEBACK_WO_HALO
+
+    c[0]=1;c[1]=0;c[2]=-1; weight=1./36.; population=14; inverse=13; 
+ //   to_index= + (x+1)%para.dim_x + para.dim_x*y + para.dim_x*para.dim_y*((para.dim_z+z-1)%para.dim_z);  
+    BOUNCEBACK_WO_HALO
+    
+    c[0]=-1;c[1]=0;c[2]=1; weight=1./36.; population=13; inverse=14; 
+  //  to_index=(para.dim_x+x-1)%para.dim_x + para.dim_x*y + para.dim_x*para.dim_y*((z+1)%para.dim_z);  
+    BOUNCEBACK_WO_HALO
+
+    c[0]=0;c[1]=1;c[2]=1; weight=1./36.; population=16; inverse=15; 
+ //   to_index= + x + para.dim_x*((y+1)%para.dim_y) + para.dim_x*para.dim_y*((z+1)%para.dim_z);  
+    BOUNCEBACK_WO_HALO
+    
+    c[0]=0;c[1]=-1;c[2]=-1; weight=1./36.; population=15; inverse=16; 
+//    to_index=+ x + para.dim_x*((para.dim_y+y-1)%para.dim_y) + para.dim_x*para.dim_y*((para.dim_z+z-1)%para.dim_z);  
+    BOUNCEBACK_WO_HALO
+    
+    c[0]=0;c[1]=1;c[2]=-1; weight=1./36.; population=18; inverse=17; 
+ //   to_index=+ x + para.dim_x*((y+1)%para.dim_y) + para.dim_x*para.dim_y*((para.dim_z+z-1)%para.dim_z); 
+    BOUNCEBACK_WO_HALO
+    
+    c[0]=0;c[1]=-1;c[2]=1; weight=1./36.; population=17; inverse=18; 
+//    to_index= + x + para.dim_x*((para.dim_y+y-1)%para.dim_y) + para.dim_x*para.dim_y*((z+1)%para.dim_z);  
+    BOUNCEBACK_WO_HALO
+    
+    atomicadd(&lb_boundary_force[3*(n_b.boundary[index]-1)+0], boundary_force[0]);
+    atomicadd(&lb_boundary_force[3*(n_b.boundary[index]-1)+1], boundary_force[1]);
+    atomicadd(&lb_boundary_force[3*(n_b.boundary[index]-1)+2], boundary_force[2]);
+    }
+  }
+}
+/**bounce back read kernel needed to avoid raceconditions whtou halo
+ * @param index			node index / thread index (Input)
+ * @param n_b			Pointer to local node residing in array b (Input)
+ * @param n_a			Pointer to local node residing in array a (Output) (temp stored in buffer a)
+*/
+__device__ void bounce_back_write_wo_halo(LB_nodes_gpu n_b, LB_nodes_gpu n_a, unsigned int index){
+
+  unsigned int xyz[3];
+
+  if(n_b.boundary[index] != 0){
+    index_to_xyz(index, xyz);
+    unsigned int x = xyz[0];
+    unsigned int y = xyz[1];
+    unsigned int z = xyz[2];
+
+  if(x != 0 && x != (para.dim_x-1) && y != 0 && y != (para.dim_y-1) && z != 0 && z != (para.dim_z-1)){
+    /** stream vd from boundary node back to origin node */
+    n_b.vd[1*para.number_of_nodes + (x+1) + para.dim_x*y + para.dim_x*para.dim_y*z] = n_a.vd[1*para.number_of_nodes + (x+1) + para.dim_x*y + para.dim_x*para.dim_y*z];
+    n_b.vd[2*para.number_of_nodes + (x-1) + para.dim_x*y + para.dim_x*para.dim_y*z] = n_a.vd[2*para.number_of_nodes + (x-1) + para.dim_x*y + para.dim_x*para.dim_y*z];
+    n_b.vd[3*para.number_of_nodes + x + para.dim_x*(y+1) + para.dim_x*para.dim_y*z] = n_a.vd[3*para.number_of_nodes + x + para.dim_x*(y+1) + para.dim_x*para.dim_y*z];
+    n_b.vd[4*para.number_of_nodes + x + para.dim_x*(y-1) + para.dim_x*para.dim_y*z] = n_a.vd[4*para.number_of_nodes + x + para.dim_x*(y-1) + para.dim_x*para.dim_y*z];
+    n_b.vd[5*para.number_of_nodes + x + para.dim_x*y + para.dim_x*para.dim_y*(z+1)] = n_a.vd[5*para.number_of_nodes + x + para.dim_x*y + para.dim_x*para.dim_y*(z+1)];
+    n_b.vd[6*para.number_of_nodes + x + para.dim_x*y + para.dim_x*para.dim_y*(z-1)] = n_a.vd[6*para.number_of_nodes + x + para.dim_x*y + para.dim_x*para.dim_y*(z-1)];
+    n_b.vd[7*para.number_of_nodes + (x+1) + para.dim_x*(y+1) + para.dim_x*para.dim_y*z] = n_a.vd[7*para.number_of_nodes + (x+1) + para.dim_x*(y+1) + para.dim_x*para.dim_y*z];
+    n_b.vd[8*para.number_of_nodes + (x-1) + para.dim_x*(y-1) + para.dim_x*para.dim_y*z] = n_a.vd[8*para.number_of_nodes + (x-1) + para.dim_x*(y-1) + para.dim_x*para.dim_y*z];
+    n_b.vd[9*para.number_of_nodes + (x+1) + para.dim_x*(y-1) + para.dim_x*para.dim_y*z] = n_a.vd[9*para.number_of_nodes + (x+1) + para.dim_x*(y-1) + para.dim_x*para.dim_y*z];
+    n_b.vd[10*para.number_of_nodes + (x-1) + para.dim_x*(y+1) + para.dim_x*para.dim_y*z] = n_a.vd[10*para.number_of_nodes + (x-1) + para.dim_x*(y+1) + para.dim_x*para.dim_y*z];
+    n_b.vd[11*para.number_of_nodes + (x+1) + para.dim_x*y + para.dim_x*para.dim_y*(z+1)] = n_a.vd[11*para.number_of_nodes + (x+1) + para.dim_x*y + para.dim_x*para.dim_y*(z+1)];
+    n_b.vd[12*para.number_of_nodes + (x-1) + para.dim_x*y + para.dim_x*para.dim_y*(z-1)] = n_a.vd[12*para.number_of_nodes + (x-1) + para.dim_x*y + para.dim_x*para.dim_y*(z-1)];
+    n_b.vd[13*para.number_of_nodes + (x+1) + para.dim_x*y + para.dim_x*para.dim_y*(z-1)] = n_a.vd[13*para.number_of_nodes + (x+1) + para.dim_x*y + para.dim_x*para.dim_y*(z-1)];
+    n_b.vd[14*para.number_of_nodes + (x-1) + para.dim_x*y + para.dim_x*para.dim_y*(z+1)] = n_a.vd[14*para.number_of_nodes + (x-1) + para.dim_x*y + para.dim_x*para.dim_y*(z+1)];
+    n_b.vd[15*para.number_of_nodes + x + para.dim_x*(y+1) + para.dim_x*para.dim_y*(z+1)] = n_a.vd[15*para.number_of_nodes + x + para.dim_x*(y+1) + para.dim_x*para.dim_y*(z+1)];
+    n_b.vd[16*para.number_of_nodes + x + para.dim_x*(y-1) + para.dim_x*para.dim_y*(z-1)] = n_a.vd[16*para.number_of_nodes + x + para.dim_x*(y-1) + para.dim_x*para.dim_y*(z-1)];
+    n_b.vd[17*para.number_of_nodes + x + para.dim_x*(y+1) + para.dim_x*para.dim_y*(z-1)] = n_a.vd[17*para.number_of_nodes + x + para.dim_x*(y+1) + para.dim_x*para.dim_y*(z-1)];
+    n_b.vd[18*para.number_of_nodes + x + para.dim_x*(y-1) + para.dim_x*para.dim_y*(z+1)] = n_a.vd[18*para.number_of_nodes + x + para.dim_x*(y-1) + para.dim_x*para.dim_y*(z+1)];
+    }
+  }
+}
+/** Bounce back boundary conditions halo.
+ * The populations that have propagated into a boundary node
+ * are bounced back to the node they came from. This results
+ * in no slip boundary conditions.
+ *
+ * [cf. Ladd and Verberg, J. Stat. Phys. 104(5/6):1191-1251, 2001]
+ * @param index			node index / thread index (Input)
+ * @param n_b			Pointer to local node residing in array b (Input)
+ * @param n_a			Pointer to local node residing in array a (Output) (temp stored in buffer a)
+*/
+__device__ void bounce_back_read_halo(LB_nodes_gpu n_b, LB_nodes_gpu n_a, unsigned int index, \
+    float* lb_boundary_velocity, float* lb_boundary_force){
+    
+  unsigned int xyz[3];
+  int c[3];
+  float v[3];
+  float shift, weight, pop_to_bounce_back;
+  float boundary_force[3] = {0,0,0};
+  size_t to_index, to_index_x, to_index_y, to_index_z;
+  int population, inverse;
+  int boundary_index;
+
+
+  boundary_index=n_b.boundary[index];
+  if(boundary_index != 0){
+    
+    v[0]=lb_boundary_velocity[3*(boundary_index-1)+0];
+    v[1]=lb_boundary_velocity[3*(boundary_index-1)+1];
+    v[2]=lb_boundary_velocity[3*(boundary_index-1)+2];
+    index_to_xyz(index, xyz);
+
+    unsigned int x = xyz[0];
+    unsigned int y = xyz[1];
+    unsigned int z = xyz[2];
+
+  if(x != 0 && x != (para.dim_x-1) && y != 0 && y != (para.dim_y-1) && z != 0 && z != (para.dim_z-1)){
+/* CPU analog of shift:
+   lbpar.agrid*lbpar.agrid*lbpar.agrid*lbpar.rho*2*lbmodel.c[i][l]*lb_boundaries[lbfields[k].boundary-1].velocity[l] */
+  
+    /** store vd temporary in second lattice to avoid race conditions */
+#define BOUNCEBACK_HALO  \
+  shift = para.agrid*para.agrid*para.agrid*para.agrid*para.rho*2.*3.*weight*para.tau*(v[0]*c[0] + v[1]*c[1] + v[2]*c[2]); \
+  pop_to_bounce_back = n_b.vd[population*para.number_of_nodes + index]; \
+  to_index_x = (x+c[0]); \
+  to_index_y = (y+c[1]); \
+  to_index_z = (z+c[2]); \
+  to_index = to_index_x + para.dim_x*to_index_y + para.dim_x*para.dim_y*to_index_z; \
+  if (n_b.boundary[to_index] == 0) \
+  { \
+    boundary_force[0] += (2*pop_to_bounce_back+shift)*c[0]/para.tau/para.tau/para.agrid; \
+    boundary_force[1] += (2*pop_to_bounce_back+shift)*c[1]/para.tau/para.tau/para.agrid; \
+    boundary_force[2] += (2*pop_to_bounce_back+shift)*c[2]/para.tau/para.tau/para.agrid; \
+    n_b.vd[inverse*para.number_of_nodes + to_index] = pop_to_bounce_back + shift; \
+  }
+
+// ***** SHOULDN'T THERE BE AN ELSE STATMENT IN "BOUNCEBACK"?
+// ***** THERE IS AN ODD FACTOR OF 2 THAT YOU INCUR IN THE FORCES FOR THE "lb_stokes_sphere_gpu.tcl" TEST CASE
+
+/*        printf("boundary %d population %d creates force  %f %f %f\n", boundary_index-1, population, 1000*pop_to_bounce_back*c[0],  1000*pop_to_bounce_back*c[1],  1000*pop_to_bounce_back*c[2]);\
+      } */
+
+// ***** WHAT DO THE "to_index" STATMENTS? THEY GET WRITTEN OVER BY "BOUNCEBACK" ANYWAY? I THINK THESE CAN BE REMOVED, COMMENTING THEM OUT DID NOT SEEM TO EFFECT ANYTHING.
+  if(x == 0) {
+
+
+
+  }
+    // the resting population does nothing.
+    c[0]=1;c[1]=0;c[2]=0; weight=1./18.; population=2; inverse=1; 
+//    to_index=(x+1)%para.dim_x + para.dim_x*y + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_HALO
+    
+    c[0]=-1;c[1]=0;c[2]=0; weight=1./18.; population=1; inverse=2; 
+//    to_index=(para.dim_x+x-1)%para.dim_x + para.dim_x*y + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_HALO
+    
+    c[0]=0;c[1]=1;c[2]=0;  weight=1./18.; population=4; inverse=3; 
+ //   to_index= x + para.dim_x*((y+1)%para.dim_y) + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_HALO
+
+    c[0]=0;c[1]=-1;c[2]=0; weight=1./18.; population=3; inverse=4; 
+//    to_index=x + para.dim_x*((para.dim_y+y-1)%para.dim_y) + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_HALO
+    
+    c[0]=0;c[1]=0;c[2]=1; weight=1./18.; population=6; inverse=5; 
+//    to_index=x + para.dim_x*y + para.dim_x*para.dim_y*((z+1)%para.dim_z);  
+    BOUNCEBACK_HALO
+
+    c[0]=0;c[1]=0;c[2]=-1; weight=1./18.; population=5; inverse=6; 
+ //   to_index=x + para.dim_x*y + para.dim_x*para.dim_y*((para.dim_z+z-1)%para.dim_z);  
+    BOUNCEBACK_HALO
+    
+    c[0]=1;c[1]=1;c[2]=0; weight=1./36.; population=8; inverse=7; 
+//    to_index=+(x+1)%para.dim_x + para.dim_x*((y+1)%para.dim_y) + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_HALO
+    
+    c[0]=-1;c[1]=-1;c[2]=0; weight=1./36.; population=7; inverse=8; 
+//    to_index= (para.dim_x+x-1)%para.dim_x + para.dim_x*((para.dim_y+y-1)%para.dim_y) + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_HALO
+    
+    c[0]=1;c[1]=-1;c[2]=0; weight=1./36.; population=10; inverse=9; 
+//    to_index= (x+1)%para.dim_x + para.dim_x*((para.dim_y+y-1)%para.dim_y) + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_HALO
+
+    c[0]=-1;c[1]=+1;c[2]=0; weight=1./36.; population=9; inverse=10; 
+//    to_index= + (para.dim_x+x-1)%para.dim_x + para.dim_x*((y+1)%para.dim_y) + para.dim_x*para.dim_y*z;  
+    BOUNCEBACK_HALO
+    
+    c[0]=1;c[1]=0;c[2]=1; weight=1./36.; population=12; inverse=11; 
+//    to_index= + (x+1)%para.dim_x + para.dim_x*y + para.dim_x*para.dim_y*((z+1)%para.dim_z);  
+    BOUNCEBACK_HALO
+    
+    c[0]=-1;c[1]=0;c[2]=-1; weight=1./36.; population=11; inverse=12; 
+ //   to_index= + (para.dim_x+x-1)%para.dim_x + para.dim_x*y + para.dim_x*para.dim_y*((para.dim_z+z-1)%para.dim_z);  
+    BOUNCEBACK_HALO
+
+    c[0]=1;c[1]=0;c[2]=-1; weight=1./36.; population=14; inverse=13; 
+ //   to_index= + (x+1)%para.dim_x + para.dim_x*y + para.dim_x*para.dim_y*((para.dim_z+z-1)%para.dim_z);  
+    BOUNCEBACK_HALO
+    
+    c[0]=-1;c[1]=0;c[2]=1; weight=1./36.; population=13; inverse=14; 
+  //  to_index=(para.dim_x+x-1)%para.dim_x + para.dim_x*y + para.dim_x*para.dim_y*((z+1)%para.dim_z);  
+    BOUNCEBACK_HALO
+
+    c[0]=0;c[1]=1;c[2]=1; weight=1./36.; population=16; inverse=15; 
+ //   to_index= + x + para.dim_x*((y+1)%para.dim_y) + para.dim_x*para.dim_y*((z+1)%para.dim_z);  
+    BOUNCEBACK_HALO
+    
+    c[0]=0;c[1]=-1;c[2]=-1; weight=1./36.; population=15; inverse=16; 
+//    to_index=+ x + para.dim_x*((para.dim_y+y-1)%para.dim_y) + para.dim_x*para.dim_y*((para.dim_z+z-1)%para.dim_z);  
+    BOUNCEBACK_HALO
+    
+    c[0]=0;c[1]=1;c[2]=-1; weight=1./36.; population=18; inverse=17; 
+ //   to_index=+ x + para.dim_x*((y+1)%para.dim_y) + para.dim_x*para.dim_y*((para.dim_z+z-1)%para.dim_z); 
+    BOUNCEBACK_HALO
+    
+    c[0]=0;c[1]=-1;c[2]=1; weight=1./36.; population=17; inverse=18; 
+//    to_index= + x + para.dim_x*((para.dim_y+y-1)%para.dim_y) + para.dim_x*para.dim_y*((z+1)%para.dim_z);  
+    BOUNCEBACK_HALO
+    
+    atomicadd(&lb_boundary_force[3*(n_b.boundary[index]-1)+0], boundary_force[0]);
+    atomicadd(&lb_boundary_force[3*(n_b.boundary[index]-1)+1], boundary_force[1]);
+    atomicadd(&lb_boundary_force[3*(n_b.boundary[index]-1)+2], boundary_force[2]);
+    }
+  }
+}
+
 /** add of (external) forces within the modespace, needed for particle-interaction
  * @param index		node index / thread index (Input)
  * @param mode		Pointer to the local register values mode (Input/Output)
@@ -3042,26 +3369,59 @@ __global__ void calc_fluid_particle_ia(LB_nodes_gpu n_a, LB_particle_gpu *partic
   */
 __global__ void bb_read(LB_nodes_gpu n_a, LB_nodes_gpu n_b, float* lb_boundary_velocity, float* lb_boundary_force){
 
-    unsigned int index = blockIdx.y * gridDim.x * blockDim.x + blockDim.x * blockIdx.x + threadIdx.x;
+  unsigned int index = blockIdx.y * gridDim.x * blockDim.x + blockDim.x * blockIdx.x + threadIdx.x;
 
-      if(index<para.number_of_nodes){
+  if(index<para.number_of_nodes){
 #ifdef SHANCHEN
-            bounce_back_read_shanchen(n_b, n_a, index);
+    bounce_back_read_shanchen(n_b, n_a, index);
 #else
-            bounce_back_read(n_b, n_a, index, lb_boundary_velocity, lb_boundary_force);
+    bounce_back_read(n_b, n_a, index, lb_boundary_velocity, lb_boundary_force);
 #endif
-      }
+  }
 }
 /**Bounce back boundary write kernel
  * @param n_a					Pointer to local node residing in array a (Input)
  * @param n_b					Pointer to local node residing in array b (Input)
 */
-__global__ void bb_write(LB_nodes_gpu n_a, LB_nodes_gpu n_b){
+__global__ void bb_write(LB_nodes_gpu n_a, LB_nodes_gpu n_b, float* buffer){
+
+  unsigned int index = blockIdx.y * gridDim.x * blockDim.x + blockDim.x * blockIdx.x + threadIdx.x;
+  float mode[19];
+
+  if(index<para.number_of_nodes){
+    //bounce_back_write(n_b, n_a, index);
+    calc_m_from_n(n_b, index, mode);
+    normalize_modes(mode);
+    calc_n_from_modes_buffer(n_b, buffer, mode, index);
+  }
+}
+
+/**Bounce back boundary read kernel without halo
+  * @param n_a Pointer to local node residing in array a (Input)
+  * @param n_b Pointer to local node residing in array b (Input)
+  */
+__global__ void bb_read_wo_halo(LB_nodes_gpu n_a, LB_nodes_gpu n_b, float* lb_boundary_velocity, float* lb_boundary_force){
 
   unsigned int index = blockIdx.y * gridDim.x * blockDim.x + blockDim.x * blockIdx.x + threadIdx.x;
 
   if(index<para.number_of_nodes){
-    bounce_back_write(n_b, n_a, index);
+#ifdef SHANCHEN
+    bounce_back_read_wo_halo_shanchen(n_b, n_a, index);
+#else
+    bounce_back_read_wo_halo(n_b, n_a, index, lb_boundary_velocity, lb_boundary_force);
+#endif
+  }
+}
+/**Bounce back boundary write kernel without halo
+ * @param n_a					Pointer to local node residing in array a (Input)
+ * @param n_b					Pointer to local node residing in array b (Input)
+*/
+__global__ void bb_write_wo_halo(LB_nodes_gpu n_a, LB_nodes_gpu n_b){
+
+  unsigned int index = blockIdx.y * gridDim.x * blockDim.x + blockDim.x * blockIdx.x + threadIdx.x;
+
+  if(index<para.number_of_nodes){
+    bounce_back_write_wo_halo(n_b, n_a, index);
   }
 }
 
@@ -4406,7 +4766,7 @@ void lbgpu::integrate_GPU(){
 #ifdef LB_BOUNDARIES_GPU		
       if (n_lb_boundaries > 0) {
         KERNELCALL(bb_read, dim_grid, threads_per_block, (plan[g].nodes_a, plan[g].nodes_b, plan[g].lb_boundary_velocity, plan[g].lb_boundary_force));
-        KERNELCALL(bb_write, dim_grid, threads_per_block, (plan[g].nodes_a, plan[g].nodes_b));
+//        KERNELCALL(bb_write, dim_grid, threads_per_block, (plan[g].nodes_a, plan[g].nodes_b, plan[g].send_buffer_d));
       }
 #endif
      // printf("current pointer %p nodes b %p\n", plan[g].current_nodes, &plan[g].nodes_b);
@@ -4418,7 +4778,7 @@ void lbgpu::integrate_GPU(){
 #ifdef LB_BOUNDARIES_GPU		
       if (n_lb_boundaries > 0) {
         KERNELCALL(bb_read, dim_grid, threads_per_block, (plan[g].nodes_b, plan[g].nodes_a, plan[g].lb_boundary_velocity, plan[g].lb_boundary_force));
-        KERNELCALL(bb_write, dim_grid, threads_per_block, (plan[g].nodes_b, plan[g].nodes_a));
+//        KERNELCALL(bb_write, dim_grid, threads_per_block, (plan[g].nodes_b, plan[g].nodes_a, plan[g].send_buffer_d));
       }
 #endif
       //cudaThreadSynchronize();
@@ -4448,7 +4808,6 @@ void lbgpu::integrate_multigpu_GPU(){
       plan[g].current_nodes = &plan[g].nodes_b;
      // printf("current pointer %p nodes b %p\n", plan[g].current_nodes, &plan[g].nodes_b);
       plan[g].intflag = 0;
-
     }else{
       KERNELCALL(integrate, dim_grid, threads_per_block, (plan[g].nodes_b, plan[g].nodes_a, plan[g].device_values, plan[g].node_f, plan[g].send_buffer_d, &gpu_n));
       plan[g].current_nodes = &plan[g].nodes_a;
@@ -4468,13 +4827,17 @@ void lbgpu::bb_bounds_GPU(){
     if (plan[g].intflag == 0){
 #ifdef LB_BOUNDARIES_GPU		
       if (n_lb_boundaries > 0) {
+      //  KERNELCALL(bb_read_wo_halo, dim_grid, threads_per_block, (plan[g].nodes_a, plan[g].nodes_b, plan[g].lb_boundary_velocity, plan[g].lb_boundary_force));
+      //  KERNELCALL(bb_write_wo_halo, dim_grid, threads_per_block, (plan[g].nodes_a, plan[g].nodes_b));
         KERNELCALL(bb_read, dim_grid, threads_per_block, (plan[g].nodes_a, plan[g].nodes_b, plan[g].lb_boundary_velocity, plan[g].lb_boundary_force));
-        KERNELCALL(bb_write, dim_grid, threads_per_block, (plan[g].nodes_a, plan[g].nodes_b));
+        KERNELCALL(bb_write, dim_grid, threads_per_block, (plan[g].nodes_a, plan[g].nodes_b, plan[g].send_buffer_d));
       }
     }else{
       if (n_lb_boundaries > 0) {
+      //  KERNELCALL(bb_read_wo_halo, dim_grid, threads_per_block, (plan[g].nodes_b, plan[g].nodes_a, plan[g].lb_boundary_velocity, plan[g].lb_boundary_force));
+      // KERNELCALL(bb_write_wo_halo, dim_grid, threads_per_block, (plan[g].nodes_b, plan[g].nodes_a));
         KERNELCALL(bb_read, dim_grid, threads_per_block, (plan[g].nodes_b, plan[g].nodes_a, plan[g].lb_boundary_velocity, plan[g].lb_boundary_force));
-        KERNELCALL(bb_write, dim_grid, threads_per_block, (plan[g].nodes_b, plan[g].nodes_a));
+        KERNELCALL(bb_write, dim_grid, threads_per_block, (plan[g].nodes_b, plan[g].nodes_a, plan[g].send_buffer_d));
       }
     }
   }
