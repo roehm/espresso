@@ -74,8 +74,10 @@ int i;
 
 static void mpi_get_particles_lb(LB_particle_gpu *host_result);
 static void mpi_get_particles_slave_lb();
+static void get_particles_lb(LB_particle_gpu *host_result);
 static void mpi_send_forces_lb(LB_particle_force_gpu *host_forces);
 static void mpi_send_forces_slave_lb();
+static void send_forces_lb(LB_particle_force_gpu *host_forces);
 
 int n_extern_nodeforces = 0;
 LB_extern_nodeforce_gpu *host_extern_nodeforces = NULL;
@@ -124,7 +126,11 @@ void lbgpu::lattice_boltzmann_update() {
 void lbgpu::calc_particle_lattice_ia() {
 
   if (transfer_momentum_gpu) {
-    mpi_get_particles_lb(host_data);
+    if(lbdevicepar_gpu.number_of_gpus ==1 ) {
+      mpi_get_particles_lb(host_data);
+    }else{
+      get_particles_lb(host_data);
+    }
 
     if(this_node == 0){
 #if 0
@@ -343,8 +349,7 @@ void lbgpu::get_bounds_multigpu(unsigned *bound_array){
 
 }
 /*************** REQ_GETPARTS ************/
-/*************** REQ_GETPARTS ************/
-/**
+/** collects the particle postions and velocties to master node
  * @params host_data struct storing all needed particle data (Output)
  *
  * */
@@ -415,6 +420,11 @@ static void mpi_get_particles_lb(LB_particle_gpu *host_data)
   free(sizes);
 }
 
+/*************** REQ_GETPARTS ************/
+/** collects the particle postions and velocties to master node (slave)
+ * @params host_data struct storing all needed particle data (Output)
+ *
+ * */
 static void mpi_get_particles_slave_lb(){
  
   int n_part;
@@ -467,6 +477,55 @@ static void mpi_get_particles_slave_lb(){
   }  
 }
 
+/*************** REQ_GETPARTS ************/
+/** collects the particle postions and velocties to master node
+ * @params host_data struct storing all needed particle data (Output)
+ *
+ * */
+static void get_particles_lb(LB_particle_gpu *host_data)
+{
+  int n_part;
+  int g, pnode;
+  Cell *cell;
+  int c;
+
+  int i;	
+
+  n_part = cells_get_n_particles();
+
+   for (c = 0; c < local_cells.n; c++) {
+     Particle *part;
+     int npart;	
+     int dummy[3] = {0,0,0};
+     double pos[3];
+     cell = local_cells.cell[c];
+     part = cell->part;
+     npart = cell->n;
+    for (i=0;i<npart;i++) {
+      memcpy(pos, part[i].r.p, 3*sizeof(double));
+      fold_position(pos, dummy);
+      host_data[i+g].p[0] = (float)pos[0];
+      host_data[i+g].p[1] = (float)pos[1];
+      host_data[i+g].p[2] = (float)pos[2];
+	  							
+      host_data[i+g].v[0] = (float)part[i].m.v[0];
+      host_data[i+g].v[1] = (float)part[i].m.v[1];
+      host_data[i+g].v[2] = (float)part[i].m.v[2];
+#ifdef LB_ELECTROHYDRODYNAMICS
+      host_data[i+g].mu_E[0] = (float)part[i].p.mu_E[0];
+      host_data[i+g].mu_E[1] = (float)part[i].p.mu_E[1];
+      host_data[i+g].mu_E[2] = (float)part[i].p.mu_E[2];
+#endif
+    }  
+  g += npart;
+  }
+  COMM_TRACE(fprintf(stderr, "%d: finished get\n", this_node));
+}
+/*************** REQ_GETPARTS ************/
+/** distributes the particles forces back to all nodes
+ * @params host_forcs struct storing particle forces (Output)
+ *
+ * */
 static void mpi_send_forces_lb(LB_particle_force_gpu *host_forces){
 	
   int n_part;
@@ -515,6 +574,11 @@ static void mpi_send_forces_lb(LB_particle_force_gpu *host_forces){
   free(sizes);
 }
 
+/*************** REQ_GETPARTS ************/
+/** distributes the particles forces back to all nodes (slave)
+ * @params host_forcs struct storing particle forces (Output)
+ *
+ * */
 static void mpi_send_forces_slave_lb(){
 
   int n_part;
@@ -548,6 +612,33 @@ static void mpi_send_forces_slave_lb(){
     }
     free(host_forces_sl);
   } 
+}
+/*************** REQ_GETPARTS ************/
+/** distributes the particles forces back on single nodes
+ * @params host_forcs struct storing particle forces (Output)
+ *
+ * */
+static void send_forces_lb(LB_particle_force_gpu *host_forces){
+	
+  int n_part;
+  int g, pnode;
+  Cell *cell;
+  int c;
+  int i;	
+  n_part = cells_get_n_particles();
+
+  for (c = 0; c < local_cells.n; c++) {
+    int npart;	
+    cell = local_cells.cell[c];
+    npart = cell->n;
+    for (i=0;i<npart;i++) {
+      cell->part[i].f.f[0] += (double)host_forces[i+g].f[0];
+      cell->part[i].f.f[1] += (double)host_forces[i+g].f[1];
+      cell->part[i].f.f[2] += (double)host_forces[i+g].f[2];
+    }
+    g += npart;
+  }
+  COMM_TRACE(fprintf(stderr, "%d: finished send\n", this_node));
 }
 /*@}*/
 
