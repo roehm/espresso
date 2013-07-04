@@ -126,24 +126,24 @@ void lbgpu::lattice_boltzmann_update() {
 void lbgpu::calc_particle_lattice_ia() {
 
   if (transfer_momentum_gpu) {
-    if(lbdevicepar_gpu.number_of_gpus ==1 ) {
-      mpi_get_particles_lb(host_data);
-    }else{
+    if(lbdevicepar_gpu.number_of_gpus > 1) {
       get_particles_lb(host_data);
+      if(lbdevicepar_gpu.number_of_particles) lbgpu::particle_GPU(host_data);
+    }else{
+      mpi_get_particles_lb(host_data);
+      if(this_node == 0){
+        if(lbdevicepar_gpu.number_of_particles){ lbgpu::particle_GPU(host_data);
+        }
+      }
     }
 
-    if(this_node == 0){
 #if 0
       for (i=0;i<n_total_particles;i++) {
         fprintf(stderr, "%i particle posi: , %f %f %f\n", i, host_data[i].p[0], host_data[i].p[1], host_data[i].p[2]);
       }
 #endif
 
-      if(lbdevicepar_gpu.number_of_particles){ lbgpu::particle_GPU(host_data);
-
         LB_TRACE (fprintf(stderr,"node %i lb_calc_particle_lattice_ia_gpu \n",this_node));
-      }
-    }
   }
 }
 
@@ -152,34 +152,47 @@ void lbgpu::calc_particle_lattice_ia() {
 void lbgpu::send_forces(){
 
   if (transfer_momentum_gpu) {
-    if(this_node == 0){
-      if (lbdevicepar_gpu.number_of_particles){
+    if(lbdevicepar_gpu.number_of_gpus > 1) {
+      send_forces_lb(host_forces);
+      if(lbdevicepar_gpu.number_of_particles) {
         lbgpu::copy_forces_GPU(host_forces);
-
         LB_TRACE (fprintf(stderr,"node %i send_forces \n", this_node));
       }
+    }else{
+      mpi_get_particles_lb(host_data);
+      if(this_node == 0){
+        if(lbdevicepar_gpu.number_of_particles){
+          lbgpu::copy_forces_GPU(host_forces);
+          LB_TRACE (fprintf(stderr,"node %i send_forces \n", this_node));
+          mpi_send_forces_lb(host_forces);
+        }
+      }
+    }
 #if 0
         for (i=0;i<n_total_particles;i++) {
           fprintf(stderr, "%i particle forces , %f %f %f \n", i, host_forces[i].f[0], host_forces[i].f[1], host_forces[i].f[2]);
         }
 #endif
-    }
-    mpi_send_forces_lb(host_forces);
   }
 }
 
 /** (re-) allocation of the memory need for the particles (cpu part)*/
 void lbgpu::realloc_particles(){
 
-  lbdevicepar_gpu.number_of_particles = n_total_particles;
+  if(lbdevicepar_gpu.number_of_gpus > 1) {
+    lbdevicepar_gpu.number_of_particles = cells_get_n_particles();
+  }else{
+    lbdevicepar_gpu.number_of_particles = n_total_particles;
+  }
   LB_TRACE (printf("node %i #particles realloc\t %u \n", this_node,lbdevicepar_gpu.number_of_particles));
   //fprintf(stderr, "%u \t \n", lbpar_gpu.number_of_particles);
   /**-----------------------------------------------------*/
   /** allocating of the needed memory for several structs */
   /**-----------------------------------------------------*/
   /**Allocate struct for particle forces */
+  //TODO make forces Hostalloc
   size_t size_of_forces = lbdevicepar_gpu.number_of_particles * sizeof(LB_particle_force_gpu);
-  host_forces = (LB_particle_force_gpu*) realloc(host_forces, size_of_forces);
+  host_forces = (LB_particle_force_gpu*)realloc(host_forces, size_of_forces);
 
   lbpar_gpu.your_seed = (unsigned int)i_random(max_ran);
 
@@ -482,28 +495,25 @@ static void mpi_get_particles_slave_lb(){
  * @params host_data struct storing all needed particle data (Output)
  *
  * */
-static void get_particles_lb(LB_particle_gpu *host_data)
-{
-  int n_part;
+static void get_particles_lb(LB_particle_gpu *host_data) {
+  //int n_part;
   int g, pnode;
   Cell *cell;
   int c;
 
   int i;	
 
-  n_part = cells_get_n_particles();
+  //n_part = cells_get_n_particles();
 
    for (c = 0; c < local_cells.n; c++) {
      Particle *part;
      int npart;	
-     int dummy[3] = {0,0,0};
      double pos[3];
      cell = local_cells.cell[c];
      part = cell->part;
      npart = cell->n;
     for (i=0;i<npart;i++) {
       memcpy(pos, part[i].r.p, 3*sizeof(double));
-      fold_position(pos, dummy);
       host_data[i+g].p[0] = (float)pos[0];
       host_data[i+g].p[1] = (float)pos[1];
       host_data[i+g].p[2] = (float)pos[2];
@@ -526,7 +536,7 @@ static void get_particles_lb(LB_particle_gpu *host_data)
  * @params host_forcs struct storing particle forces (Output)
  *
  * */
-static void mpi_send_forces_lb(LB_particle_force_gpu *host_forces){
+static void mpi_send_forces_lb(LB_particle_force_gpu *host_forces) {
 	
   int n_part;
   int g, pnode;
