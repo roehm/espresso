@@ -71,7 +71,8 @@ LB_parameters_gpu lbpar_gpu = { .rho=SC0, .mu=SC0, .viscosity=SC0, .gamma_shear=
                                 .coupling=SC20, .gamma_mobility=SC1
 #endif
 };
-
+/**multi GPU para struct */
+LB_gpus lbdevicepar_gpu;
 /** this is the array that stores the hydrodynamic fields for the output */
 LB_rho_v_pi_gpu *host_values = NULL;
 
