@@ -64,7 +64,7 @@ libEspresso_a_SOURCES = \
 	modes.c	modes.h \
 	molforces.c molforces.h \
 	morse.h \
-	mystatistics.c mystatistics.h \ 
+	mystatistics.c mystatistics.h \
 	mol_cut.c mol_cut.h \
 	nemd.c nemd.h \
 	npt.h \
