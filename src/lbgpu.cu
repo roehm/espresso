@@ -26,10 +26,13 @@
 #include <stdio.h>
 #include <cuda.h>
 #include <stdlib.h>
+#include <mpi.h>
 
 extern "C" {
 #include "lbgpu.h"
 #include "config.h"
+#include "communication.h"
+#include "grid.h"
 //#include "cuda_common.h"
 }
 
@@ -87,7 +90,9 @@ static unsigned int intflag = 1;
 static LB_nodes_gpu *current_nodes = NULL;
 /**defining size values for allocating global memory */
 static size_t size_of_rho_v;
+static size_t size_of_rho_v_wo_halo;
 static size_t size_of_rho_v_pi;
+static size_t size_of_rho_v_pi_wo_halo;
 static size_t size_of_forces;
 static size_t size_of_particles;
 static size_t size_of_seed;
@@ -110,6 +115,7 @@ plan_gpu *plan;
 //extern cudaError_t err;
 //extern cudaError_t _err;
 int plan_initflag = 0;
+static int gpu_n = 0;
 
 /*-------------------------------------------------------*/
 /*********************************************************/
@@ -2108,10 +2114,12 @@ __global__ void get_mesoscopic_values_in_MD_units_wo_halo(LB_nodes_gpu n_a, LB_r
 
   if(index<para.number_of_nodes){
     float mode[4];
-    calc_mode(mode, n_a, index);
-    //TODO rename/adjust following function
-    //calc_values_wo_halo(n_a, mode, d_v, index, singlenode, node_f);
-    calc_values_in_MD_units(n_a, mode, p_v, d_v, index, index);
+    for(int ii=0;ii<LB_COMPONENTS;++ii) { 
+      calc_mode(mode, n_a, index,ii);
+      //TODO rename/adjust following function
+      //calc_values_wo_halo(n_a, mode, d_v, index, singlenode, node_f);
+      calc_values_in_MD_units(n_a, mode, p_v, d_v, index, index);
+    }
   }
 }
 /** get boundary flags
@@ -2311,6 +2319,8 @@ void lb_setup_plan(){
   for(int g = 0; g < gpu_n; ++g){
     plan[g].initflag = 0;
   }
+}
+
   /**communication for the multi gpu fluid called from host
  * @param *s_buf_h	Pointer to source host buffer
  * @param *r_buf_h	Pointer to receive host buffer
@@ -2351,6 +2361,22 @@ int cuda_comm_p2p_indirect_MPI(float *s_buf_h, float *r_buf_h, float *s_buf_d, f
       MPI_Abort(MPI_COMM_WORLD, error_code);
     }
   return 1;
+}
+/**copy of the velocity densities from buffer into vd array
+ * @param 
+*/
+void lb_cp_buffer_in_vd(){
+
+  LB_TRACE(printf("node %i cp_buffer_in_vd gpu %i\n", this_node, lbdevicepar_gpu.gpu_number));
+  int threads_per_block = 64;
+  int blocks_per_grid_y = 4;
+  int blocks_per_grid_x = (lbpar_gpu.number_of_nodes + threads_per_block * blocks_per_grid_y - 1) /(threads_per_block * blocks_per_grid_y);
+  dim3 dim_grid = make_uint3(blocks_per_grid_x, blocks_per_grid_y, 1);
+  int g = 0; 
+  //Attention GPU pointers
+   // printf("node %i current pointer %p buffer %p\n", this_node, plan[g].current_nodes, plan[g].recv_buffer_d);
+  KERNELCALL(write_buffer, dim_grid, threads_per_block, (*plan[g].current_nodes, plan[g].recv_buffer_d));
+
 }
 
 /**send and receive the buffers for multi-GPU usage
@@ -2445,26 +2471,10 @@ int lb_send_recv_buffer(float* s_buf_d, float* r_buf_d){
   return 1;
 }
 
-/**copy of the velocity densities from buffer into vd array
- * @param 
-*/
-void lb_cp_buffer_in_vd(){
-
-  LB_TRACE(printf("node %i cp_buffer_in_vd gpu %i\n", this_node, lbdevicepar_gpu.gpu_number));
-  int threads_per_block = 64;
-  int blocks_per_grid_y = 4;
-  int blocks_per_grid_x = (lbpar_gpu.number_of_nodes + threads_per_block * blocks_per_grid_y - 1) /(threads_per_block * blocks_per_grid_y);
-  dim3 dim_grid = make_uint3(blocks_per_grid_x, blocks_per_grid_y, 1);
-  int g = 0; 
-  //Attention GPU pointers
-   // printf("node %i current pointer %p buffer %p\n", this_node, plan[g].current_nodes, plan[g].recv_buffer_d);
-  KERNELCALL(write_buffer, dim_grid, threads_per_block, (*plan[g].current_nodes, plan[g].recv_buffer_d));
-
-}
 /**initialization for the lb gpu fluid called from host
  * @param *lbpar_gpu	Pointer to parameters to setup the lb field
 */
-void lb_init_GPU(LB_parameters_gpu *lbpar_gpu){
+void lb_init_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu){
 #define free_and_realloc(var,size)\
   { if( (var) != NULL ) cudaFree((var)); cuda_safe_mem(cudaMalloc((void**)&var, size)); } 
 

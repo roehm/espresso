@@ -46,7 +46,7 @@ extern "C" {
   CUDA_particle_force *particle_forces_host = NULL;
 
   /**cuda streams for parallel computing on cpu and gpu */
-  cudaStream_t stream[1];
+  //cudaStream_t stream[1];
 
   cudaError_t err;
   cudaError_t _err;

@@ -325,7 +325,7 @@ void lb_reinit_fluid_gpu();
 void lb_realloc_particles_gpu();
 void lb_realloc_particle_GPU_leftovers(LB_parameters_gpu *lbpar_gpu);
 
-void lb_init_GPU(LB_parameters_gpu *lbpar_gpu);
+void lb_init_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu);
 void lb_integrate_GPU();
 #ifdef SHANCHEN
 void lb_calc_shanchen_GPU();
@@ -352,7 +352,7 @@ void lb_set_node_rho_GPU(int single_nodeindex, float* host_rho);
 
 void reinit_parameters_GPU(LB_parameters_gpu *lbpar_gpu);
 void lb_reinit_extern_nodeforce_GPU(LB_parameters_gpu *lbpar_gpu);
-void lb_reinit_GPU(LB_parameters_gpu *lbpar_gpu);
+void lb_reinit_GPU(LB_parameters_gpu *lbpar_gpu, LB_gpus *lbdevicepar_gpu);
 int lb_lbnode_set_extforce_GPU(int ind[3], double f[3]);
 void lb_gpu_get_boundary_forces(double* forces);
 void lb_save_checkpoint_GPU(float *host_checkpoint_vd, unsigned int *host_checkpoint_seed, unsigned int *host_checkpoint_boundary, float *host_checkpoint_force);

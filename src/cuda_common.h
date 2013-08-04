@@ -21,7 +21,7 @@ extern "C" {
 #define REQ_GETPARTS  16
 
 /**cuda streams for parallel computing on cpu and gpu */
-extern cudaStream_t stream[1];
+extern cudaStream_t *stream;
 
 extern cudaError_t err;
 extern cudaError_t _err;
@@ -109,6 +109,33 @@ if (_err!=cudaSuccess){ \
   exit(EXIT_FAILURE); \
 }
 
+inline void _cuda_check_errors(cudaError_t err, char *file, unsigned int line)
+{
+  if( cudaSuccess != err) {
+    fprintf(stderr, "Cuda Error at %s:%u.\n", file, line);
+    printf("CUDA error: %s\n", cudaGetErrorString(err));
+    exit(EXIT_FAILURE);
+  } else {
+      _err=cudaGetLastError(); \
+     if (_err != cudaSuccess) {
+       fprintf(stderr, "Error found during memory operation. Possibly however from an failed operation before. %s:%u.\n", file, line);
+      printf("CUDA error: %s\n", cudaGetErrorString(err));
+      exit(EXIT_FAILURE);
+    }
+  }
+
+}
+#define cuda_check_errors(a) _cuda_check_errors((a), __FILE__, __LINE__)
+
+#define KERNELCALL_MG(_f, _a, _b, _params) \
+  _f<<<_a, _b, 0, stream[g]>>>_params; \
+  _err=cudaGetLastError(); \
+  if (_err!=cudaSuccess){ \
+    printf("CUDA error: %s\n", cudaGetErrorString(_err)); \
+    fprintf(stderr, "error calling %s with #thpb %d in %s:%u\n", #_f, _b, __FILE__, __LINE__); \
+    exit(EXIT_FAILURE); \
+  }
+                
 #endif /* ifdef CUDA */
 
 #ifdef __cplusplus

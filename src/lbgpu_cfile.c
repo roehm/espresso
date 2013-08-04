@@ -160,7 +160,7 @@ void lb_reinit_fluid_gpu() {
   //lbpar_gpu.your_seed = (unsigned int)i_random(max_ran);
   lb_reinit_parameters_gpu();
   if(lbpar_gpu.number_of_nodes != 0){
-    lb_reinit_GPU(&lbpar_gpu);
+    lb_reinit_GPU(&lbpar_gpu, &lbdevicepar_gpu);
     lbpar_gpu.reinit = 1;
   }
 
@@ -242,7 +242,7 @@ void lb_init_gpu() {
 
   lb_realloc_particles_gpu();
 
-  lb_init_GPU(&lbpar_gpu);
+  lb_init_GPU(&lbpar_gpu, &lbdevicepar_gpu);
   
   gpu_init_particle_comm();
   cuda_bcast_global_part_params();
