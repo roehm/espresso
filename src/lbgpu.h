@@ -101,6 +101,12 @@ typedef struct {
 
   unsigned int number_of_nodes;
   unsigned int number_of_particles;
+  unsigned int number_of_nodes_wo_halo;
+  unsigned int global_dim_x;
+  unsigned int global_dim_y;
+  unsigned int global_dim_z;
+  unsigned int number_of_global_nodes;
+  unsigned int number_of_halo_nodes[3];
   /** Flag indicating whether fluctuations are present. */
   int fluct;
   /**to calc and print out phys values */
@@ -122,7 +128,17 @@ typedef struct {
 #endif // SHANCHEN  
 
 } LB_parameters_gpu;
+/** Data structure holding multi GPU environment info for the Lattice Boltzmann system. */
+typedef struct {
 
+  unsigned int number_of_particles;
+  int gpu_number;
+  int number_of_gpus;
+  int cpus_per_gpu;
+  int gpus_per_cpu;
+  int* devices;
+
+} LB_gpus;
 /** Data structure holding the conserved quantities for the Lattice Boltzmann system. */
 typedef struct {
 
@@ -179,6 +195,71 @@ typedef struct {
 
 } LB_extern_nodeforce_gpu;
 
+/** Data structure for node structs of different gpus */
+typedef struct {
+  //structs for nodes    
+  int extended_values_flag; /* TODO: this has to be set to one by
+                               appropriate functions if there is 
+                               the need to compute pi at every 
+                               step (e.g. moving boundaries)*/
+
+/**defining structures residing in global memory */
+
+/** device_rho_v: struct for hydrodynamic fields: this is for internal use 
+    (i.e. stores values in LB units) and should not used for 
+    printing values  */
+  LB_rho_v_gpu *device_rho_v;
+  LB_rho_v_gpu *device_rho_v_wo_halo;
+
+/** device_rho_v_pi: extended struct for hydrodynamic fields: this is the interface
+    to tcl, and stores values in MD units. It should not used
+    as an input for any LB calculations. TODO: This structure is not yet 
+    used, and it is here to allow access to the stress tensor at any
+    timestep, e.g. for future implementations of moving boundary codes */
+  LB_rho_v_gpu *device_rho_v_pi;
+  LB_rho_v_gpu *device_rho_v_pi_wo_halo;
+
+/** print_rho_v_pi: struct for hydrodynamic fields: this is the interface
+    to tcl, and stores values in MD units. It should not used
+    as an input for any LB calculations. TODO: in the future,
+    one might want to have several structures for printing 
+    separately rho, v, pi without having to compute/store 
+    the complete set. */
+  LB_rho_v_pi_gpu *print_rho_v_pi;
+  LB_rho_v_pi_gpu *print_rho_v_pi_wo_halo;
+
+  /** structs for velocity densities */
+  LB_nodes_gpu nodes_a;
+  LB_nodes_gpu nodes_b;
+  LB_nodes_gpu *current_nodes;
+  /** struct for particle force */
+  //FIXME
+  CUDA_particle_force* lb_particle_force_gpu;
+  //LB_particle_force_gpu *particle_force;
+  /** struct for particle position and veloctiy */
+  //LB_particle_gpu *particle_data;
+  CUDA_particle_data* lb_particle_gpu;
+  /** struct for node force */
+  LB_node_force_gpu node_f;
+
+  LB_extern_nodeforce_gpu *extern_nodeforces;
+  //intflag for double buffering method
+  unsigned int intflag;
+  //initflags for release of memory
+  //FIXME
+  unsigned int initflag;
+  unsigned int partinitflag;
+
+//FIXME 
+  float *lb_boundary_force;
+  float *lb_boundary_velocity;
+
+  //Stream for asynchronous command execution
+  float *send_buffer_d;
+  float *recv_buffer_d;
+  //cudaStream_t stream;
+  
+} plan_gpu;
 
 void on_lb_params_change_gpu(int field);
 
@@ -257,7 +338,7 @@ void lb_init_boundaries_GPU(int n_lb_boundaries, int number_of_boundnodes, int* 
 #endif
 void lb_init_extern_nodeforces_GPU(int n_extern_nodeforces, LB_extern_nodeforce_gpu *host_extern_nodeforces, LB_parameters_gpu *lbpar_gpu);
 
-void lb_calc_particle_lattice_ia_gpu();
+void lb_calc_particle_lattice_ia_GPU();
 
 void lb_calc_fluid_mass_GPU(double* mass);
 void lb_calc_fluid_momentum_GPU(double* host_mom);
