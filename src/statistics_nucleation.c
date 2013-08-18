@@ -278,6 +278,15 @@ int q6_calculation(){
     Cell *cell;
     Particle *part;
     int statusOK = 1;
+
+    for (c = 0; c < local_cells.n; c++) {
+      part = local_cells.cell[c]->part;
+      np = local_cells.cell[c]->n;       
+      for (i=0;i<np;i++) {
+        part[i].q.solid_bonds=0;
+        part[i].q.solid_state=0;
+      }
+    }
         
     for (c = 0; c < local_cells.n; c++) {
       cell = local_cells.cell[c];
@@ -294,9 +303,12 @@ int q6_calculation(){
 	       part[i].q.q6 *= (4.0 * M_PI) / 13.0; //normalise by 4pi/13
         // Steinhardt order parameter: Wolfgang Lechner and Christoph Dellago 2008 eq(3)
 	       part[i].q.q6 = sqrt(part[i].q.q6);    // This is the local invariant q6 per particle (Eq. 7 in ten Wolde)
+	       //fprintf(stderr, "q6: %f\n", part[i].q.q6);
+           if(part[i].q.q6 > q6para.q6_min) {
+	          part[i].q.solid_state = 1;
+           }
       }      
     }    
-
     return statusOK;
 }
 
@@ -322,6 +334,8 @@ int q6_average(){
       np = local_cells.cell[c]->n;       
       for (i=0;i<np;i++) {
         part[i].q.q6_ave=0.0;
+        part[i].q.solid_bonds=0;
+        part[i].q.solid_state=0;
       }
     }
     for(c=0; c<ghost_cells.n; c++) {
@@ -329,6 +343,8 @@ int q6_average(){
       np   = ghost_cells.cell[c]->n;     
       for (i=0;i<np;i++) {
         part[i].q.q6_ave=0.0;
+        part[i].q.solid_bonds=0;
+        part[i].q.solid_state=0;
       }
     }
 
@@ -378,20 +394,23 @@ int q6_average(){
 		        //Q6 is undefined
 		        for (int m=0; m<=6; m++){
 		          Q6r[m] = 0.0;
-            Q6i[m] = 0.0;
-          }        
+                  Q6i[m] = 0.0;
+                }        
 	       } 
-      // calc average q6 lechner and dellago 2008 eq(5)
-      part[i].q.q6_ave = 0.5 * ( Q6r[0]*Q6r[0] + Q6i[0]*Q6i[0] );
-      for (int m=1; m<=6; m++){
-	      part[i].q.q6_ave += Q6r[m]*Q6r[m] + Q6i[m]*Q6i[m];
-      }
-      part[i].q.q6_ave *= 4.0 * M_PI/13.0;
-      part[i].q.q6_ave = sqrt(part[i].q.q6_ave);
+           // calc average q6 lechner and dellago 2008 eq(5)
+           part[i].q.q6_ave = 0.5 * ( Q6r[0]*Q6r[0] + Q6i[0]*Q6i[0] );
+           for (int m=1; m<=6; m++){
+	         part[i].q.q6_ave += Q6r[m]*Q6r[m] + Q6i[m]*Q6i[m];
+           }
+           part[i].q.q6_ave *= 4.0 * M_PI/13.0;
+           part[i].q.q6_ave = sqrt(part[i].q.q6_ave);
       //fprintf(stderr,"particle %d ave_q6: %f\n",part[i].p.identity,part[i].q.q6_ave);       
+           if(part[i].q.q6_ave > q6para.q6_min) {
+	          part[i].q.solid_state = 1;
+           }
 	    }
-	  }
-	  return statusOK; 
+	 }
+	 return statusOK; 
 }
 
 int q6q6_calculation() {
@@ -446,7 +465,7 @@ int q6q6_calculation() {
            //if(part1->q.q6q6 <0.0) printf("partcle %i q6q6: %f bonds: %i\n", part1->p.identity,part1->q.q6q6, part1->q.solid_bonds);
 
            //Test against arbitrary threshold
-           if(part1->q.q6q6 > q6para.q6q6_min) {
+           if(part1->q.q6q6 > q6para.q6_min) {
               part1->q.solid_bonds++;
               part2->q.solid_bonds++;
            }
@@ -483,11 +502,11 @@ int q6q6_calculation() {
 /** initializes and communicates the tcl parameters for q6 usage
  
 */
-int q6_initialize(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds) {
+int q6_initialize(double tcl_rc, double tcl_q6_min, int tcl_min_solid_bonds) {
 
     int statusOK=1;
     q6para.rc = tcl_rc;
-    q6para.q6q6_min = tcl_q6q6_min;
+    q6para.q6_min = tcl_q6_min;
     q6para.min_solid_bonds = tcl_min_solid_bonds;
     mpi_bcast_q6_params();
     //printf("bcast q6 params ok\n");

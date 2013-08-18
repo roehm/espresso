@@ -34,7 +34,7 @@
 typedef struct {
 
   double rc;
-  double q6q6_min;
+  double q6_min;
   int min_solid_bonds;
   
 } Q6_Parameters;
@@ -51,7 +51,7 @@ int q6_assign_ave();
 
 void q6_pre_init();
 
-int q6_initialize(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
+int q6_initialize(double tcl_rc, double tcl_q6_min, int tcl_min_solid_bonds);
 
 void q6_update();
 

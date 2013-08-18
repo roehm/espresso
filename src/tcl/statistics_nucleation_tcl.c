@@ -38,7 +38,7 @@ int tclcommand_q6(ClientData data, Tcl_Interp *interp, int argc, char **argv) {
   if (argc < 1) {
     Tcl_AppendResult(interp, "Error: q6 needs at least 1 argument\n", (char *)NULL);
     Tcl_AppendResult(interp, "Usage of \"q6\":\n", (char *)NULL);
-    Tcl_AppendResult(interp, "Usage: q6 initialize rc_neighbor q6q6_min min_solid_bonds\n q6 update \n q6 average\n q6 q6q6\n", (char *)NULL);
+    Tcl_AppendResult(interp, "Usage: q6 initialize rc_neighbor q6_min min_solid_bonds\n q6 update \n q6 average\n q6 q6q6\n", (char *)NULL);
     return TCL_ERROR;
   }
   while (argc > 0) {
@@ -48,7 +48,7 @@ int tclcommand_q6(ClientData data, Tcl_Interp *interp, int argc, char **argv) {
       if( (! ARG_IS_D(0, doublearg[0])) ||
           (! ARG_IS_D(1, doublearg[1]))  ||
           (! ARG_IS_I(2, intarg)) ) {
-          Tcl_AppendResult(interp, "Error: Usage: q6 initialize rc_neighbor q6q6_min min_solid_bonds.\n", (char *)NULL);
+          Tcl_AppendResult(interp, "Error: Usage: q6 initialize rc_neighbor q6_min min_solid_bonds.\n", (char *)NULL);
           return TCL_ERROR;
       }
       if ( !q6_initialize(doublearg[0], doublearg[1], intarg) == 0 ) {
