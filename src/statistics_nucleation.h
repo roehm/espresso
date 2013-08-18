@@ -45,6 +45,8 @@ int q6_ri_calculation();
 
 int q6_calculation();
 
+int q6q6_calculation();
+
 int q6_assign_ave();
 
 void q6_pre_init();
@@ -52,6 +54,8 @@ void q6_pre_init();
 int q6_initialize(double tcl_rc, double tcl_q6q6_min, int tcl_min_solid_bonds);
 
 void q6_update();
+
+void q6q6_update();
 
 int q6_average();
 

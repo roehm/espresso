@@ -117,6 +117,39 @@ proc writevtkq6ave {filename {type "all"}} {
 	close $fp
 }
 
+#dumps particle positions into a file so that paraview can visualize them
+proc writevtkq6q6 {filename {type "all"}} {
+	set max_pid [setmd max_part]
+	set n 0
+	set fp [open $filename "w"]
+
+	for { set pid 0 } { $pid <= $max_pid } { incr pid } {
+		if {[part $pid print type] == $type || ([part $pid print type] != "na" && $type == "all")} then {
+			incr n
+		}
+	}
+
+	puts $fp "# vtk DataFile Version 2.0\nparticles\nASCII\nDATASET UNSTRUCTURED_GRID\nPOINTS $n float"
+
+	for { set pid 0 } { $pid <= $max_pid } { incr pid } {
+		if {[part $pid print type] == $type || ([part $pid print type] != "na" && $type == "all")} then {
+			set xpos [expr [lindex [part $pid print folded_pos] 0]] ;#shifted since the LB and MD grid are shifted but the vtk output for the LB field doesn't acknowledge that
+			set ypos [expr [lindex [part $pid print folded_pos] 1]]
+			set zpos [expr [lindex [part $pid print folded_pos] 2]]
+			puts $fp "$xpos $ypos $zpos"
+		}
+	}
+	
+	puts $fp "POINT_DATA $n\nSCALARS scalars float 1\nLOOKUP_TABLE default"
+	
+	for { set pid 0 } { $pid <= $max_pid } { incr pid } {
+		if {[part $pid print type] == $type || ([part $pid print type] != "na" && $type == "all")} then {
+			set paraq6q6 [part $pid print q6q6]
+			puts $fp "$paraq6q6"		
+		}
+	}
+	close $fp
+}
 proc writevtkq6solidstate {filename {type "all"}} {
 	set max_pid [setmd max_part]
 	set n 0

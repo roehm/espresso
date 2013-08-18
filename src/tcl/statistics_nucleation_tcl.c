@@ -63,7 +63,7 @@ int tclcommand_q6(ClientData data, Tcl_Interp *interp, int argc, char **argv) {
         q6_average_update();
     }
     else if (ARG0_IS_S("q6q6")) {
-        q6q6_calculation();
+        q6q6_update();
     }
     return TCL_OK;
   }

@@ -151,7 +151,6 @@ int q6_ri_calculation(){
       for (i=0;i<np;i++) {
         part[i].q.neb = 0;
         part[i].q.solid_bonds=0;
-        //part[i].l.solid = 0;
         part[i].q.q6=0.0;
 	       for (int m=0; m<=6; m++){
 	         part[i].q.q6r[m]=0.0;
@@ -165,7 +164,6 @@ int q6_ri_calculation(){
       for (i=0;i<np;i++) {
         part[i].q.neb = 0;
         part[i].q.solid_bonds=0;
-        //part[i].l.solid = 0;
         part[i].q.q6=0.0;
 	       for (m=0; m<=6; m++){
 	         part[i].q.q6r[m]=0.0;
@@ -190,19 +188,19 @@ int q6_ri_calculation(){
         for(i=0; i<2*np; i+=2) {
 	         p1 = pairs[i];                    /* pointer to particle 1 */
 	         p2 = pairs[i+1];                  /* pointer to particle 2 */
-          dist2 = distance2vec(p2->r.p, p1->r.p, vec21);
+             dist2 = distance2vec(p2->r.p, p1->r.p, vec21);
           //fprintf(stderr, "%i: dist2 %lf vec %lf %lf %lf\n", p1->p.identity, dist2, vec21[0], vec21[1], vec21[2]);
 	         if(dist2 < rclocal2) {
-            if((p1->q.neb >= 27 || p2->q.neb >= 27)) {
-              fprintf(stderr,"ERROR: Particle has more neighbors than possible! p1: %i p2: %i ", p1->q.neb, p2->q.neb);              
-              errexit();
-            }
-            p1->q.neighbors[p1->q.neb]=p2->p.identity;
-            p2->q.neighbors[p2->q.neb]=p1->p.identity;
-            p1->q.neb++;
-            p2->q.neb++;
-            if(dist2 != 0.0) y6(p1, sqrt(dist2), vec21[0], vec21[1], vec21[2]);
-            if(dist2 != 0.0) y6(p2, sqrt(dist2), vec21[0], vec21[1], vec21[2]);
+               if((p1->q.neb >= 27 || p2->q.neb >= 27)) {
+                 fprintf(stderr,"ERROR: Particle has more neighbors than possible! p1: %i p2: %i ", p1->q.neb, p2->q.neb);              
+                 errexit();
+               }
+              p1->q.neighbors[p1->q.neb]=p2->p.identity;
+              p2->q.neighbors[p2->q.neb]=p1->p.identity;
+              p1->q.neb++;
+              p2->q.neb++;
+              if(dist2 != 0.0) y6(p1, sqrt(dist2), vec21[0], vec21[1], vec21[2]);
+              if(dist2 != 0.0) y6(p2, sqrt(dist2), vec21[0], vec21[1], vec21[2]);
           }
         }
       }
@@ -267,7 +265,7 @@ int q6_ri_calculation(){
 	             //fprintf(stderr, "hab kenen %i: %lf real %lf im \n", part[i].p.identity, part[i].q.q6r[m],part[i].q.q6i[m]);
 	           }
 	           //statusOK = 0;
-	         }
+	       }
 	     } 
 	   } 
     return statusOK;
@@ -409,6 +407,7 @@ int q6q6_calculation() {
       for (i=0;i<np;i++) {
         part1[i].q.solid_bonds=0;
         part1[i].q.solid_state=0;
+        part1[i].q.q6q6=0.0;
       }
     }
     for(c=0; c<ghost_cells.n; c++) {
@@ -417,6 +416,7 @@ int q6q6_calculation() {
       for (i=0;i<np;i++) {
         part1[i].q.solid_bonds=0;
         part1[i].q.solid_state=0;
+        part1[i].q.q6q6=0.0;
       }
     }
     //copy q6 particle struct to ghosts
