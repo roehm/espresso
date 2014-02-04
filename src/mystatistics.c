@@ -26,6 +26,7 @@
 #include "mystatistics.h"
 
 #ifdef MY_STAT
+#define TRACER
 // list of the currently specified box boundaries
 DoubleList boundaries = { NULL, 0 };
 DoubleList boundaries_q6 = { NULL, 0 };
@@ -40,7 +41,6 @@ int allo=0;
 int counter=1;
 int dummy[3] = {0,0,0};
 int num_of_sets = 0;  
-char *savefilename;
 int q6_on = 0;
 
 #if 0
@@ -94,7 +94,7 @@ static void wall_sort_particles() {
     //fprintf(stderr, ".e:%i bn: %i \n", boundaries.e, boundaries.n);
     if(s<0 || s>=n_part_bins) continue;
     realloc_grained_intlist(&part_in_bin[s], part_in_bin[s].n + 1, 8);
-    part_in_bin[s].e[part_in_bin[s].n++] = i;
+    part_in_bin[s].e[part_in_bin[s].n++] = partCfg[i].p.identity;
    // part_in_bin[s].n++;
   }
   //allo=1;
@@ -115,7 +115,8 @@ static void wall_sort_q6() {
     realloc_intlist(&part_in_bin_q6[i], part_in_bin_q6[i].n = 0);
   }
   part_in_bin_q6 = realloc(part_in_bin_q6, (boundaries_q6.n - 1)*sizeof(IntList));
-  q6_in_bin = realloc(q6_in_bin, (boundaries_q6.n - 1)*sizeof(IntList));
+  //fuck hier warn bug IntList
+  q6_in_bin = realloc(q6_in_bin, (boundaries_q6.n - 1)*sizeof(DoubleList));
   // initialize new ones
   for (int i = n_part_bins_q6; i < boundaries_q6.n-1; ++i) {
     init_intlist(&part_in_bin_q6[i]);
@@ -167,7 +168,7 @@ static void wall_sort_q6() {
 }
 static int printpeaks(char* filename){
  if (num_of_sets==0){
-  savefilename=filename;
+  int *peaklist;
   FILE* fp = fopen(filename, "w");
 	
 	   if(fp == NULL)
@@ -204,30 +205,65 @@ static int printpeaks(char* filename){
 
 static int printq6peaks(char* filename){
  if (num_of_sets==0){
-  savefilename=filename;
   FILE* fp = fopen(filename, "w");
-	
-	   if(fp == NULL)
-	  	  return 1;
+  int countr = 0;
+  DoubleList boundlist = { NULL, 0 };
+
+	if(fp == NULL)
+	return 1;
 	  	for(int s=0; s<boundaries_q6.n-1; s++) {
 #if 1
       if(s==0) {
         if(part_in_bin_q6[s].n > part_in_bin_q6[s+1].n) {
           fprintf(fp, "%lf \t %lf \t %lf \n", ((s+0.5)*box_l[0])/(boundaries_q6.n-1), (boundaries_q6.n-1)*part_in_bin_q6[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]), q6_in_bin[s].e[0]/(q6_in_bin[s].n));
+#if 0
+          if(q6_in_bin[s].e[0]/q6_in_bin[s].n > 0.3){
+             realloc_doublelist(&boundlist, countr+1);
+             boundlist.e[countr] = boundaries_q6.e[s];
+             boundlist.n++;
+             countr++;
+          }
+#endif
         }
       }
       if(s==boundaries.n-1) {
         if(part_in_bin_q6[s].n > part_in_bin_q6[s-1].n) {
           fprintf(fp, "%lf \t %lf \t %lf\n", ((s+0.5)*box_l[0])/(boundaries_q6.n-1), (boundaries_q6.n-1)*part_in_bin_q6[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]), q6_in_bin[s].e[0]/(q6_in_bin[s].n));
+#if 0
+          if(q6_in_bin[s].e[0]/q6_in_bin[s].n > 0.3){
+            realloc_doublelist(&boundlist, countr+1);
+            boundlist.e[countr] = boundaries_q6.e[s];
+            boundlist.n++;
+            countr++;
+          }
+#endif
         }
       }else
         if(part_in_bin_q6[s].n > part_in_bin_q6[s-1].n && part_in_bin_q6[s].n > part_in_bin_q6[s+1].n) {
           fprintf(fp, "%lf \t %lf \t %lf\n", ((s+0.5)*box_l[0])/(boundaries_q6.n-1), (boundaries_q6.n-1)*part_in_bin_q6[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]), q6_in_bin[s].e[0]/(q6_in_bin[s].n));
+#if 0
+          if(q6_in_bin[s].e[0]/q6_in_bin[s].n > 0.3){
+            realloc_doublelist(&boundlist, countr+1);
+            boundlist.e[countr] = boundaries_q6.e[s];
+            boundlist.n++;
+            countr++;
+          }
+#endif
         }
-     #else
+#else
      fprintf(fp, "%lf \t %lf \t %lf\n", ((s+0.5)*box_l[0])/(boundaries_q6.n-1), (boundaries_q6.n-1)*part_in_bin_q6[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]), q6_in_bin[s].e[0]/(q6_in_bin[s].n));
-    #endif
+#endif
     }
+    //set new boundaries
+    //printf("number of bins %i\n", countr+1);
+#if 0
+    realloc_doublelist(&boundaries, countr+1);
+		for(int s=0; s<boundlist.n; s++) {
+      boundaries.e[s] = boundlist.e[s] - 0.3;
+    }
+    boundaries.n = boundlist.n;
+    wall_sort_particles();
+#endif
         
     fclose(fp);
       
@@ -236,6 +272,36 @@ static int printq6peaks(char* filename){
   //  return 1;
   //  }
   }
+  return 0;
+}
+
+static int printbins(char* filename){
+
+  FILE* fp = fopen(filename, "w");
+	
+	if(fp == NULL)
+	  return 1;
+  for (int j = 0; j < n_part_bins; j++) { 
+    fprintf(fp, "%i", j);
+    for (int i = 1; i < part_in_bin[j].n; i++) { 
+        fprintf(fp, "\t %i", part_in_bin[j].e[i]);
+    }
+    fprintf(fp, "\n");
+  }
+  fclose(fp);
+  return 0;
+}
+
+static int printq6bins(char* filename){
+
+  FILE* fp = fopen(filename, "w");
+	
+	if(fp == NULL)
+	  return 1;
+	for(int s=0; s<boundaries_q6.n-1; s++) {
+          fprintf(fp, "%lf \t %lf \t %lf\n", ((s+0.5)*box_l[0])/(boundaries_q6.n-1), (boundaries_q6.n-1)*part_in_bin_q6[s].n/(double)(counter*box_l[0]*box_l[1]*box_l[2]), q6_in_bin[s].e[0]/(q6_in_bin[s].n));
+  }
+  fclose(fp);
   return 0;
 }
 
@@ -273,46 +339,238 @@ static int updatemean(){
     //printpeaks(savefilename);
     //}
 }
-
-
+#ifdef TRACER
+//tracer calc_wallmsdyz
 static void calc_wallmsdyz(double *g, int bin)
 {
   // loop over all stored configurations
   // and calculate the MSD with respect to the current configuration
   // MSD of configuration with itself is always 0
   g[0] = 0;
+  double com0[2];
+  double com[2];
   for(int k = 1; k < n_configs; k++) {
     g[k] = 0.0;
+    com0[0] = 0.0;
+    com0[1] = 0.0;
+    com[0] = 0.0;
+    com[1] = 0.0;
     // loop over all particles in the specified bin and add up MSD
     if(part_in_bin[bin].n){
       for (int i = 0; i < part_in_bin[bin].n; ++i) {
         int p = part_in_bin[bin].e[i];
+	      com0[0] += configs[n_configs-1][3*p + 1];
+        com[0] += configs[n_configs-1-k][3*p + 1];
+	      com0[1] += configs[n_configs-1][3*p + 2];
+        com[1] += configs[n_configs-1-k][3*p + 2];
+      }
+      com0[0] /= part_in_bin[bin].n;
+      com0[1] /= part_in_bin[bin].n;
+      com[0] /= part_in_bin[bin].n;
+      com[1] /= part_in_bin[bin].n;
+      for (int i = 0; i < part_in_bin[bin].n; ++i) {
+        int p = part_in_bin[bin].e[i];
         g[k] +=
-	      + SQR(configs[n_configs-1][3*p + 1]-configs[n_configs-1-k][3*p + 1])
-	      + SQR(configs[n_configs-1][3*p + 2]-configs[n_configs-1-k][3*p + 2]);
+	      + SQR((configs[n_configs-1][3*p + 1] - com0[0]) - (configs[n_configs-1-k][3*p + 1] - com[0]))
+	      + SQR((configs[n_configs-1][3*p + 2] - com0[1]) - (configs[n_configs-1-k][3*p + 2] - com[1]));
       }
       // normalize
       g[k] /= part_in_bin[bin].n;
     }
   }
 }
+#else
+//collective calc_wallmsdyz
+static void calc_wallmsdyz(double *g, int bin)
+{
+  // loop over all stored configurations
+  // and calculate the MSD with respect to the current configuration
+  // MSD of configuration with itself is always 0
+  g[0] = 0;
+  double temp1, temp2;
+  for(int k = 1; k < n_configs; k++) {
+    g[k] = 0.0;
+    temp1 = 0.0;
+    temp2 = 0.0;
+    // loop over all particles in the specified bin and add up MSD
+    if(part_in_bin[bin].n){
+      for (int i = 0; i < part_in_bin[bin].n; ++i) {
+        int p = part_in_bin[bin].e[i];
+        temp1 += configs[n_configs-1][3*p + 1] + configs[n_configs-1][3*p + 2];
+        temp2 += configs[n_configs-1-k][3*p + 1] + configs[n_configs-1-k][3*p + 2];
+      }
+      g[k] += SQR(temp1-temp2);
 
+//hier war n fehler sqr*sqr
+      g[k] /= part_in_bin[bin].n;
+    }
+  }
+}
+#endif
+static int calc_wall_vanhoveyz(double rmin, double rmax, int rbins, int bin, double **vanhove)
+{
+  double p1[3],p2[3];
+  double bin_width, inv_bin_width;
+
+  if(!part_in_bin[bin].n)
+  { printf("no particles\n"); return 0; }
+  
+  /* preparation */
+  bin_width     = (rmax-rmin) / (double)rbins;
+  inv_bin_width = 1.0 / bin_width;
+
+  double com0[2];
+  double com[2];
+ 
+  /* calculate msd and store distribution in vanhove */
+  for(int k=0; k<n_configs; k++) { 
+    com0[0] = 0.0;
+    com0[1] = 0.0;
+    com[0] = 0.0;
+    com[1] = 0.0;
+    if(part_in_bin[bin].n){
+      for (int i = 0; i < part_in_bin[bin].n; ++i) {
+        int p = part_in_bin[bin].e[i];
+	      com0[0] += configs[n_configs-1][3*p + 1];
+        com[0] += configs[n_configs-1-k][3*p + 1];
+	      com0[1] += configs[n_configs-1][3*p + 2];
+        com[1] += configs[n_configs-1-k][3*p + 2];
+      }
+      com0[0] /= part_in_bin[bin].n;
+      com0[1] /= part_in_bin[bin].n;
+      com[0] /= part_in_bin[bin].n;
+      com[1] /= part_in_bin[bin].n;
+    }
+    for(int i=0; i<part_in_bin[bin].n; i++) {
+    	p1[0]=0.0; p1[1]=configs[n_configs-1][3*part_in_bin[bin].e[i]+1] - com0[0];
+      p1[2]=configs[n_configs-1][3*part_in_bin[bin].e[i]+2] - com0[0];
+      for(int j=0; j<part_in_bin[bin].n; j++) {
+      	p2[0]=0.0; p2[1]=configs[n_configs-1-k][3*part_in_bin[bin].e[j]+1] - com[0];
+        p2[2]=configs[n_configs-1-k][3*part_in_bin[bin].e[j]+2] - com[0];
+
+        // minimum image vector between the two particles
+        double diff[3];
+        get_mi_vector(diff, p1, p2);
+        double dist = sqrt(SQR(diff[1]) + SQR(diff[2]));
+      	if(dist >= rmin && dist < rmax) {
+      	  int ind = (int) ( (dist - rmin)*inv_bin_width );
+      	  vanhove[k][ind]++;
+      	}
+      }
+    }
+  }
+  // average density of particles
+  double av_density = (double)(part_in_bin[bin].n*(part_in_bin[bin].n))/(box_l[1]*box_l[2]);
+
+  /* normalize */
+  for(int k=0; k<n_configs; k++) { 
+    for(int i=0; i<rbins; i++) {
+      double r_in       = i*bin_width + rmin;
+      double r_out      = r_in + bin_width;
+      double bin_volume = PI*(r_out*r_out - r_in*r_in);
+      vanhove[k][i] /= (double) (av_density*bin_volume);
+    }
+  }
+
+  return 1;
+}
+static int calc_wall_self_vanhoveyz(double rmin, double rmax, int rbins, int bin, double **self_vanhove)
+{
+  double p1[3],p2[3];
+  double bin_width, inv_bin_width;
+
+  if(!part_in_bin[bin].n)
+  { return 0; }
+  
+  /* preparation */
+  bin_width     = (rmax-rmin) / (double)rbins;
+  inv_bin_width = 1.0 / bin_width;
+ 
+  /* calculate msd and store distribution in vanhove */
+  for(int k=0; k<n_configs; k++) { 
+    for(int i=0; i<part_in_bin[bin].n; i++) {
+    	p1[0]=0.0; p1[1]=configs[n_configs-1][3*part_in_bin[bin].e[i]+1];
+      p1[2]=configs[n_configs-1][3*part_in_bin[bin].e[i]+2];
+    	p2[0]=0.0; p2[1]=configs[n_configs-1-k][3*part_in_bin[bin].e[i]+1];
+      p2[2]=configs[n_configs-1-k][3*part_in_bin[bin].e[i]+2];
+      // minimum image vector between the two particles
+      double diff[3];
+      get_mi_vector(diff, p1, p2);
+      double dist = sqrt(SQR(diff[1]) + SQR(diff[2]));
+    	if(dist >= rmin && dist < rmax) {
+    	  int ind = (int) ( (dist - rmin)*inv_bin_width );
+    	  self_vanhove[k][ind]++;
+    	}
+    }
+  }
+  // average density of particles
+  double av_density = (double)part_in_bin[bin].n/(box_l[1]*box_l[2]);
+
+  /* normalize */
+  for(int k=0; k<n_configs; k++) { 
+    for(int i=0; i<rbins; i++) {
+      double r_in       = i*bin_width + rmin;
+      double r_out      = r_in + bin_width;
+      double bin_volume = PI*(r_out*r_out - r_in*r_in);
+      self_vanhove[k][i] /= (double) (av_density*bin_volume);
+    }
+  }
+
+  return 1;
+}
+#ifdef TRACER
+//tracer calc_wallmsdx
 static void calc_wallmsdx(double *g, int bin)
 {
   // see calc_wallmsdyz, just for x
   g[0] = 0;
   for(int k = 1; k < n_configs; k++) {
     g[k] = 0.0;
+    double com0 = 0.0;
+    double com = 0.0;
     if(part_in_bin[bin].n){
       for (int i = 0; i < part_in_bin[bin].n; ++i) {
+        int p = part_in_bin[bin].e[i];
+	      com0 += configs[n_configs-1][3*p + 1];
+        com += configs[n_configs-1-k][3*p + 1];
+      }
+      com0 /= part_in_bin[bin].n;
+      com /= part_in_bin[bin].n;
+      for (int i = 0; i < part_in_bin[bin].n; ++i) {
       int p = part_in_bin[bin].e[i];
-      g[k] += SQR(configs[n_configs-1][3*p]-configs[n_configs-1-k][3*p]);
+      g[k] += SQR((configs[n_configs-1][3*p] - com0) - (configs[n_configs-1-k][3*p] - com));
       }
       g[k] /= part_in_bin[bin].n;
     }
   }
 }
-
+#else
+//collective calc_wallmsdx
+static void calc_wallmsdx(double *g, int bin)
+{
+  // see calc_wallmsdyz, just for x
+  g[0] = 0;
+  double temp1, temp2;
+  for(int k = 1; k < n_configs; k++) {
+    g[k] = 0.0;
+    temp1 = 0.0;
+    temp2 = 0.0;
+    if(part_in_bin[bin].n){
+      for (int i = 0; i < part_in_bin[bin].n; ++i) {
+      int p = part_in_bin[bin].e[i];
+      //g[k] += configs[n_configs-1][3*p]-configs[n_configs-1-k][3*p];
+      temp1 += configs[n_configs-1][3*p];
+      temp2 += configs[n_configs-1-k][3*p];
+      }
+      //g[k] = SQR(g[k]);
+      g[k] /= part_in_bin[bin].n;
+      g[k] += SQR(temp1-temp2);
+//fehlerhafter alter code
+      //g[k] /= SQR(part_in_bin[bin].n);
+    }
+  }
+}
+#endif
 static void calc_wallbondyz(double *g, int bin, double rclocal, double rmax, int rbins)
 {
   // char buffer[TCL_INTEGER_SPACE + TCL_DOUBLE_SPACE + 2];
@@ -681,8 +939,10 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
   DoubleList g;
   int job, bin;
   double rmin, rmax,rclocal;
+  double **vanhove=NULL;
+  double **self_vanhove=NULL;
   int rbins, boxes;
-  enum { BINS, MX, MYZ, RDFYZ,BONDYZ,SCALE,SCALE2, PRINT, PEAKS, UPDATEMEAN, Q6BINS, Q6PEAKS };
+  enum { BINS, MX, MYZ, VHYZ, SVHYZ, RDFYZ,BONDYZ,SCALE,SCALE2, PRINT, PRINTQ6, PEAKS, UPDATEMEAN, Q6BINS, Q6PEAKS };
   //double floatarg;
   
   if (argc < 1) {
@@ -694,6 +954,12 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
   // 1. what do we do?
   if (ARG0_IS_S("-bins")) {
     job = BINS;
+  }
+  else if (ARG0_IS_S("-print") && argc == 2) {
+    job = PRINT;
+  }
+  else if (ARG0_IS_S("-q6print") && argc == 2) {
+    job = PRINTQ6;
   }
   else if (ARG0_IS_S("-printpeaks") && argc >= 2) {
     job = PEAKS;
@@ -713,6 +979,12 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
   else if (ARG0_IS_S("-myz") && argc == 2) {
     job = MYZ;
   }
+  else if (ARG0_IS_S("-vhyz") && argc == 5) {
+    job = VHYZ;
+  }
+  else if (ARG0_IS_S("-svhyz") && argc == 5) {
+    job = SVHYZ;
+  }
   else if (ARG0_IS_S("-rdfyz") && argc == 5) {
     job = RDFYZ;
   }
@@ -724,9 +996,6 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
   }
   else if (ARG0_IS_S("-scale2") && argc == 4) {
     job = SCALE2;
-  }
-  else if (ARG0_IS_S("-print") && argc == 2) {
-    job = PRINT;
   }
   else {
     Tcl_AppendResult(interp, ": analyze wallstuff -bins|-myz|-mx|-rdfyz|-bondyz|-scale|-scale2...", (char *)NULL);
@@ -756,6 +1025,8 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
     break;
   case MX:
   case MYZ:
+  case VHYZ:
+  case SVHYZ:
   case RDFYZ:
   case BONDYZ:
   case SCALE:
@@ -768,6 +1039,8 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
       return (TCL_ERROR);
     }
     break;
+  case PRINTQ6:
+  break;
   case PEAKS:
   break;
   case Q6PEAKS:
@@ -779,6 +1052,28 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
   // 2. other parameters, only for rdf
   switch (job) {
   case RDFYZ:
+    if (!ARG_IS_D(2, rmin)) {
+      return (TCL_ERROR);
+    }
+    if (!ARG_IS_D(3, rmax)) {
+      return (TCL_ERROR);
+    }
+    if (!ARG_IS_I(4, rbins)) {
+      return (TCL_ERROR);
+    }
+    break;
+  case VHYZ:
+    if (!ARG_IS_D(2, rmin)) {
+      return (TCL_ERROR);
+    }
+    if (!ARG_IS_D(3, rmax)) {
+      return (TCL_ERROR);
+    }
+    if (!ARG_IS_I(4, rbins)) {
+      return (TCL_ERROR);
+    }
+    break;
+  case SVHYZ:
     if (!ARG_IS_D(2, rmin)) {
       return (TCL_ERROR);
     }
@@ -826,6 +1121,26 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
     // these cases use partCfg
     updatePartCfg(WITHOUT_BONDS);
     break;
+  case VHYZ:
+    // these cases use the positions array
+    if (n_configs == 0) {
+      Tcl_AppendResult(interp, "no configurations found! Use 'analyze append' to save some!",
+		       (char *)NULL);
+      return TCL_ERROR;
+    }
+    // these cases use partCfg
+    updatePartCfg(WITHOUT_BONDS);
+    break;
+  case SVHYZ:
+    // these cases use the positions array
+    if (n_configs == 0) {
+      Tcl_AppendResult(interp, "no configurations found! Use 'analyze append' to save some!",
+		       (char *)NULL);
+      return TCL_ERROR;
+    }
+    // these cases use partCfg
+    updatePartCfg(WITHOUT_BONDS);
+    break;
   case BONDYZ:
     // these cases use partCfg
     updatePartCfg(WITHOUT_BONDS);
@@ -865,6 +1180,28 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
     realloc_doublelist(&g, g.n = n_configs);
     calc_wallmsdyz(g.e, bin);    
     break;
+  case VHYZ:
+    vanhove = (double **) malloc((n_configs)*sizeof(double *));
+    for(int c=0; c<n_configs; c++) { 
+        vanhove[c] = (double *) malloc(rbins*sizeof(double));
+        for(int i=0; i<rbins; i++) { vanhove[c][i] = 0; }
+    }
+    if(!calc_wall_vanhoveyz(rmin, rmax, rbins, bin, vanhove)){
+        Tcl_AppendResult(interp, "no configs for van Hove",
+		       (char *)NULL);
+    }
+    break;
+  case SVHYZ:
+    self_vanhove = (double **) malloc((n_configs)*sizeof(double *));
+    for(int c=0; c<n_configs; c++) { 
+        self_vanhove[c] = (double *) malloc(rbins*sizeof(double));
+        for(int i=0; i<rbins; i++) { self_vanhove[c][i] = 0; }
+    }
+    if(!calc_wall_self_vanhoveyz(rmin, rmax, rbins, bin, self_vanhove)){
+        Tcl_AppendResult(interp, "no configs for van Hove",
+		       (char *)NULL);
+    }
+    break;
   case RDFYZ:
     realloc_doublelist(&g, g.n = rbins);
     calc_wallrdfyz(g.e, bin, rmin, rmax, rbins);
@@ -884,9 +1221,23 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
   case PRINT:
     // just write out what wall_sort_particles has put into
     // this bin
-    for (int i = 1; i < part_in_bin[bin].n; i++) { 
-      sprintf(buffer," %d",part_in_bin[bin].e[i]);
-      Tcl_AppendResult(interp, buffer, (char *)NULL); 
+#if 0
+    for (int j = 0; j < n_part_bins; j++) { 
+      for (int i = 1; i < part_in_bin[j].n; i++) { 
+        sprintf(buffer," %i",part_in_bin[j].e[i]);
+        Tcl_AppendResult(interp, buffer, (char *)NULL); 
+      }
+    }
+#endif
+    if(printbins(argv[1]) != 0) {
+      Tcl_AppendResult(interp, "Error at print", (char *)NULL);
+      return (TCL_ERROR);
+    }
+    break;
+  case PRINTQ6:
+    if(printq6bins(argv[1]) != 0) {
+      Tcl_AppendResult(interp, "Error at printq6", (char *)NULL);
+      return (TCL_ERROR);
     }
     break;
   case PEAKS:
@@ -900,6 +1251,8 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
       Tcl_AppendResult(interp, "Error at printpeaks", (char *)NULL);
       return (TCL_ERROR);
     }
+    sprintf(buffer," %i",boundaries.n-1);
+    Tcl_AppendResult(interp, buffer, (char *)NULL); 
     break;
   case UPDATEMEAN:
     if(updatemean() != 0) {
@@ -919,6 +1272,29 @@ int parse_wallstuff(Tcl_Interp *interp, int argc, char **argv) {
       Tcl_AppendResult(interp, buffer, (char *)NULL); 
     }
     realloc_doublelist(&g, g.n = 0);
+  }
+  // print out double results, if any
+  if (vanhove) {
+    for(int k=0; k< n_configs; k++) { 
+      for(int i=0; i<rbins; i++) {
+        sprintf(buffer," %f", vanhove[k][i]);
+        Tcl_AppendResult(interp, buffer, (char *)NULL); 
+      }
+    }
+     // free space of times and vanhove
+     for(int k=0; k<n_configs; k++) { free(vanhove[k]); } 
+     free(vanhove);
+  }
+  if (self_vanhove) {
+    for(int k=0; k< n_configs; k++) { 
+      for(int i=0; i<rbins; i++) {
+        sprintf(buffer," %f", self_vanhove[k][i]);
+        Tcl_AppendResult(interp, buffer, (char *)NULL); 
+      }
+    }
+     // free space of times and vanhove
+     for(int k=0; k<n_configs; k++) { free(self_vanhove[k]); } 
+     free(self_vanhove);
   }
 
   return (TCL_OK);
