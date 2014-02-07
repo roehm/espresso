@@ -443,10 +443,10 @@ static int calc_wall_vanhoveyz(double rmin, double rmax, int rbins, int bin, dou
     }
     for(int i=0; i<part_in_bin[bin].n; i++) {
     	p1[0]=0.0; p1[1]=configs[n_configs-1][3*part_in_bin[bin].e[i]+1] - com0[0];
-      p1[2]=configs[n_configs-1][3*part_in_bin[bin].e[i]+2] - com0[0];
+      p1[2]=configs[n_configs-1][3*part_in_bin[bin].e[i]+2] - com0[1];
       for(int j=0; j<part_in_bin[bin].n; j++) {
       	p2[0]=0.0; p2[1]=configs[n_configs-1-k][3*part_in_bin[bin].e[j]+1] - com[0];
-        p2[2]=configs[n_configs-1-k][3*part_in_bin[bin].e[j]+2] - com[0];
+        p2[2]=configs[n_configs-1-k][3*part_in_bin[bin].e[j]+2] - com[1];
 
         // minimum image vector between the two particles
         double diff[3];
