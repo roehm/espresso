@@ -190,8 +190,8 @@ int q6_ri_calculation(){
         for(i=0; i<2*np; i+=2) {
 	         p1 = pairs[i];                    /* pointer to particle 1 */
 	         p2 = pairs[i+1];                  /* pointer to particle 2 */
-          dist2 = distance2vec(p2->r.p, p1->r.p, vec21);
-          //fprintf(stderr, "%i: dist2 %lf vec %lf %lf %lf\n", p1->p.identity, dist2, vec21[0], vec21[1], vec21[2]);
+           dist2 = distance2vec(p2->r.p, p1->r.p, vec21);
+           //fprintf(stderr, "%i: dist2 %lf vec %lf %lf %lf\n", p1->p.identity, dist2, vec21[0], vec21[1], vec21[2]);
 	         if(dist2 < rclocal2) {
             if((p1->q.neb >= 27 || p2->q.neb >= 27)) {
               fprintf(stderr,"ERROR: Particle has more neighbors than possible! p1: %i p2: %i ", p1->q.neb, p2->q.neb);              
@@ -380,7 +380,7 @@ int q6_average(){
 		        //Q6 is undefined
 		        for (int m=0; m<=6; m++){
 		          Q6r[m] = 0.0;
-            Q6i[m] = 0.0;
+              Q6i[m] = 0.0;
           }        
 	       } 
       // calc average q6 lechner and dellago 2008 eq(5)
