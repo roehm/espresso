@@ -193,7 +193,7 @@ int q6_ri_calculation(){
            dist2 = distance2vec(p2->r.p, p1->r.p, vec21);
            //fprintf(stderr, "%i: dist2 %lf vec %lf %lf %lf\n", p1->p.identity, dist2, vec21[0], vec21[1], vec21[2]);
 	         if(dist2 < rclocal2) {
-            if((p1->q.neb >= 27 || p2->q.neb >= 27)) {
+            if((p1->q.neb >= 37 || p2->q.neb >= 37)) {
               fprintf(stderr,"ERROR: Particle has more neighbors than possible! p1: %i p2: %i ", p1->q.neb, p2->q.neb);              
               errexit();
             }

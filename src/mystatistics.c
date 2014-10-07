@@ -26,7 +26,7 @@
 #include "mystatistics.h"
 
 #ifdef MY_STAT
-#define TRACER
+//#define TRACER
 // list of the currently specified box boundaries
 DoubleList boundaries = { NULL, 0 };
 DoubleList boundaries_q6 = { NULL, 0 };
