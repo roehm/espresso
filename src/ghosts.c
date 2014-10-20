@@ -114,8 +114,8 @@ int calc_transmit_size(GhostCommunication *gc, int data_parts)
       n_buffer_new += sizeof(ParticleQ6);
     if (data_parts & GHOSTCOMM_Q6)
       n_buffer_new += sizeof(ParticleQ6);
-    if (data_parts & GHOSTCOMM_Q6_SOLID_BONDS)
-      n_buffer_new += sizeof(ParticleQ6);
+    //if (data_parts & GHOSTCOMM_Q6_SOLID_BONDS)
+    //  n_buffer_new += sizeof(ParticleQ6);
 #endif
 #ifdef LB
     if (data_parts & GHOSTTRANS_COUPLING)
@@ -184,14 +184,6 @@ void prepare_send_buffer(GhostCommunication *gc, int data_parts)
 	}
 #ifdef Q6_PARA
 	if (data_parts & GHOSTTRANS_Q6) {
-	  memcpy(insert, &pt->q, sizeof(ParticleQ6));
-	  insert +=  sizeof(ParticleQ6);
-	}
-	if (data_parts & GHOSTCOMM_Q6) {
-	  memcpy(insert, &pt->q, sizeof(ParticleQ6));
-	  insert +=  sizeof(ParticleQ6);
-	}
-	if (data_parts & GHOSTCOMM_Q6_SOLID_BONDS) {
 	  memcpy(insert, &pt->q, sizeof(ParticleQ6));
 	  insert +=  sizeof(ParticleQ6);
 	}
@@ -291,10 +283,12 @@ void put_recv_buffer(GhostCommunication *gc, int data_parts)
 	  memcpy(&pt->q, retrieve, sizeof(ParticleQ6));
 	  retrieve +=  sizeof(ParticleQ6);
 	}
+#if 0
 	if (data_parts & GHOSTCOMM_Q6_SOLID_BONDS) {
 	  memcpy(&pt->q, retrieve, sizeof(ParticleQ6));
 	  retrieve +=  sizeof(ParticleQ6);
 	}
+#endif
 #endif 
 #ifdef LB
 	if (data_parts & GHOSTTRANS_COUPLING) {
@@ -419,8 +413,10 @@ void cell_cell_transfer(GhostCommunication *gc, int data_parts)
 	  add_q6(&pt2->q, &pt1->q);
 	if (data_parts & GHOSTCOMM_Q6)
 	  memcpy(&pt2->q, &pt1->q, sizeof(ParticleQ6));
+#if 0
 	if (data_parts & GHOSTCOMM_Q6_SOLID_BONDS)
 	  add_q6_solid_bonds(&pt2->q, &pt1->q);
+#endif
 #endif
 #ifdef LB
 	if (data_parts & GHOSTTRANS_COUPLING)
@@ -557,9 +553,9 @@ void ghost_communicator(GhostCommunicator *gc)
 	  else if (data_parts == GHOSTTRANS_Q6){
 	    add_q6_from_recv_buffer(gcn, data_parts);
 	  }
-	  else if (data_parts == GHOSTCOMM_Q6_SOLID_BONDS){
-	    add_q6_from_recv_buffer(gcn, data_parts);
-	  }
+	  //else if (data_parts == GHOSTCOMM_Q6_SOLID_BONDS){
+	  //  add_q6_from_recv_buffer(gcn, data_parts);
+	  //}
 #endif
 	  else
 	    put_recv_buffer(gcn, data_parts);
@@ -592,9 +588,9 @@ void ghost_communicator(GhostCommunicator *gc)
 	      else if (data_parts == GHOSTTRANS_Q6 && comm_type != GHOST_RDCE){
 	        add_q6_from_recv_buffer(gcn2, data_parts);
 	      }
-	      else if (data_parts == GHOSTCOMM_Q6_SOLID_BONDS && comm_type != GHOST_RDCE){
-	        add_q6_from_recv_buffer(gcn2, data_parts);
-	      }
+	      //else if (data_parts == GHOSTCOMM_Q6_SOLID_BONDS && comm_type != GHOST_RDCE){
+	      //  add_q6_from_recv_buffer(gcn2, data_parts);
+	      //}
 #endif
 	      else
 		       put_recv_buffer(gcn2, data_parts);

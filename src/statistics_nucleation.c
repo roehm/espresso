@@ -171,7 +171,6 @@ int q6_ri_calculation(){
 	         part[i].q.q6r[m]=0.0;
 	         part[i].q.q6i[m]=0.0;
 	       }
-
       }
     }    
     
@@ -193,8 +192,8 @@ int q6_ri_calculation(){
            dist2 = distance2vec(p2->r.p, p1->r.p, vec21);
            //fprintf(stderr, "%i: dist2 %lf vec %lf %lf %lf\n", p1->p.identity, dist2, vec21[0], vec21[1], vec21[2]);
 	         if(dist2 < rclocal2) {
-            if((p1->q.neb >= 37 || p2->q.neb >= 37)) {
-              fprintf(stderr,"ERROR: Particle has more neighbors than possible! p1: %i p2: %i ", p1->q.neb, p2->q.neb);              
+            if((p1->q.neb >= 27 || p2->q.neb >= 27)) {
+              fprintf(stderr,"ERROR: Particle has more neighbors than possible! p1: %i p2: %i\n", p1->q.neb, p2->q.neb);              
               errexit();
             }
             p1->q.neighbors[p1->q.neb]=p2->p.identity;
@@ -208,6 +207,18 @@ int q6_ri_calculation(){
       }
     }
     ghost_communicator(&cell_structure.collect_ghost_q6_comm);
+    for (int c = 0; c < local_cells.n; c++) {
+      part = local_cells.cell[c]->part;
+      np = local_cells.cell[c]->n;      
+      for (i=0;i<np;i++) {
+//        printf("part %i neb %i\n", part[i].p.identity, part[i].q.neb);
+        //part[i].l.solid = 0;
+	      printf("%i q6r %lf q6i %lf id %i\n",part[i].q.neb, part[i].q.q6r[0], part[i].q.q6i[0],part[i].p.identity );
+	       for (int m=1; m<=6; m++){
+	         printf("%i q6r %lf q6i %lf\n",part[i].q.neb, 0.5*part[i].q.q6r[m], 0.5*part[i].q.q6i[m]);
+	       }
+      }
+    }
 #if 0    
     for(c=0; c<ghost_cells.n; c++) {
       part = ghost_cells.cell[c]->part;
@@ -264,7 +275,7 @@ int q6_ri_calculation(){
 	           for (m=0; m<=6; m++){
 	             part[i].q.q6r[m] = 0.0;
 	             part[i].q.q6i[m] = 0.0;
-	             //fprintf(stderr, "hab kenen %i: %lf real %lf im \n", part[i].p.identity, part[i].q.q6r[m],part[i].q.q6i[m]);
+	             fprintf(stderr, "no neighbors found for part %i: %lf real %lf im \n", part[i].p.identity, part[i].q.q6r[m],part[i].q.q6i[m]);
 	           }
 	           //statusOK = 0;
 	         }
@@ -287,10 +298,10 @@ int q6_calculation(){
       np = cell->n;
        
       for (i=0;i<np;i++) {
-	       part[i].q.q6 = 0.5 * ( part[i].q.q6r[0] * part[i].q.q6r[0] + part[i].q.q6i[0] * part[i].q.q6i[0] );
+	       part[i].q.q6 = ( part[i].q.q6r[0] * part[i].q.q6r[0] + part[i].q.q6i[0] * part[i].q.q6i[0] );
 	       //fprintf(stderr, "Anfang: %f aus %f und %f\n", part[i].l.q6, part[i].q.q6r[0], part[i].q.q6i[0]);
 	       for (m=1; m<=6; m++){
-	         part[i].q.q6 += part[i].q.q6r[m] * part[i].q.q6r[m] + part[i].q.q6i[m] * part[i].q.q6i[m];
+	         part[i].q.q6 += 2*(part[i].q.q6r[m] * part[i].q.q6r[m] + part[i].q.q6i[m] * part[i].q.q6i[m]);
 	       }
 	       //fprintf(stderr, "Ende: %f\n", part[i].q.q6);
 	       part[i].q.q6 *= (4.0 * M_PI) / 13.0; //normalise by 4pi/13
@@ -384,9 +395,9 @@ int q6_average(){
           }        
 	       } 
       // calc average q6 lechner and dellago 2008 eq(5)
-      part[i].q.q6_ave = 0.5 * ( Q6r[0]*Q6r[0] + Q6i[0]*Q6i[0] );
+      part[i].q.q6_ave = ( Q6r[0]*Q6r[0] + Q6i[0]*Q6i[0] );
       for (int m=1; m<=6; m++){
-	      part[i].q.q6_ave += Q6r[m]*Q6r[m] + Q6i[m]*Q6i[m];
+	      part[i].q.q6_ave += 2*(Q6r[m]*Q6r[m] + Q6i[m]*Q6i[m]);
       }
       part[i].q.q6_ave *= 4.0 * M_PI/13.0;
       part[i].q.q6_ave = sqrt(part[i].q.q6_ave);
