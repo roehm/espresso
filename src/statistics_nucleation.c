@@ -213,9 +213,9 @@ int q6_ri_calculation(){
       for (i=0;i<np;i++) {
 //        printf("part %i neb %i\n", part[i].p.identity, part[i].q.neb);
         //part[i].l.solid = 0;
-	      printf("%i q6r %lf q6i %lf id %i\n",part[i].q.neb, part[i].q.q6r[0], part[i].q.q6i[0],part[i].p.identity );
+//	      printf("%i q6r %lf q6i %lf id %i\n",part[i].q.neb, part[i].q.q6r[0], part[i].q.q6i[0],part[i].p.identity );
 	       for (int m=1; m<=6; m++){
-	         printf("%i q6r %lf q6i %lf\n",part[i].q.neb, 0.5*part[i].q.q6r[m], 0.5*part[i].q.q6i[m]);
+//	         printf("%i q6r %lf q6i %lf\n",part[i].q.neb, 0.5*part[i].q.q6r[m], 0.5*part[i].q.q6i[m]);
 	       }
       }
     }
@@ -275,7 +275,7 @@ int q6_ri_calculation(){
 	           for (m=0; m<=6; m++){
 	             part[i].q.q6r[m] = 0.0;
 	             part[i].q.q6i[m] = 0.0;
-	             fprintf(stderr, "no neighbors found for part %i: %lf real %lf im \n", part[i].p.identity, part[i].q.q6r[m],part[i].q.q6i[m]);
+	             //fprintf(stderr, "no neighbors found for part %i: %lf real %lf im \n", part[i].p.identity, part[i].q.q6r[m],part[i].q.q6i[m]);
 	           }
 	           //statusOK = 0;
 	         }
