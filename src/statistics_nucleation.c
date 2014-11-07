@@ -131,9 +131,13 @@ void y6(Particle *p_tmp, double dr, double dx, double dy, double dz){
 int q6_ri_calculation(){
 
     on_observable_calc();
+
+    if (rebuild_verletlist)  
+       build_verlet_lists();
+
     double rc = q6para.rc;
     Particle *p1, *p2, **pairs;
-    int c, i, m, n, np;
+    int np;
     double dist2;
     double rclocal2 = rc*rc; // sphere radius squared around particle for neighbor detection
     double vec21[3];
@@ -148,7 +152,7 @@ int q6_ri_calculation(){
     for (int c = 0; c < local_cells.n; c++) {
       part = local_cells.cell[c]->part;
       np = local_cells.cell[c]->n;      
-      for (i=0;i<np;i++) {
+      for (int i=0;i<np;i++) {
         part[i].q.neb = 0;
         part[i].q.solid_bonds=0;
         //part[i].l.solid = 0;
@@ -159,15 +163,15 @@ int q6_ri_calculation(){
 	       }
       }
     }
-    for(c=0; c<ghost_cells.n; c++) {
+    for(int c=0; c<ghost_cells.n; c++) {
       part = ghost_cells.cell[c]->part;
       np   = ghost_cells.cell[c]->n;
-      for (i=0;i<np;i++) {
+      for (int i=0;i<np;i++) {
         part[i].q.neb = 0;
         part[i].q.solid_bonds=0;
         //part[i].l.solid = 0;
         part[i].q.q6=0.0;
-	       for (m=0; m<=6; m++){
+	       for (int m=0; m<=6; m++){
 	         part[i].q.q6r[m]=0.0;
 	         part[i].q.q6i[m]=0.0;
 	       }
@@ -176,17 +180,17 @@ int q6_ri_calculation(){
     
       
     /* Loop local cells */
-    for (c = 0; c < local_cells.n; c++) {
+    for (int c = 0; c < local_cells.n; c++) {
 
       VERLET_TRACE(fprintf(stderr,"%d: cell %d with %d neighbors\n",this_node,c, dd.cell_inter[c].n_neighbors));
       /* Loop cell neighbors */
-      for (n = 0; n < dd.cell_inter[c].n_neighbors; n++) {
+      for (int n = 0; n < dd.cell_inter[c].n_neighbors; n++) {
         pairs = dd.cell_inter[c].nList[n].vList.pair;
         np    = dd.cell_inter[c].nList[n].vList.n;
         VERLET_TRACE(fprintf(stderr,"%d: neighbor %d has %d particles\n",this_node,n,np));
 
         /* verlet list loop */
-        for(i=0; i<2*np; i+=2) {
+        for(int i=0; i<2*np; i+=2) {
 	         p1 = pairs[i];                    /* pointer to particle 1 */
 	         p2 = pairs[i+1];                  /* pointer to particle 2 */
            dist2 = distance2vec(p2->r.p, p1->r.p, vec21);
@@ -207,18 +211,20 @@ int q6_ri_calculation(){
       }
     }
     ghost_communicator(&cell_structure.collect_ghost_q6_comm);
+#if 0
     for (int c = 0; c < local_cells.n; c++) {
       part = local_cells.cell[c]->part;
       np = local_cells.cell[c]->n;      
-      for (i=0;i<np;i++) {
-//        printf("part %i neb %i\n", part[i].p.identity, part[i].q.neb);
+      for (int i=0;i<np;i++) {
+        printf("part %i neb %i\n", part[i].p.identity, part[i].q.neb);
         //part[i].l.solid = 0;
-//	      printf("%i q6r %lf q6i %lf id %i\n",part[i].q.neb, part[i].q.q6r[0], part[i].q.q6i[0],part[i].p.identity );
+	      printf("%i q6r %lf q6i %lf id %i\n",part[i].q.neb, part[i].q.q6r[0], part[i].q.q6i[0],part[i].p.identity );
 	       for (int m=1; m<=6; m++){
-//	         printf("%i q6r %lf q6i %lf\n",part[i].q.neb, 0.5*part[i].q.q6r[m], 0.5*part[i].q.q6i[m]);
+	         printf("%i q6r %lf q6i %lf\n",part[i].q.neb, 0.5*part[i].q.q6r[m], 0.5*part[i].q.q6i[m]);
 	       }
       }
     }
+#endif
 #if 0    
     for(c=0; c<ghost_cells.n; c++) {
       part = ghost_cells.cell[c]->part;
@@ -256,15 +262,15 @@ int q6_ri_calculation(){
     }    
 #endif 
 
-    for (c = 0; c < local_cells.n; c++) {
+    for (int c = 0; c < local_cells.n; c++) {
       cell = local_cells.cell[c];
       part = cell->part;
       np = cell->n;
        
-      for (i=0;i<np;i++) {
+      for (int i=0;i<np;i++) {
 	       // Wolfgang Lechner and Christoph Dellago 2008 eq(1)
         if(part[i].q.neb > 0) {
-          for (m=0; m<=6; m++){
+          for (int m=0; m<=6; m++){
             part[i].q.q6r[m] /= (double) part[i].q.neb;
             part[i].q.q6i[m] /= (double) part[i].q.neb;
             //fprintf(stderr, "%i: real: %lf im: %lf \n", part[i].p.identity, part[i].q.q6r[m],part[i].q.q6i[m]);
@@ -272,7 +278,7 @@ int q6_ri_calculation(){
           }
         } else {
 	           //Q6 undefined... 
-	           for (m=0; m<=6; m++){
+	           for (int m=0; m<=6; m++){
 	             part[i].q.q6r[m] = 0.0;
 	             part[i].q.q6i[m] = 0.0;
 	             //fprintf(stderr, "no neighbors found for part %i: %lf real %lf im \n", part[i].p.identity, part[i].q.q6r[m],part[i].q.q6i[m]);
